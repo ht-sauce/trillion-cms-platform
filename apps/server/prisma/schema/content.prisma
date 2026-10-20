@@ -1,0 +1,113 @@
+/// 栏目表：站点下的目录 / 功能块，支持树形结构（parentId 自关联）
+model Channel {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 所属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 父级栏目 ID，顶级栏目为 null
+  parentId String? @map("parent_id") @db.VarChar(36)
+  /// 栏目名称
+  name String @db.VarChar(64)
+  /// URL 片段，决定 SSG 产物子目录名
+  slug String @db.VarChar(64)
+  /// 物化访问路径（含祖先，如 /doctors/experts）；仅校验不成环，默认不超 5 层
+  /// 允空仅为兼容历史行：服务端写入时一律物化填充（目录存在已发布页面时 slug 锁定）
+  path String? @db.VarChar(512)
+  /// 同级排序值，越小越靠前
+  sort Int @default(0)
+  /// 栏目级 SEO 标题
+  seoTitle String? @map("seo_title") @db.VarChar(128)
+  /// 栏目级 SEO 描述
+  seoDescription String? @map("seo_description") @db.VarChar(255)
+  /// 语言版本（多语言预留）
+  locale String @default("zh-CN") @db.VarChar(8)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@unique([siteId, slug])
+  @@unique([siteId, path])
+  @@index([siteId])
+}
+
+/// 页面表：页面 = 模板 + 结构化 Block 数组
+model Page {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 所属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 所属栏目 ID
+  channelId String @map("channel_id") @db.VarChar(36)
+  /// 使用的模板标识，对应 GEO 项目中的模板定义
+  templateId String @default("default") @map("template_id") @db.VarChar(32)
+  /// 页面标题，渲染为 H1
+  title String @db.VarChar(128)
+  /// URL 片段
+  slug String @db.VarChar(128)
+  /// 内容状态：draft=草稿 / pending_review=待审核 / published=已发布
+  status String @default("draft") @db.VarChar(16)
+  /// 摘要：llms.txt 与 meta description 复用，GEO 关键字段
+  summary String? @db.VarChar(512)
+  /// 页面级 SEO 标题
+  seoTitle String? @map("seo_title") @db.VarChar(128)
+  /// 页面级 SEO 描述
+  seoDescription String? @map("seo_description") @db.VarChar(255)
+  /// 页面级关键字
+  seoKeywords String? @map("seo_keywords") @db.VarChar(255)
+  /// 结构化 Block 数据 JSON 数组，元素为 BlockInstance：{ id, key, enabled, data }
+  /// （旧数据为 { type, ... } 形态，由回填脚本升级为 BlockInstance）
+  blocks Json @default("[]")
+  /// 物化访问地址（首页为 /）；是「页面 ↔ 线上地址 ↔ 产物文件」的唯一锚点
+  /// 允空仅为兼容历史行：服务端写入时一律物化填充
+  path String? @db.VarChar(512)
+  /// 页面类型：static=静态页 / list=列表页 / detail=详情页
+  kind String @default("static") @db.VarChar(8)
+  /// 整页草稿快照 JSON（后写覆盖，不构建、不影响线上）
+  draft Json?
+  /// 当前内容指纹（由标题/摘要/SEO/块数据与块代码指纹派生，用于徽标判定）
+  contentHash String @default("") @map("content_hash") @db.VarChar(32)
+  /// 上次发布时的内容指纹（与产物清单该页 hash 对齐）
+  publishedHash String @default("") @map("published_hash") @db.VarChar(32)
+  /// 页面级 JSON-LD 自定义内容
+  jsonLd String? @map("json_ld") @db.Text
+  /// 页面级 JSON-LD 模式：auto_append / override
+  jsonLdMode String @default("auto_append") @map("json_ld_mode") @db.VarChar(16)
+  /// 医疗类内容编审信息 JSON：{ writer, reviewer, source, nextReviewDate }，发布前置
+  editorial Json?
+  /// 同级排序值，越小越靠前
+  sort Int @default(0)
+  /// 下线时间（保留记录，不做 301）
+  downAt DateTime? @map("down_at") @db.DateTime(0)
+  /// 作者署名（E-E-A-T 权威性信号）
+  authorName String? @map("author_name") @db.VarChar(32)
+  /// 发布时间（三态流转到 published 时写入）
+  publishedAt DateTime? @map("published_at") @db.DateTime(0)
+  /// 语言版本（多语言预留）
+  locale String @default("zh-CN") @db.VarChar(8)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@unique([siteId, channelId, slug])
+  @@unique([siteId, path])
+  @@index([siteId, status])
+  @@index([siteId, channelId, sort])
+}
+
+/// 模板定义表：描述某模板包含哪些 Block 槽位，驱动 admin 表单与 GEO 项目渲染
+model Template {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 模板标识，页面通过 templateId 引用
+  key String @unique @db.VarChar(32)
+  /// 模板名称
+  name String @db.VarChar(64)
+  /// 槽位 Block 类型序列 JSON，如 ["hero","text","faq"]
+  slots Json @default("[]")
+  /// 是否内置模板（内置不可删除）
+  builtin Boolean @default(true)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+}

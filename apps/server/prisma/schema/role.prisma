@@ -1,0 +1,52 @@
+/// 后台角色表（用户 → 角色 → 菜单 的中间层）
+/// 权限边界由 `platform` 标记决定：平台级角色可执行建站/菜单与角色维护等平台级操作
+model Role {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+
+  /// 角色标识（唯一，代码内引用），如 admin / site_admin
+  code String @unique @db.VarChar(32)
+  /// 角色名称（中文展示），如 系统管理员
+  name String @db.VarChar(32)
+  /// 角色说明
+  description String? @db.VarChar(255)
+  /// 是否平台级角色：可执行平台级操作并访问平台级接口（PlatformAdminGuard 判据）
+  platform Boolean @default(false)
+  /// 是否内置角色：内置角色禁止删除（系统必须保留至少一个平台级角色）
+  builtin Boolean @default(false)
+  /// 角色状态：active=启用 / disabled=停用（停用后其用户无法登录）
+  status String @default("active") @db.VarChar(8)
+  /// 排序，升序
+  sort Int @default(0)
+
+  /// 创建时间（中国时区，精确到秒）
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 绑定了该角色的后台用户
+  users AdminUser[]
+  /// 该角色绑定的菜单（角色-菜单 授权关系）
+  menus RoleMenu[]
+
+  /// 按排序取角色列表
+  @@index([sort])
+}
+
+/// 角色-菜单关联表：决定某角色登录后侧栏可见哪些菜单
+model RoleMenu {
+  /// 角色 ID
+  roleId String @map("role_id") @db.VarChar(36)
+  /// 菜单 ID
+  menuId String @map("menu_id") @db.VarChar(36)
+
+  /// 角色（角色删除时级联清空授权）
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  /// 菜单（菜单删除时级联清空授权）
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  /// 联合主键：同一角色对同一菜单只保留一条授权
+  @@id([roleId, menuId])
+  /// 按菜单反查授权的角色
+  @@index([menuId])
+}

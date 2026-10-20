@@ -1,0 +1,19 @@
+/// 站点会员表：CMS 站点前台注册会员，按 siteId 隔离——A 站会员在 B 站无效
+model Member {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 所属站点 ID（隔离边界）
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 会员登录账号
+  username String @db.VarChar(32)
+  /// 昵称
+  nickname String? @db.VarChar(32)
+  /// bcrypt 加密后的密码
+  password String @db.VarChar(128)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  /// 同一站点内账号唯一
+  @@unique([siteId, username])
+  @@index([siteId])
+}

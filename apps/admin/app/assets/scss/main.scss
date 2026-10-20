@@ -1,0 +1,298 @@
+/**
+ * 全局样式入口
+ * 1) 基础 reset 与 12px 基准字号
+ * 2) Element Plus 亮色主题变量覆盖 + 紧凑密度
+ * 3) 语义色工具类（状态文本统一走 .c-*，禁止页面内写死色值）
+ *
+ * 颜色计算一律用 Sass 模块函数 color.mix()：
+ * 全局 `mix()` 已被 Dart Sass 标记弃用（3.0 将移除，dev/build 会刷 DEPRECATION WARNING）
+ */
+@use 'sass:color';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: $c-bg;
+  color: $c-text;
+  font-family: $font-family-base;
+  font-size: $font-size-base; // 基准字号：12px
+  line-height: 1.6;
+  /**
+   * 禁止浏览器级滚动：滚动一律发生在布局的 .content（页面主功能区）内部，
+   * 保证后台始终是"一屏内操作"，不出现整页滚动条（见 AGENTS.md 页面规范）
+   */
+  overflow: hidden;
+}
+
+a {
+  color: $c-primary;
+  text-decoration: none;
+}
+
+// ============ Element Plus 亮色主题变量覆盖 ============
+:root {
+  /**
+   * 主色变体一律由 $c-primary 派生（color.mix 计算），不手写十六进制：
+   * 换主色时只改 tokens.scss 一处，Element Plus 的浅色/深色梯度自动跟着变
+   */
+  --el-color-primary: #{$c-primary};
+  --el-color-primary-light-3: #{color.mix(#fff, $c-primary, 30%)};
+  --el-color-primary-light-5: #{color.mix(#fff, $c-primary, 50%)};
+  --el-color-primary-light-7: #{color.mix(#fff, $c-primary, 70%)};
+  --el-color-primary-light-8: #{color.mix(#fff, $c-primary, 80%)};
+  --el-color-primary-light-9: #{color.mix(#fff, $c-primary, 90%)};
+  --el-color-primary-dark-2: #{color.mix(#000, $c-primary, 20%)};
+
+  --el-color-success: #{$c-success};
+  --el-color-warning: #{$c-warning};
+  --el-color-danger: #{$c-danger};
+  --el-color-error: #{$c-danger};
+
+  --el-bg-color: #{$c-panel};
+  --el-bg-color-page: #{$c-bg};
+  --el-bg-color-overlay: #{$c-panel};
+
+  --el-text-color-primary: #{$c-text};
+  --el-text-color-regular: #{$c-text-sub};
+  --el-text-color-secondary: #{$c-text-mute};
+  --el-text-color-placeholder: #{$c-text-faint};
+  --el-text-color-disabled: #{$c-text-faint};
+
+  --el-border-color: #{$c-border};
+  --el-border-color-light: #{$c-border};
+  --el-border-color-lighter: #{$c-border-soft};
+  --el-border-color-extra-light: #{$c-border-soft};
+
+  --el-fill-color: #{$c-elevated};
+  --el-fill-color-light: #{$c-elevated};
+  --el-fill-color-lighter: #{$c-elevated};
+  --el-fill-color-blank: #{$c-panel};
+  --el-fill-color-darker: #{$c-border};
+
+  --el-mask-color: #{$c-mask};
+
+  // 紧凑密度：统一控件尺寸下沉一档
+  --el-font-size-base: 12px;
+  --el-font-size-small: 11px;
+  --el-border-radius-base: #{$radius-md};
+  --el-component-size: 28px;
+  --el-component-size-small: 26px;
+  --el-component-size-large: 30px;
+}
+
+/**
+ * 专有名词问号标记：由 `TermHint.vue` 统一渲染（页面不要再自己写 `el-tooltip + .term-mark`），
+ * 颜色继承所在文本（主色按钮里就是白字）
+ */
+.term-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  font-size: $font-size-xs;
+  line-height: 1;
+  vertical-align: middle;
+  border: 1px solid currentcolor;
+  border-radius: 50%;
+  cursor: help;
+}
+
+/**
+ * 长文本弹层（统一宽度区间与行距）
+ *   `.term-tooltip` = 术语问号说明（`TermHint.vue` 统一挂）
+ *   `.text-tooltip` = 其他长文本气泡（如构建失败日志尾部），共用同一套排版
+ * 最短 150px 保证短句不瘪，最长 300px 强制换行（约 24 字/行），
+ * 避免长文案摊成一整行横贯屏幕、读到一半要左右追字
+ */
+.term-tooltip.el-popper,
+.text-tooltip.el-popper {
+  min-width: 150px;
+  max-width: 300px;
+  padding: $sp-1;
+  font-size: $font-size-sm;
+  line-height: 1.6;
+  white-space: normal;
+  word-break: break-word;
+}
+
+// ============ 语义色工具类（页面状态文本统一使用）============
+.c-success {
+  color: $c-success;
+}
+
+.c-warning {
+  color: $c-warning;
+}
+
+.c-danger {
+  color: $c-danger;
+}
+
+.c-primary {
+  color: $c-primary;
+}
+
+.c-mute {
+  color: $c-text-mute;
+}
+
+// 全局紧凑化：表单、按钮、表格统一收紧
+.el-button {
+  font-size: $font-size-sm;
+  padding: 5px 12px;
+}
+
+.el-form-item {
+  margin-bottom: $sp-2;
+}
+
+.el-form-item__label {
+  font-size: $font-size-xs !important;
+  color: $c-text-mute !important;
+  line-height: 1.4 !important;
+}
+
+/**
+ * 表单标签与控件垂直对齐（左侧标签，即 label-width 模式）：
+ * Element Plus 的 label 是**固定高度的行内 flex**（small 档 24px）且文字贴顶，
+ * 而本项目控件更高（$control-height + 输入框内边距）——只改 line-height 会让标签文字「靠上」。
+ * 这里让 label 整块在行内居中、文字在块内居中，与输入框/下拉框/日期控件中线对齐。
+ */
+.el-form:not(.el-form--label-top) .el-form-item__label {
+  align-self: center;
+  align-items: center;
+  padding-bottom: 0 !important;
+}
+
+/** 顶部标签（label-position="top"）：贴着控件上沿，留 4px 间距 */
+.el-form--label-top .el-form-item__label {
+  padding-bottom: 4px !important;
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  background: $c-input;
+  box-shadow: 0 0 0 1px #{$c-border} inset;
+  padding: 3px 8px;
+}
+
+.el-input__inner {
+  font-size: $font-size-sm;
+  height: $control-height;
+  color: $c-text;
+}
+
+.el-popper.is-light {
+  border-color: $c-border;
+}
+
+// ============ 表格：统一 border 模式（可拖拽列宽，规范见 AGENTS.md §7）============
+.el-table {
+  font-size: $font-size-sm;
+  --el-table-border-color: #{$c-border};
+  --el-table-header-bg-color: #{$c-table-head};
+  --el-table-bg-color: #{$c-panel};
+  --el-table-tr-bg-color: #{$c-panel};
+  --el-table-row-hover-bg-color: #{$c-elevated};
+  --el-table-header-text-color: #{$c-text-sub};
+  --el-table-text-color: #{$c-text-sub};
+}
+
+/** 紧凑密度：单元格内边距收紧（默认 8px 偏松） */
+.el-table .el-table__cell {
+  padding: 5px 0;
+}
+
+/** 表头字号与字重收一档 */
+.el-table th.el-table__cell {
+  font-size: $font-size-xs;
+  font-weight: 500;
+}
+
+/** border 模式：圆角外框（内层网格线由 --el-table-border-color 统一），并让列宽拖拽手柄清晰可见 */
+.el-table--border {
+  border-radius: $radius-lg;
+  overflow: hidden;
+
+  .el-table__cell {
+    border-right: 1px solid $c-border;
+  }
+
+  /**
+   * 右侧固定列分界线兜底：Element Plus 2.x 的固定列是 sticky 实现，
+   * 分界只在横向滚动态由阴影承担；表格未滚动时（is-scrolling-none）阴影为 none，
+   * 且左邻单元格的 border-right 会被 sticky 层盖住——表现为「启用｜操作」这类
+   * 相邻竖线凭空消失。这里给右侧固定列统一补一条左边框（滚动时与阴影叠加不冲突）
+   */
+  .el-table-fixed-column--right.el-table__cell {
+    border-left: 1px solid $c-border;
+  }
+}
+
+/** 列宽拖拽指示线：用主题色，避免与边框混淆 */
+.el-table__column-resize-proxy {
+  border-left: 2px solid $c-primary;
+}
+
+/**
+ * 操作列统一规格（表格里所有「操作」列都挂 `class-name="ops-col"`）
+ *
+ * 为什么必须 flex-wrap：操作按钮会随业务增长（站点行已有 5 个：预览 / 编辑 / 编辑内容 / 下载 / 删除），
+ * 固化列宽后必然挤——单元格默认的 `text-overflow: ellipsis` 会把末尾按钮变成省略号，
+ * 那等于按钮直接消失。这里明确「放不下就换行，绝不省略」。
+ * 间距用 gap（行间距 4px / 列间距 6px）：换行后行首不会多出一截 margin。
+ */
+.el-table .ops-col .cell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  padding: 0 $sp-1;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/** 按钮间距交给上面的 gap：清掉 Element Plus 相邻按钮的 12px margin */
+.el-table .ops-col .cell .el-button + .el-button {
+  margin-left: 0;
+}
+
+.el-tabs__item {
+  font-size: $font-size-sm;
+  height: 28px;
+  line-height: 28px;
+}
+
+.el-card {
+  background: $c-panel;
+  border-color: $c-border;
+}
+
+/**
+ * 页面容器：内边距与模块间距统一走 8px 档（$sp-1）
+ * 规范：页面区块之间保持紧凑，单屏尽量展示更多内容；需要更大间隔时用 $sp-2，不要临时写像素值
+ */
+.page-wrap {
+  padding: $sp-1;
+  display: flex;
+  flex-direction: column;
+  gap: $sp-1;
+}
+
+.mono {
+  @include mono-figure;
+}
+
+.panel-title {
+  font-size: $font-size-md;
+  font-weight: 500;
+  color: $c-text;
+}

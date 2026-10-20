@@ -1,0 +1,173 @@
+/// 站点表（站点 = 企业，一张表承载企业元数据 + 网站信息 + SEO/GEO 默认值 + 平台配置）
+/// 所有内容类数据均通过本表的站点维度隔离，admin 站点管理页面即对本表 CRUD
+model Site {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+
+  // ---------- 网站信息 ----------
+  /// 网站名称，对外展示
+  name String @db.VarChar(64)
+  /// 站点标识（URL 安全字符），同时作为 SSG 产物目录名 sites/<slug>/
+  slug String @unique @db.VarChar(32)
+  /// 站点**主域名**（唯一规范地址，域名或 host:port）：生产填正式域名，本地开发填本地地址（如 localhost:3002）
+  /// 用途：管理后台站点列表「预览」按此打开；SSR 模式用于 Host 反查站点；SEO 绝对 URL（sitemap/llms.txt/JSON-LD）由此拼装
+  /// 别名域名（该站点可被其他域名访问）见 SiteDomain 表
+  domain String @db.VarChar(128)
+  /// ICP 备案号，自动渲染至站点页脚（合规要求 + SEO 信任信号）
+  icpNumber String? @map("icp_number") @db.VarChar(64)
+  /// 公安备案号
+  policeNumber String? @map("police_number") @db.VarChar(64)
+
+  // ---------- 企业实体标识（GEO 实体唯一性基础） ----------
+  /// 工商登记全称（营业执照口径）；缺失时先等于 commonName，并在实体档案页标注「待补」
+  legalName String @default("") @map("legal_name") @db.VarChar(128)
+  /// 对外常用名（H1 / title / NAP 使用，如「某某医院」「某某科技」）
+  commonName String @default("") @map("common_name") @db.VarChar(128)
+  /// 简称与曾用名 JSON 数组，输出为 schema.org alternateName
+  abbrName Json @default("[]") @map("abbr_name")
+  /// 头部 LOGO 英文副标（框架块 site-header 用，如「XARA · VITILIGO SPECIALTY」）；为空则头部不渲染副标
+  logoSubtitle String? @map("logo_subtitle") @db.VarChar(128)
+  /// 头部 LOGO 方形标记内单字（框架块 site-header 用）；为空时取 commonName 首字
+  logoMark String? @map("logo_mark") @db.VarChar(8)
+
+  // ---------- 企业主体（工商资质） ----------
+  /// 企业名称，需与营业执照全称一致
+  companyName String @map("company_name") @db.VarChar(128)
+  /// 统一社会信用代码
+  creditCode String? @map("credit_code") @db.VarChar(32)
+  /// 营业执照图片，关联静态文件表，仅后台存档不对外展示
+  businessLicenseFileId String? @map("business_license_file_id") @db.VarChar(36)
+  /// 企业地址
+  companyAddress String? @map("company_address") @db.VarChar(255)
+  /// 联系电话
+  contactPhone String? @map("contact_phone") @db.VarChar(32)
+  /// 联系邮箱
+  contactEmail String? @map("contact_email") @db.VarChar(128)
+
+  // ---------- 医疗机构资质 ----------
+  /// 医疗机构登记号
+  clinicRegNo String? @map("clinic_reg_no") @db.VarChar(64)
+  /// 执业许可证有效期起（YYYY-MM-DD；日期型值统一用字符串存储，规避时区换算漂移）
+  licenseValidFrom String? @map("license_valid_from") @db.VarChar(10)
+  /// 执业许可证有效期止（YYYY-MM-DD）
+  licenseValidTo String? @map("license_valid_to") @db.VarChar(10)
+  /// 机构类型（如「专科医院」）
+  orgType String? @map("org_type") @db.VarChar(64)
+  /// 机构等级（如「二级」）
+  level String? @db.VarChar(32)
+  /// 法定代表人
+  legalPerson String? @map("legal_person") @db.VarChar(64)
+  /// 主要负责人
+  principal String? @db.VarChar(64)
+  /// 成立日期（YYYY-MM-DD）
+  foundDate String? @map("found_date") @db.VarChar(10)
+  /// 诊疗科目 JSON 数组
+  practiceScopes Json @default("[]") @map("practice_scopes")
+  /// 执业许可证发证机关（法定信息，页脚须可见；必须取自证件原件，禁止推测）
+  issuingAuthority String? @map("issuing_authority") @db.VarChar(128)
+
+  // ---------- NAP（Name / Address / Phone） ----------
+  /// 地址（对外逐字口径，全站唯一写法）
+  addressFull String? @map("address_full") @db.VarChar(255)
+  /// 邮政编码
+  postalCode String? @map("postal_code") @db.VarChar(16)
+  /// 纬度（字符串存储，保留原始精度）
+  lat String? @db.VarChar(32)
+  /// 经度（字符串存储，保留原始精度）
+  lng String? @db.VarChar(32)
+  /// 对外唯一电话（NAP-P）
+  phone String? @db.VarChar(32)
+  /// 电话服务时间说明
+  phoneServiceHours String? @map("phone_service_hours") @db.VarChar(128)
+
+  // ---------- 门诊时间 ----------
+  /// 门诊时间 JSON：{ season?, weekday, open, close, note? }[]，支持季节区分与「午间不休息/节假日正常」备注
+  openingHours Json @default("[]") @map("opening_hours")
+
+  // ---------- 医保 ----------
+  /// 是否医保定点
+  medicalInsurance Boolean @default(false) @map("medical_insurance")
+  /// 医保定点编号
+  insuranceNo String? @map("insurance_no") @db.VarChar(64)
+  /// 医保口径补充说明（非定点时的院内减免口径等；合规红线要求非定点须明示）
+  insuranceNote String? @map("insurance_note") @db.VarChar(255)
+
+  // ---------- 关联标识（实体置信度） ----------
+  /// 关联标识 JSON：{ platform, url, status?, checkedAt? }[]，如官网/公众号/地图/卫健委公示/企业信用公示
+  sameAs Json @default("[]") @map("same_as")
+
+  // ---------- 主题 ----------
+  /// 站点设计令牌 JSON（驱动站点外观，与后台主题完全解耦）
+  themeTokens Json @default("{}") @map("theme_tokens")
+
+  // ---------- SEO / GEO 默认值（页面未单独配置时的兜底） ----------
+  /// 站点默认 SEO 标题
+  seoTitle String? @map("seo_title") @db.VarChar(128)
+  /// 站点默认描述，同时作为 llms.txt 站点级摘要来源
+  seoDescription String? @map("seo_description") @db.VarChar(255)
+  /// 站点默认关键字，逗号分隔
+  seoKeywords String? @map("seo_keywords") @db.VarChar(255)
+  /// 站点 Logo，关联静态文件表
+  logoFileId String? @map("logo_file_id") @db.VarChar(36)
+  /// 站点 Favicon，关联静态文件表
+  faviconFileId String? @map("favicon_file_id") @db.VarChar(36)
+  /// 默认语言（多语言预留字段，v1 固定 zh-CN）
+  defaultLocale String @default("zh-CN") @map("default_locale") @db.VarChar(8)
+  /// AI 爬虫放行策略 JSON，驱动 robots.txt 生成
+  robotsPolicy Json @default("{\"allowAllAi\":true,\"blockedAgents\":[],\"extraAllowedAgents\":[]}") @map("robots_policy")
+
+  // ---------- GEO 文档（双模式：auto_append 自动+追加 / override 全量覆盖） ----------
+  /// 机构实体声明 JSON-LD（MedicalClinic）自定义内容
+  geoJsonLd String? @map("geo_json_ld") @db.Text
+  /// 机构实体声明模式：auto_append / override
+  geoJsonLdMode String @default("auto_append") @map("geo_json_ld_mode") @db.VarChar(16)
+  /// llms.txt 自定义内容
+  llmsTxt String? @map("llms_txt") @db.Text
+  /// llms.txt 模式：auto_append / override
+  llmsTxtMode String @default("auto_append") @map("llms_txt_mode") @db.VarChar(16)
+  /// head 扩展（白名单净化后注入，禁止可执行脚本）
+  headExtra String? @map("head_extra") @db.Text
+  /// head 扩展模式：auto_append / override
+  headExtraMode String @default("auto_append") @map("head_extra_mode") @db.VarChar(16)
+  /// robots meta 摘要策略 JSON：{ index, follow, maxSnippet, maxImagePreview, maxVideoPreview }
+  robotsMeta Json @default("{\"index\":true,\"follow\":true,\"maxSnippet\":-1,\"maxImagePreview\":\"large\",\"maxVideoPreview\":-1}") @map("robots_meta")
+
+  // ---------- 平台配置 ----------
+  /// 渲染模式：ssg=静态构建 / ssr=服务端实时渲染，站点级开关（本期纯 SSG，后台不暴露切换）
+  renderMode String @default("ssg") @map("render_mode") @db.VarChar(8)
+  /// 主题配置 JSON（平台级主色，兼容既有字段；站点外观以 themeTokens 为准）
+  themeConfig Json @default("{\"primary\":\"#3B82F6\",\"accent\":\"#67E8F9\",\"background\":\"#0B1224\",\"text\":\"#E8EDFF\",\"radius\":8}") @map("theme_config")
+  /// 站点状态：active=启用 / disabled=停用
+  status String @default("active") @db.VarChar(8)
+
+  /// 创建时间（中国时区，精确到秒）
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 别名域名映射（多域名访问；主域名在上方 domain 字段，不重复存入本表）
+  domains SiteDomain[]
+  /// 导航分组（头部主导航 + 页脚四列，独立配置、不从内容树推导）
+  navigations Navigation[]
+}
+
+/// 站点别名域名表：一个站点可被多个域名访问，主域名存 Site.domain（规范地址），本表只放别名域名
+/// 用途：GEO 项目 SSR 按请求 Host 反查站点（slug | 主域名 | 别名域名）；页面内容与元数据与主域名完全一致
+model SiteDomain {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 所属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 别名域名（域名或 host:port），**全局唯一**：不得与任何站点的主域名或其他别名域名重复
+  domain String @unique @db.VarChar(128)
+  /// 创建时间（中国时区，精确到秒）
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 所属站点（真实外键：站点删除时级联清理别名域名）
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  /// 按站点聚合查询别名域名
+  @@index([siteId])
+}

@@ -1,0 +1,12 @@
+// 该文件为 Prisma schema 主入口：仅放置 generator 与 datasource 配置
+// 业务模型按领域拆分到同级目录下的独立文件（site.prisma / static-file.prisma / content.prisma ...）
+
+// Prisma 6 起多文件 schema（本目录下的 *.prisma）已默认支持，无需再声明 previewFeatures
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}

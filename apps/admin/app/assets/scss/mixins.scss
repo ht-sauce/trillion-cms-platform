@@ -1,0 +1,36 @@
+/**
+ * 混入与复用的样式片段
+ * 说明：本文件被 @use 引入时不会走 vite additionalData，必须显式引入令牌
+ */
+@use 'tokens.scss' as *;
+
+/** 面板容器：深空控制台统一外观 */
+@mixin panel {
+  background: $c-panel;
+  border: 1px solid $c-border;
+  border-radius: $radius-lg;
+}
+
+/** 等宽数字（所有统计数值统一使用） */
+@mixin mono-figure {
+  font-family: $font-family-mono;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+/** 单行省略 */
+@mixin ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/** 密集表格容器：表格本体仍用 Element Plus 组件，这里只做皮肤收紧 */
+@mixin dense-table {
+  :deep(.el-table__header th) {
+    padding: 6px 0;
+  }
+  :deep(.el-table__row td) {
+    padding: 4px 0;
+  }
+}

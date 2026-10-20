@@ -1,0 +1,34 @@
+/// 后台菜单表（最多三级，parentId 自关联）
+/// 驱动管理后台侧栏动态渲染：菜单可见性由「角色-菜单」授权关系决定（用户 → 角色 → 菜单）
+model Menu {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+
+  /// 上级菜单 ID，null 表示一级菜单
+  parentId String? @map("parent_id") @db.VarChar(36)
+  /// 菜单名称，侧栏展示文本
+  title String @db.VarChar(32)
+  /// 路由路径（/ 开头）；目录型菜单可留空，仅用于展开子菜单
+  path String? @db.VarChar(128)
+  /// 同级排序，升序排列
+  sort Int @default(0)
+  /// 是否在侧栏可见（false = 隐藏入口，仅保留路由可达）
+  visible Boolean @default(true)
+  /// 菜单状态：active=启用 / disabled=停用
+  status String @default("active") @db.VarChar(8)
+
+  /// 创建时间（中国时区，精确到秒）
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 上级菜单（自关联，层级用于限制最多三级）
+  parent Menu? @relation("MenuTree", fields: [parentId], references: [id])
+  /// 子菜单
+  children Menu[] @relation("MenuTree")
+  /// 授权了本菜单的角色
+  roles RoleMenu[]
+
+  /// 按上级 + 排序取菜单（侧栏与树构建的主查询路径）
+  @@index([parentId, sort])
+}

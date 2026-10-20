@@ -1,0 +1,29 @@
+/// 发布任务表：手动发布触发的构建任务，串行执行，记录构建日志与结果
+model PublishTask {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 发布范围：page=页面级增量 / site=整站重建
+  /// （数据库列沿用历史的 type，避免一次无意义的列改名迁移；语义以本字段为准）
+  scope String @default("page") @map("type") @db.VarChar(16)
+  /// 发布目标 JSON：{ pageIds: string[], paths: string[], removedPaths: string[] }
+  /// （数据库列沿用历史的 page_ids，类型同为 JSON；语义以本字段为准）
+  targets Json @default("[]") @map("page_ids")
+  /// 产物构建号（与 sites/<slug>/_trillion.json 的 buildId 对齐）
+  buildId String? @map("build_id") @db.VarChar(32)
+  /// 产物摘要 JSON：{ pageCount, routes, manifestFile }（构建成功后回写）
+  artifact Json?
+  /// 任务状态：pending=排队中 / running=构建中 / success=成功 / failed=失败
+  status String @default("pending") @db.VarChar(16)
+  /// 构建日志
+  log String? @db.Text
+  /// 触发人 admin_user.id
+  triggeredBy String? @map("triggered_by") @db.VarChar(36)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 完成时间
+  finishedAt DateTime? @map("finished_at") @db.DateTime(0)
+
+  @@index([siteId, status])
+}

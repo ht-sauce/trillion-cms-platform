@@ -1,0 +1,75 @@
+# nginx 生产配置 · 单域名同源（直装 · git 仓库形态）
+#
+# 实例：公网 IP 11.11.11.11，nginx 直接监听 8080（公网只放行 8080；3000~3002 不对外，由本配置反代）。
+# 服务器上落地（三者缺一不可）：
+#   sudo cp nginx.conf.example /etc/nginx/sites-available/trillion.conf
+#   sudo ln -s /etc/nginx/sites-available/trillion.conf /etc/nginx/sites-enabled/trillion.conf
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# 约定：仓库位于 /srv/app/trillion-cms-platform（见 docs/spec/10-launch-runbook.md §4）。
+# 若实际路径不同，改下方 root / alias 两处即可；多站点时 apps/geo/sites/ 下每个 <slug> 子目录配一个 server 块。
+# 拓扑说明与验收清单见 docs/spec/10-launch-runbook.md §7 / §8。
+
+server {
+    # 对外端口 8080（与 env/.env.production 的 API_BASE / CORS_ORIGINS 同口径）
+    listen 8080;
+    server_name 11.11.11.11;
+
+    # 管理后台：Nuxt app.baseURL=/geocms/，前缀原样透传，proxy_pass 不做路径重写
+    location /geocms/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 服务端 API：全局前缀 /geoserver，前缀原样透传；client_max_body_size 放开素材上传
+    location /geoserver/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 20m;
+    }
+
+    # 上传资源直出（PUBLIC_URL_PREFIX=/static；物理目录 apps/server/uploads）
+    location /static/ {
+        alias /srv/app/trillion-cms-platform/apps/server/uploads/;
+        expires 7d;
+    }
+
+    # 站点 SSG 产物（内容发布后由服务端自动增量重建，无需重启 nginx）
+    location / {
+        # 内容编辑器草稿预览：带 ?__preview=<票据> 的请求交给 GEO 渲染进程（读草稿），其余仍走静态产物。
+        # 用 418 + 有名 location，避免把 proxy_pass 写进 if（nginx「if 陷阱」的经典坑）。
+        error_page 418 = @geo_preview;
+        if ($arg___preview) { return 418; }
+        root /srv/app/trillion-cms-platform/apps/geo/sites/xian-renai-skin;
+        index index.html;
+        try_files $uri $uri/ $uri.html =404;
+    }
+
+    # GEO 渲染进程（SSR，端口取 env 的 PORT_GEO）：只承接预览票据请求。
+    # Host 与站点同源 → 渲染引擎按主域名反查站点，故无需 /<slug> 前缀（ADR-031）。
+    location @geo_preview {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# 防火墙：公网只放行 8080 与 SSH；3000~3002 保持仅本机可访问（预览请求由 nginx 反代进入，GEO 自身仍不对公网监听）。
+# 换域名或上 HTTPS：改 listen 443 ssl + server_name <域名>（certbot --nginx 可自动补段），
+# 同时把 env/.env.production 的 API_BASE 与 CORS_ORIGINS 改成 https://<域名>，
+# 否则后台接口仍会打到 http://11.11.11.11:8080/geoserver 这个旧基址。
+#
+# 预览三件套（缺一不可，否则后台 iframe 超时或渲染报错）：
+#   1) 本配置里的「?__preview= 分流到 PORT_GEO」location；
+#   2) env/.env.production 显式给 GEO_BASE_URL=<对外基址>（例：http://11.11.11.11:8080；
+#      config/index.mjs 支持用 env 覆盖派生值）——派生缺省会落到 GEO 内部端口，浏览器打不开；
+#   3) 站点表 domain 写**纯主机名**：GEO 按 Host 去端口后反查站点（apps/geo/app/composables/useSiteKey.ts）。
+# 说明与验收见 docs/spec/10-launch-runbook.md §7 / §8。

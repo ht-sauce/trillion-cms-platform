@@ -1,0 +1,56 @@
+/**
+ * 设计令牌（亮色主题）
+ * 硬规范：基准字号 12px、间距原子单位 8px（8/16/24/32）、信息密度优先
+ * 所有页面一律使用这里的令牌，禁止临时写死像素值与颜色（状态文本用 main.scss 的 .c-* 工具类）
+ */
+
+// ============ 字号 ============
+$font-size-base: 12px; // 全局基准字号
+$font-size-xs: 11px; // 表头/辅助说明
+$font-size-sm: 12px; // 正文
+$font-size-md: 13px; // 小节标题
+$font-size-lg: 14px; // 区块标题
+$font-size-xl: 16px; // 页面级数字
+$font-size-figure: 18px; // 指标卡数字
+
+// ============ 间距（8px 栅格）============
+$sp-1: 8px;
+$sp-2: 16px;
+$sp-3: 24px;
+$sp-4: 32px;
+
+// ============ 配色（亮色主题）============
+$c-bg: #f4f6fb; // 页面底色
+$c-panel: #ffffff; // 面板
+$c-elevated: #eef2f9; // 选中/悬浮
+$c-border: #d8dfec; // 边框
+$c-border-soft: #e9eef7; // 内部分隔线
+$c-text: #1f2a44; // 主文本
+$c-text-sub: #48557a; // 次级文本
+$c-text-mute: #7b87a3; // 弱化文本
+$c-text-faint: #9aa5bf; // 提示文本
+$c-primary: #2563eb; // 主色 蓝
+$c-accent: #0e7490; // 数据高亮 深青（亮底可读）
+$c-success: #15803d; // 成功
+$c-warning: #b45309; // 警告
+$c-danger: #dc2626; // 危险
+$c-table-head: #f7f9fc; // 表头底色
+$c-input: #ffffff; // 输入框底色
+$c-on-primary: #ffffff; // 主色背景上的文字（按钮等）
+$c-mask: rgba(15, 23, 42, 0.45); // 弹窗遮罩
+
+// ============ 圆角 ============
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+
+// ============ 密度（关键：所有组件走紧凑档）============
+$row-height: 32px; // 表格行高
+$row-height-sm: 28px; // 密集表格行高
+$control-height: 28px; // 表单控件高度
+$input-padding: 6px 8px; // 输入框内边距
+
+// ============ 字体 ============
+$font-family-base: 'Microsoft YaHei', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+$font-family-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, Menlo, monospace;

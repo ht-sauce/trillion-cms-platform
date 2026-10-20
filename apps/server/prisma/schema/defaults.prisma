@@ -1,0 +1,37 @@
+// =============================================================================
+// 全局默认值说明（仅文档，不产生任何 Prisma 实体）
+// =============================================================================
+//
+// 1) sites.robotsPolicy JSON 默认值：默认放行全部已知 AI 爬虫
+//    {"allowAllAi":true,"blockedAgents":[],"extraAllowedAgents":[]}
+//
+// 2) sites.themeConfig JSON 默认值（平台级主色，兼容既有字段；站点外观以 themeTokens 为准）
+//    {"primary":"#3B82F6","accent":"#67E8F9","background":"#0B1224","text":"#E8EDFF","radius":8}
+//
+// 3) sites.robotsMeta JSON 默认值：完整摘要（利于 AI 抽取长片段与大图预览）
+//    {"index":true,"follow":true,"maxSnippet":-1,"maxImagePreview":"large","maxVideoPreview":-1}
+//
+// 4) sites.openingHours JSON 结构：门诊时间规则
+//    [{"season":"","weekday":"周一至周日","open":"08:30","close":"17:30","note":"午间不休息"}]
+//
+// 5) sites.sameAs JSON 结构：关联标识（实体置信度）
+//    [{"platform":"微信公众号","url":"...","status":"verified","checkedAt":"2026-10-06"}]
+//
+// 6) pages.blocks JSON 结构：BlockInstance 数组（块代码化的新形态）
+//    [{"id":"b_9f3c1a","key":"hero-dark","enabled":true,"data":{"eyebrow":"...","h1":"..."}}]
+//    ⚠️ 历史数据为旧形态 { type, ... }，由回填脚本升级（见 prisma/backfill.ts）
+//
+// 7) pages.draft JSON 结构：整页草稿快照（后写覆盖）
+//    { title, slug, summary, seoTitle, seoDescription, seoKeywords, authorName,
+//      kind, blocks: BlockInstance[], editorial: {...}|null, updatedAt }
+//
+// 8) pages.editorial JSON 结构：医疗类内容编审信息（发布前置）
+//    {"writer":"...","reviewer":"...","source":"...","nextReviewDate":"2027-10-06"}
+//
+// 9) block_definitions.declaration JSON 结构：从 SFC 源码抽取的 defineBlock 声明
+//    {"key":"hero-dark","name":"深色首屏","hint":"...","fields":[...],"dataSource":{"kind":"manual"}}
+//
+// 10) publish_tasks.targets JSON 结构：发布目标
+//    {"pageIds":["<pageId>","<pageId>"],"paths":["/","/entity"],"removedPaths":["/old-page"]}
+//
+// =============================================================================

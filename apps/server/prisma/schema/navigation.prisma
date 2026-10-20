@@ -1,0 +1,56 @@
+/// 导航分组表：头部主导航 + 页脚四列
+/// ⚠️ 导航是**独立配置数据**，不从内容树推导（内容树仅用于后台可视化管理，见 ADR-029）
+model Navigation {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 所属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 分组键：header / footer-1 / footer-2 / footer-3 / footer-4
+  key String @db.VarChar(16)
+  /// 分组展示名（如「头部主导航」「页脚第一列」）
+  title String @db.VarChar(64)
+  /// 分组排序，升序
+  sort Int @default(0)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 所属站点（站点删除时级联清理导航配置）
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  /// 分组下的导航项
+  items NavigationItem[]
+
+  /// 同站点同分组键唯一
+  @@unique([siteId, key])
+  /// 按站点查全部导航分组
+  @@index([siteId])
+}
+
+/// 导航项：指向页面（pageId）或外部链接（href），两者皆无时后台告警
+model NavigationItem {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 所属导航分组 ID
+  navigationId String @map("navigation_id") @db.VarChar(36)
+  /// 链接文案
+  label String @db.VarChar(64)
+  /// 关联页面 ID（站内跳转）；页面下线后此引用视为失效，后台告警
+  pageId String? @map("page_id") @db.VarChar(36)
+  /// 外部链接或自定义地址（与 pageId 二选一）
+  href String? @db.VarChar(512)
+  /// 排序值，升序
+  sort Int @default(0)
+  /// 状态：active=启用 / disabled=停用
+  status String @default("active") @db.VarChar(16)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 所属分组（分组删除时级联清理导航项）
+  navigation Navigation @relation(fields: [navigationId], references: [id], onDelete: Cascade)
+
+  /// 按分组取排序后的导航项（侧栏与站点渲染主查询路径）
+  @@index([navigationId, sort])
+}

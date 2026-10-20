@@ -1,0 +1,65 @@
+/// 块定义表：**块代码的唯一事实来源**（公共模板 + 站点块）
+/// 块 = 数据库存储的 Vue SFC；字段声明写在块代码内（defineBlock），服务端编译校验时抽取
+/// ⚠️ siteId = "0"（字符串哨兵）表示「公共模板（模板库）」——不用 NULL：MySQL 唯一索引视多个 NULL 为互不相同，
+///    会导致同名公共块可重复插入，破坏 key 唯一性
+/// 块隔离（09 §4.5）：公共模板只作**模板**，不再是站点的渲染来源；
+///    站点引用某个块时复制一份本站自有块（siteId = 站点 id），此后改代码只影响本站
+model BlockDefinition {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 块标识：^[a-z][a-z0-9-]{1,40}$
+  key String @db.VarChar(48)
+  /// 展示名
+  name String @db.VarChar(64)
+  /// 用途说明（块库卡片展示）
+  hint String @default("") @db.VarChar(255)
+  /// 归属：public=公共模板（模板库）/ site=本站块
+  scope String @default("public") @db.VarChar(16)
+  /// 归属站点 ID；**"0" 表示公共模板**（站点 ID 为 uuid，不会与哨兵冲突）
+  siteId String @default("0") @map("site_id") @db.VarChar(36)
+  /// Vue SFC 源码（template / script / style）
+  code String @db.LongText
+  /// 代码指纹（产物清单比对用）
+  codeHash String @map("code_hash") @db.VarChar(32)
+  /// 编译校验状态：ok / error
+  compileStatus String @default("ok") @map("compile_status") @db.VarChar(16)
+  /// 编译错误信息（含行号）
+  compileError String? @map("compile_error") @db.Text
+  /// 从源码抽取的 defineBlock 声明 JSON：{ key, name, hint, fields, dataSource }
+  /// 缓存声明可避免列表/详情接口每次都重新编译源码
+  declaration Json @default("{}")
+  /// 版本号（每次保存 +1）
+  version Int @default(1)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 同一归属下 key 唯一（公共模板 siteId = 0，站点块 siteId = 站点 ID）
+  @@unique([key, siteId])
+  /// 块库按归属分组查询
+  @@index([scope, siteId])
+}
+
+/// 块代码版本留档：用于「回退上一版」（只保留最近一版）
+model BlockDefinitionVersion {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 所属块定义 ID
+  blockId String @map("block_id") @db.VarChar(36)
+  /// 版本号
+  version Int
+  /// 该版本的 Vue SFC 源码
+  code String @db.LongText
+  /// 该版本代码指纹
+  codeHash String @map("code_hash") @db.VarChar(32)
+  /// 该版本抽取的声明 JSON
+  declaration Json @default("{}")
+  /// 操作人 admin_user.id
+  createdBy String? @map("created_by") @db.VarChar(36)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  /// 同块同版本唯一
+  @@unique([blockId, version])
+}

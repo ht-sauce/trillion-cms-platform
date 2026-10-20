@@ -1,0 +1,102 @@
+/* ============================================================================
+ * GEO 站点渲染桥接层（ADR-036 补充 · 非设计稿文件）
+ * ----------------------------------------------------------------------------
+ * 设计稿的页面节奏是「一整页若干 <section>，交替 <section class="alt">」，
+ * 而 CMS 里每个块是一个独立组件。渲染器（BlockRenderer）把「标题 + 内容」
+ * 合并进同一个 `<section class="site-section [alt]">`，与设计稿的 section
+ * 粒度一致；本文件只补上设计稿 `section{padding:56px 0}` 的等价声明 ——
+ * 设计稿 CSS 保持零改动（ADR-036），这里也不复制任何其他版式。
+ *
+ * 节奏变体（由渲染器按「页面级 section 提示 → 块默认清单」决定）：
+ *   .site-section             普通区块（白底，上下 56px，同设计稿 section）
+ *   .site-section.alt         灰底带（bg-2 + 上下描边，同设计稿 .alt）
+ *   .site-section.flush-top   贴住上一段（padding-top:0，如页底 telbar 收口）
+ *   .site-section--head       仅标题行兜底（正常情况标题已与内容同节）
+ * ========================================================================== */
+
+.site-section {
+  padding: 56px 0;
+}
+
+.site-section.alt {
+  background: var(--bg-2);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.site-section.flush-top {
+  padding-top: 0;
+}
+
+.site-section--head {
+  padding-bottom: 0;
+}
+
+/* 设计稿的 .wrap 只做宽度与左右内边距（site.css 已定义），这里不重复声明 */
+
+/* ==========================================================================
+ * 西安仁爱 v3.2 · 1:1 还原追加段（2026-10-12，docs/站点代码交付方案.md §5.1）
+ * 只追加、不改上方原选择器。源：原型 assets/css/disease-switch.css、xr-common.css
+ * ========================================================================== */
+
+/* ---- 区块节奏 56px → 34px（原型 post_fix 定稿；追加覆写，不改原声明） ---- */
+:root{
+  --disease-b:#3730A3; /* 银屑病识别色（靛蓝） */
+  --disease-c:#9A4B1F; /* 胎记识别色（赭棕） */
+}
+.site-section{ padding:34px 0; }
+
+/* ---- 三病种切换（disease-switch 块；色系走变量，块 SFC 不出现字面量） ---- */
+.dtabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.dtab{appearance:none;font-family:inherit;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:10px 22px;font-size:14.5px;font-weight:700;color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:box-shadow .15s}
+.dtab .ddot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:1px;background:#C6D2DE}
+.dtab[data-d="a"] .ddot{background:var(--teal-dk)}
+.dtab[data-d="b"] .ddot{background:var(--disease-b)}
+.dtab[data-d="c"] .ddot{background:var(--disease-c)}
+.dtab:hover{box-shadow:0 2px 10px rgba(10,22,40,.08)}
+.dtab.on{color:#fff;border-color:transparent}
+.dtab.on[data-d="a"]{background:var(--teal-dk)}
+.dtab.on[data-d="b"]{background:var(--disease-b)}
+.dtab.on[data-d="c"]{background:var(--disease-c)}
+.dtab.on .ddot{background:rgba(255,255,255,.75)}
+.dpanel{display:none;border:1px solid var(--line);border-radius:var(--r-md);background:#fff;padding:24px 26px}
+.dpanel.on{display:block}
+.dpanel .dlead{font-size:14px;color:var(--ink-2);line-height:1.9;margin:0 0 14px}
+.dpanel .chips{margin-bottom:18px}
+.dpanel .chip{color:var(--ink-2);background:#fff;border-color:var(--line)}
+.dlinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.dlinks a{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:10px;padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--ink-2);text-decoration:none;background:var(--bg-2)}
+.dlinks a:hover{border-color:#9FB8CE;color:#0A1628}
+.dlinks a span{color:var(--teal-dk);font-weight:800}
+#svc-detail{scroll-margin-top:72px}
+
+/* ---- 页脚：信息块 + 两列导航 + 二维码位（.fqr） ---- */
+.fqr h4{margin-bottom:14px}
+.fqr .qr-box{width:118px;height:118px;border:1.5px dashed rgba(255,255,255,.28);border-radius:10px;display:grid;place-items:center;font-size:12px;color:#8FA9C6;background:rgba(255,255,255,.04);overflow:hidden}
+.fqr .qr-box img{width:100%;height:100%;object-fit:cover;display:block}
+.fqr p{margin-top:10px;font-size:12px;color:#6C86A6}
+
+/* ---- 随访管理 step 竖排修复（theme-b 旧两列网格与 site.css 卡片式冲突） ---- */
+.steps .step{display:block}
+
+/* ---- 医师卡字母头像（doctor-card 的 letter 兜底） ---- */
+.doc .photo{position:relative}
+.doc .photo .ava-letter{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(160deg,#12314F,#0A1628)}
+.doc .photo .ava-letter span{font-size:54px;font-weight:800;color:#7FD8CC;letter-spacing:.05em}
+
+/* ---- 百度地图纯展示（bmap-live 块；无密钥静态瓦片 + 整卡新开） ---- */
+.bmap-live{position:relative;margin-top:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line,#dbe4ee);background:#e8eff6;box-shadow:0 10px 26px rgba(15,42,72,.08)}
+.bmap-live img{display:block;width:100%;height:auto}
+.bmap-open{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:flex-end;padding:14px}
+.bmap-open .bmap-chip{background:rgba(15,42,72,.9);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.22);transition:background .18s,transform .18s}
+.bmap-open:hover .bmap-chip{background:var(--teal-dk);transform:translateY(-2px)}
+@media (max-width:720px){.bmap-open{padding:10px}.bmap-open .bmap-chip{font-size:12px;padding:7px 12px}}
+
+/* ---- 新闻详情：article-meta 与 article-body 同节化（2026-10-15） ----
+ * 原型 news/*.html 里元信息条与正文同属一个 section（间距只有 .artmeta 的
+ * margin-bottom:20px）；CMS 中两者是相邻块实例，BlockRenderer 各包一层
+ * .site-section（上下各 34px），叠加出 ~88px 空白。此处在桥接层缝合：
+ * 压掉 meta 节的下 padding 与「meta 紧跟 body」时 body 节的上 padding，
+ * 相邻选择器保证 meta 独立使用时正文节奏不受影响。 */
+.site-section[data-block-key="article-meta"]{padding-bottom:0}
+.site-section[data-block-key="article-meta"] + .site-section[data-block-key="article-body"]{padding-top:0}

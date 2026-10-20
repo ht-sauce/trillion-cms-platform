@@ -1,0 +1,55 @@
+# 依赖
+node_modules/
+.pnpm-store/
+
+# 构建产物
+dist/
+.output/
+.nuxt/
+.nitro/
+.sites-build/
+
+# 站点构建缓存（build-sites.mjs 归档的渲染服务，geo 根下隐藏目录）
+apps/geo/.*.build/
+
+# 站点 SSG 产物（构建生成，可通过 CDN 分发）
+apps/geo/sites/
+
+# 块代码落盘产物（由 scripts/sync-blocks.mjs 从数据库同步生成，唯一编辑入口是后台块库）
+apps/geo/app/components/blocks/Blk*.vue
+
+# 上传文件（本地存储）
+apps/server/uploads/
+
+# 环境变量（根 env/ 只提交模板与开发/测试默认值，生产与个人覆盖不入库）
+env/.env.production
+
+# 日志
+*.log
+logs/
+
+# 启动器产物（pnpm allDev 写入的入口地址清单，终端刷屏时查看）
+dev-endpoints.txt
+
+# 上线器产物（pnpm release:* 写入的入口与健康检查清单）
+release-endpoints.txt
+
+# PM2 配置（scripts/pm2-config.mjs 按环境生成，含数据库口令与 JWT 密钥，禁止入库或跨机拷贝）
+ecosystem.config.json
+
+# 部署包（pnpm pack:deploy 产出，scripts/pack-deploy.mjs + ADR-042；含产物、依赖与环境密钥，禁止入库）
+deploy/
+
+# 编辑器与系统
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# AI 工具本地产物（计划快照、缓存等，非项目源码）
+.codebuddy/
+.workbuddy/
+
+# 清理留档（站点数据导出，仅供事后追溯，不入库）
+apps/server/_backup*

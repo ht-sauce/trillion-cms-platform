@@ -1,0 +1,116 @@
+# ============================================================
+# 多站点 CMS 平台 一键编排
+# 服务：MySQL / 服务端 / 管理后台 / GEO 项目(SSR) / Nginx(静态站点+反向代理)
+# ============================================================
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cms-mysql
+    restart: unless-stopped
+    command:
+      - --default-time-zone=+08:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: "111"
+      MYSQL_DATABASE: trillionCms
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p111"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.server
+    container_name: cms-server
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      TZ: Asia/Shanghai
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: "111"
+      DB_NAME: trillionCms
+      DATABASE_URL: "mysql://root:111@mysql:3306/trillionCms"
+      JWT_SECRET: trillion-cms-prod-secret-please-change-to-random
+      UPLOAD_DIR: uploads
+      PUBLIC_URL_PREFIX: /static
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3002,http://localhost:8080
+      GEO_PROJECT_DIR: /app/geo
+      SITES_OUTPUT_DIR: /app/sites
+    volumes:
+      - uploads-data:/app/apps/server/uploads
+      - site-artifacts:/app/sites
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/geoserver/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  admin:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        APP: admin
+    container_name: cms-admin
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      TZ: Asia/Shanghai
+      NUXT_PUBLIC_API_BASE: http://cms-server:3001/geoserver
+      PORT: 3000
+    ports:
+      - "3000:3000"
+
+  geo:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        APP: geo
+    container_name: cms-geo
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      TZ: Asia/Shanghai
+      NUXT_PUBLIC_API_BASE: http://cms-server:3001/geoserver
+      PORT: 3002
+    ports:
+      - "3002:3002"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: cms-nginx
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - site-artifacts:/usr/share/nginx/sites:ro
+      - uploads-data:/usr/share/nginx/uploads:ro
+
+volumes:
+  mysql-data:
+  uploads-data:
+  site-artifacts:

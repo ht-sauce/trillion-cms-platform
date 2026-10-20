@@ -1,0 +1,14 @@
+node_modules/
+dist/
+docs/
+env/
+deploy/
+.nuxt/
+.nitro/
+.output/
+apps/geo/sites/
+apps/server/uploads/
+coverage/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
