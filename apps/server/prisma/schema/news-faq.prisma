@@ -1,0 +1,57 @@
+/// 新闻文章表：新闻资讯的管理源（表为管理源，Page 是发布产物）
+/// 管理面 CRUD 直接读写本表，保存后由 news-faq 模块派生 /news 详情页与列表页块并触发发布
+model NewsArticle {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 归属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 文章标题
+  title String @db.VarChar(200)
+  /// 摘要（缺省由正文首段截断；发布时同步到 Page.summary 供 meta description / llms.txt 复用）
+  summary String @default("") @db.VarChar(500)
+  /// 正文纯文本，按 \n 分段（发布时拆为 article-body 段落块）
+  content String @db.Text
+  /// 发布日期（YYYY-MM-DD，不允许早于今天）
+  publishDate String @map("publish_date") @db.VarChar(10)
+  /// URL 片段，创建后不可修改（访问地址 /news/{slug}）
+  slug String @db.VarChar(120)
+  /// 状态：published=已发布 / draft=草稿（保存即发布口径，默认 published）
+  status String @default("published") @db.VarChar(20)
+  /// 发布产物页面 ID（Page 表弱引用，未建外键；页面缺失时编辑会自动补建）
+  pageId String? @map("page_id") @db.VarChar(36)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@index([siteId])
+  @@unique([siteId, slug])
+}
+
+/// 问答条目表：高频问答的管理源（表为管理源，Page 是发布产物）
+/// 管理面 CRUD 直接读写本表，保存后由 news-faq 模块派生 /faq 详情页与列表页块并触发发布
+model FaqItem {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 归属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 问题（渲染为详情页 H1）
+  question String @db.VarChar(200)
+  /// 分类（/faq 列表页按分类分组，related-faq 按同分类派生）
+  category String @db.VarChar(100)
+  /// 答案纯文本，按 \n 分段（发布时拆为 faq-detail 段落）
+  answer String @db.Text
+  /// URL 片段，创建后不可修改（访问地址 /faq/{slug}，自动生成形态为 q{三位序号}）
+  slug String @db.VarChar(120)
+  /// 状态：published=已发布 / draft=草稿（保存即发布口径，默认 published）
+  status String @default("published") @db.VarChar(20)
+  /// 发布产物页面 ID（Page 表弱引用，未建外键；页面缺失时编辑会自动补建）
+  pageId String? @map("page_id") @db.VarChar(36)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@index([siteId, category])
+  @@unique([siteId, slug])
+}

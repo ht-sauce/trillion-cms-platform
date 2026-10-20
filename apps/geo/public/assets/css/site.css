@@ -1,0 +1,311 @@
+/* ============================================================
+   西安新城仁爱皮肤病医院 · 白癜风专科 GEO 官网
+   —— 站点样式：直接继承三病种原型的方案 B 令牌（assets/theme-b.css）
+   —— 本文件只做「单病种站点」所需的增量，不改动 theme-b.css 任何令牌
+   ============================================================ */
+
+/* ---------- 可点击元素统一手型光标 ---------- */
+a, button, summary, [onclick],
+.kitem, .hotq, .post, .srccard, .certcard, .itemcard, .doc, .envgrid figure,
+.qa-link, .faq-cats a, .dev-row, .relqa a, .newslist a, .pn a, .idxlist a {
+  cursor: pointer;
+}
+/* 非跳转的纯展示卡不做手型（避免误导） */
+.tcard, .term, .step, .navcard, .napcard { cursor: default; }
+/* 资质卡默认纯展示（2026-10-14：查看原件已去掉，无核验链接时为 div）；
+   仅当卡片带核验链接（a[href].certcard）时才恢复手型 */
+.certcard:not([href]) { cursor: default; }
+
+/* ---------- 首页 hero 增强 ---------- */
+.hero .orgline{font-size:13px;color:#8FA8C6;letter-spacing:.02em;margin-bottom:14px}
+.hero .orgline b{color:var(--teal);font-weight:700}
+.hero-panel{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:var(--r-lg);padding:24px 26px;backdrop-filter:blur(14px)}
+.hero-panel h3{font-size:13px;font-weight:700;color:#fff;letter-spacing:.05em;margin-bottom:16px;display:flex;align-items:center;gap:9px}
+.hero-panel h3::before{content:"";width:3px;height:13px;background:var(--teal);border-radius:2px}
+.hero-panel .row{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:13px}
+.hero-panel .row:last-child{border-bottom:0}
+.hero-panel .row .k{width:56px;flex-shrink:0;color:#8BA5C1;font-size:12.5px}
+.hero-panel .row .v{color:#fff;font-weight:600;line-height:1.6}
+.hero-panel .row .v big{font-size:17px;color:var(--teal);letter-spacing:.02em}
+.hero-panel .acts{display:flex;gap:10px;margin-top:18px}
+.hero-panel .acts .btn{flex:1}
+
+/* ---------- 数据条（浅/深通用） ---------- */
+.stats .stat .n small{font-size:13px;font-weight:600;color:var(--teal);margin-left:3px}
+
+/* ---------- 三色标签：单病种站点只用一套主色 ---------- */
+.tagline{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tagline span{font-size:12.5px;background:var(--teal-lt);border:1px solid #BFE9E3;color:#0B5A54;padding:4px 12px;border-radius:99px;font-weight:600}
+
+/* ---------- 项目卡（检查/治疗） ---------- */
+.itemcard{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column;transition:.2s}
+.itemcard:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:#C9DBEE}
+.itemcard .hd{padding:18px 22px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#F7FBFB,#fff)}
+.itemcard .hd .cat{font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--teal-dk);font-family:ui-monospace,Menlo,Consolas,monospace}
+.itemcard .hd h4{font-size:16.5px;font-weight:800;margin:8px 0 6px}
+.itemcard .hd .dev{font-size:12.2px;color:var(--ink-3);line-height:1.7;font-family:ui-monospace,Menlo,Consolas,monospace}
+.itemcard .bd{padding:18px 22px;flex:1;display:grid;gap:11px}
+.itemcard .kv{display:flex;gap:10px;font-size:12.9px;line-height:1.75}
+.itemcard .kv .k{width:70px;flex-shrink:0;color:var(--ink-3);font-weight:600}
+.itemcard .kv .v{color:var(--ink-2)}
+.itemcard .ft{padding:14px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;background:#FBFCFE}
+.itemcard .ft .price{font-size:18px;font-weight:800;color:var(--amber);letter-spacing:-.01em}
+.itemcard .ft .price small{font-size:12px;font-weight:600;color:var(--ink-3);margin-left:2px}
+.itemcard .ft a{font-size:13px;font-weight:700;color:var(--teal-dk)}
+
+/* ---------- 流程链（挂号→面诊→检查…） ---------- */
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px}
+.flow i{font-style:normal;background:var(--bg-2);border:1px solid var(--line);padding:4px 11px;border-radius:8px;color:var(--ink-2);white-space:nowrap}
+.flow i b{color:var(--teal-dk);font-weight:700}
+.flow em{font-style:normal;color:#C3D2E4}
+
+/* ---------- 设备行 ---------- */
+.dev-row{display:grid;grid-template-columns:200px 1fr;gap:24px;padding:24px;border:1px solid var(--line);border-radius:var(--r-lg);background:#fff;align-items:start;transition:.2s}
+.dev-row:hover{border-color:#C9DBEE;box-shadow:0 10px 30px rgba(13,27,42,.07)}
+.dev-row .pic{border-radius:var(--r-md);overflow:hidden;border:1px solid var(--line);background:linear-gradient(135deg,#E8F1FC,#E6FBF8);aspect-ratio:4/3;display:grid;place-items:center}
+.dev-row .pic img{width:100%;height:100%;object-fit:cover}
+.dev-row .pic .ph{font-size:11.5px;color:var(--ink-3);text-align:center;padding:12px;line-height:1.7}
+.dev-row h4{font-size:16.5px;font-weight:800;margin-bottom:8px}
+.dev-row .meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.dev-row .meta span{font-size:11.5px;background:var(--bg-2);border:1px solid var(--line);padding:3px 10px;border-radius:99px;color:var(--ink-2);font-family:ui-monospace,Menlo,Consolas,monospace}
+.dev-row p{font-size:13px;color:var(--ink-2);line-height:1.85}
+.dev-row .use{margin-top:12px;padding-top:11px;border-top:1px dashed var(--line);font-size:12.6px;color:var(--ink-3);line-height:1.8}
+.dev-row .use b{color:var(--teal-dk)}
+
+/* ---------- 医师卡（紧凑版，2026-10-14 需求：在院医师卡过大 → 一行两张小卡） ---------- */
+/* 卡片结构：左 76px 方形小照 + 右侧姓名/职称，信息行在下 —— 替代原整卡 4:5 大图 */
+.doc .top{padding:16px 18px 12px;background:none;display:flex;gap:14px;align-items:center}
+.doc .photo{width:76px;height:76px;aspect-ratio:auto;border-radius:16px;overflow:hidden;background:var(--bg-2);position:relative;flex-shrink:0}
+.doc .photo img{width:100%;height:100%;object-fit:cover;object-position:top center}
+.doc .cap .nm{font-size:16.5px;font-weight:800;color:var(--ink)}
+.doc .cap .ti{font-size:12.3px;color:var(--teal-dk);font-weight:600;margin-top:3px}
+.doc .inf{padding:0 18px 18px}
+
+/* ---------- 科普 / 新闻列表 ---------- */
+.klist{display:grid;gap:10px}
+.kitem{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:18px 22px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;transition:.18s}
+.kitem:hover{border-color:var(--teal);box-shadow:0 8px 24px rgba(14,159,142,.09);transform:translateX(3px)}
+.kitem h4{font-size:14.8px;font-weight:700;margin-bottom:6px}
+.kitem p{font-size:12.8px;color:var(--ink-3);line-height:1.75}
+.kitem .ty{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:99px;background:var(--bg-2);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
+
+/* ---------- 术语表 ---------- */
+.terms{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.term{background:#fff;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:var(--r-sm);padding:16px 18px}
+.term b{font-size:14px;font-weight:800;display:block;margin-bottom:6px}
+.term p{font-size:12.7px;color:var(--ink-3);line-height:1.8}
+.term p em{font-style:normal;color:var(--teal-dk)}
+
+/* ---------- FAQ 分类锚点 ---------- */
+.faq-cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.faq-cats a{font-size:12.7px;padding:7px 15px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--ink-2);transition:.16s}
+.faq-cats a:hover{border-color:var(--teal);color:var(--teal-dk)}
+.faq-sec{margin-top:34px}
+.faq-sec h3{font-size:16.5px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:9px;scroll-margin-top:96px}
+.faq-sec h3::before{content:"";width:3px;height:15px;background:var(--teal);border-radius:2px}
+.faq-sec h3 small{font-size:12px;font-weight:600;color:var(--ink-3)}
+
+/* ---------- 电话条 ---------- */
+.telbar{background:linear-gradient(120deg,var(--deep) 0%,var(--deep-3) 100%);border-radius:var(--r-lg);padding:26px 32px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:22px;flex-wrap:wrap;position:relative;overflow:hidden}
+.telbar::after{content:"";position:absolute;right:-50px;top:-70px;width:230px;height:230px;border-radius:50%;background:radial-gradient(circle,rgba(45,212,191,.26),transparent 68%)}
+.telbar h3{font-size:16px;font-weight:800;margin-bottom:7px;position:relative}
+.telbar p{font-size:12.8px;color:#A9C2DC;line-height:1.8;position:relative;max-width:640px}
+/* 预约热线按钮为纯展示（2026-10-14 需求：不跳转、无点击逻辑）：
+   保留按钮外观，但去掉手型光标与悬停变色，避免误导点击。
+   覆盖 telbar 页底横幅与 hero（含右栏 hero-panel）中 tel:/mailto: 渲染出的 span 按钮 */
+.telbar .btn{position:relative}
+.telbar .btn, .hero-actions span.btn, .hero-panel .acts span.btn { cursor: default; }
+.telbar .btn-teal:hover, .hero-actions span.btn.btn-teal:hover, .hero-panel .acts span.btn.btn-teal:hover { background: var(--teal); }
+.telbar .btn-line:hover, .hero-actions span.btn.btn-line:hover, .hero-panel .acts span.btn.btn-line:hover { background: none; }
+
+/* ---------- 图片网格（实景） ---------- */
+.envgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.envgrid figure{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;transition:.2s}
+.envgrid figure:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:#C9DBEE}
+.envgrid .im{aspect-ratio:4/3;overflow:hidden;background:var(--bg-2)}
+.envgrid .im img{width:100%;height:100%;object-fit:cover}
+.envgrid figcaption{padding:13px 16px;font-size:13px;font-weight:700}
+.envgrid figcaption small{display:block;font-weight:400;font-size:11.8px;color:var(--ink-3);margin-top:4px;line-height:1.7}
+
+/* ---------- 资质卡 ---------- */
+.certgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.certcard{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:14px 14px 16px;display:flex;flex-direction:column;gap:8px;transition:.2s}
+.certcard:hover{border-color:var(--teal);box-shadow:0 10px 26px rgba(14,159,142,.10);transform:translateY(-3px)}
+.certcard .cv{display:block;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:linear-gradient(135deg,#EEF4FB,#E9F8F6);aspect-ratio:4/3;position:relative}
+.certcard .cv img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.certcard .cv.pdf{display:grid;place-items:center;text-align:center}
+.certcard .cv.pdf b{font-size:22px;font-weight:800;color:var(--ink-3);letter-spacing:.06em}
+.certcard .cv.pdf small{display:block;font-size:11.5px;color:var(--ink-3);margin-top:4px}
+.certcard .lb{font-size:11px;font-weight:800;letter-spacing:.08em;color:var(--teal-dk)}
+.certcard b{font-size:14px;font-weight:800;line-height:1.5}
+.certcard .no{font-size:12.1px;color:var(--ink-2);font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;line-height:1.7}
+.certcard .st{margin-top:auto;padding-top:10px;border-top:1px dashed var(--line);font-size:11.8px;color:var(--ink-3)}
+
+/* ---------- 消歧条（单病种版，用于说明「一个主体」） ---------- */
+.entity-bar{background:var(--deep);color:#C3D8EC;border-radius:var(--r-md);padding:15px 22px;font-size:13px;line-height:1.85;display:flex;gap:12px;align-items:flex-start}
+.entity-bar b{color:var(--teal);flex-shrink:0}
+.entity-bar code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:4px;font-size:12px}
+
+/* ---------- 声明条 ---------- */
+.cmpl{background:#F7FAFD;border:1px solid var(--line);border-radius:var(--r-md);padding:16px 20px;font-size:12.4px;color:var(--ink-3);line-height:1.85}
+.cmpl b{color:var(--ink-2)}
+
+/* ============================================================
+   以下为 15 高频问答 / 20 新闻资讯 / 18 管理 / 21 就诊指南 / 22 官方信源
+   ============================================================ */
+
+/* ---------- 热门问答速览 ---------- */
+.hotlist{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.hotq{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:16px 20px;display:block;transition:.18s}
+.hotq:hover{border-color:var(--teal);box-shadow:0 8px 24px rgba(14,159,142,.09);transform:translateY(-2px)}
+.hotq b{font-size:14.2px;font-weight:800;display:block;margin-bottom:6px;line-height:1.6}
+.hotq span{font-size:12.6px;color:var(--ink-3);line-height:1.78;display:block}
+
+/* ---------- FAQ 锚点条徽标 ---------- */
+.faq-cats a em{font-style:normal;margin-left:6px;font-size:11px;font-weight:800;color:var(--teal-dk);font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* ---------- FAQ 折叠条目 ---------- */
+.qa{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);margin-bottom:9px;overflow:hidden;transition:.18s}
+.qa:hover{border-color:#BFE4DE;box-shadow:0 8px 26px rgba(14,159,142,.09);transform:translateX(3px)}
+.qa-link{padding:15px 20px;display:flex;align-items:flex-start;gap:13px;font-weight:700;color:var(--ink);text-decoration:none;transition:.16s}
+.qa-link:hover{color:var(--teal-dk)}
+.qa .qidx{font-size:11.5px;font-weight:800;color:#fff;background:var(--deep-3);border-radius:6px;padding:3px 7px;flex-shrink:0;margin-top:2px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.qa:hover .qidx{background:var(--teal-dk)}
+.qa .qt{font-size:14.3px;line-height:1.65;flex:1}
+.qa .arw{width:9px;height:9px;border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);transform:rotate(-45deg);flex-shrink:0;margin-top:6px;transition:.2s}
+.qa:hover .arw{border-color:var(--teal-dk);transform:rotate(-45deg) translateX(2px)}
+.qa .ans{padding:0 20px 17px;font-size:13.1px;color:var(--ink-2);line-height:1.95;border-top:1px dashed var(--line);margin:0 20px;padding-top:14px;padding-left:0;padding-right:0}
+
+/* ---------- 新闻列表 ---------- */
+.posts{display:grid;gap:12px;margin-top:20px}
+.post{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:18px 22px;display:grid;grid-template-columns:104px 1fr;gap:20px;transition:.18s}
+.post:hover{border-color:var(--teal);box-shadow:0 8px 24px rgba(14,159,142,.09);transform:translateX(3px)}
+.post .pd{font-size:12.4px;font-weight:800;color:var(--teal-dk);font-family:ui-monospace,Menlo,Consolas,monospace;padding-top:2px}
+.post .ptag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--teal-lt);border:1px solid #BFE9E3;color:#0B5A54;margin-bottom:8px}
+.post h4{font-size:14.8px;font-weight:800;margin-bottom:7px;line-height:1.55}
+.post p{font-size:12.8px;color:var(--ink-3);line-height:1.8}
+.post.lead-post{grid-template-columns:120px 1fr;padding:24px 26px;background:linear-gradient(135deg,#F7FBFB,#fff);border-color:#CBE5E1}
+.post.lead-post h3{font-size:18px;font-weight:800;margin-bottom:9px;line-height:1.5}
+.post.lead-post p{font-size:13.2px;color:var(--ink-2);line-height:1.9}
+
+/* ---------- 管理闭环（18 愈后抗复发管理） ---------- */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.step{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 20px;position:relative}
+.step .sn{font-size:11.5px;font-weight:800;letter-spacing:.1em;color:var(--teal-dk);font-family:ui-monospace,Menlo,Consolas,monospace}
+.step b{display:block;font-size:15.5px;font-weight:800;margin:9px 0 8px}
+.step p{font-size:12.7px;color:var(--ink-3);line-height:1.82}
+.step::after{content:"";position:absolute;right:-9px;top:42px;width:14px;height:2px;background:var(--line)}
+.step:last-child::after{display:none}
+
+/* ---------- 时间轴（抗复发周期） ---------- */
+.tl{position:relative;padding-left:26px;margin-top:10px}
+.tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:linear-gradient(var(--teal),var(--line))}
+.tl .ti{position:relative;padding:0 0 22px}
+.tl .ti::before{content:"";position:absolute;left:-25px;top:5px;width:11px;height:11px;border-radius:50%;background:#fff;border:3px solid var(--teal)}
+.tl .ti b{display:block;font-size:14.6px;font-weight:800;margin-bottom:6px}
+.tl .ti p{font-size:12.9px;color:var(--ink-3);line-height:1.85}
+
+/* ---------- 就诊指南：NAP 卡 ---------- */
+.napgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.napcard{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:22px}
+.napcard .lb{font-size:11px;font-weight:800;letter-spacing:.09em;color:var(--teal-dk);margin-bottom:9px}
+.napcard b{font-size:16px;font-weight:800;display:block;line-height:1.55}
+.napcard p{font-size:12.8px;color:var(--ink-3);line-height:1.85;margin-top:8px}
+.napcard a{color:var(--teal-dk);font-weight:700}
+
+/* ---------- 就诊指南：路线 ---------- */
+.rt{display:grid;gap:12px}
+.rt .rrow{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:18px 22px}
+.rt .rrow .rh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.rt .rrow .rh .ric{width:24px;height:24px;border-radius:7px;background:var(--teal-lt);border:1px solid #BFE9E3;display:grid;place-items:center;font-size:12px;font-weight:800;color:#0B5A54;flex-shrink:0}
+.rt .rrow .rh b{font-size:15px;font-weight:800}
+.rt .rrow p{font-size:13px;color:var(--ink-2);line-height:1.95}
+.rt .rrow p+p{margin-top:6px}
+.rt .rrow code{background:var(--bg-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:12.2px;color:var(--teal-dk)}
+
+/* ---------- 停车场表 ---------- */
+.pk{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;font-size:13px}
+.pk th,.pk td{padding:12px 16px;text-align:left;border-bottom:1px solid var(--line)}
+.pk th{background:var(--bg-2);font-size:12px;font-weight:800;color:var(--ink-2);letter-spacing:.03em}
+.pk tr:last-child td{border-bottom:0}
+.pk td b{font-weight:700;color:var(--ink)}
+.pk td .mut{color:var(--ink-3);font-size:12.4px}
+
+/* ---------- 官方信源（22） ---------- */
+.srcgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.srccard{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:17px 20px;display:flex;gap:14px;align-items:flex-start;transition:.18s}
+.srccard:hover{border-color:var(--teal);box-shadow:0 8px 24px rgba(14,159,142,.09)}
+.srccard .si{width:34px;height:34px;border-radius:9px;background:var(--bg-2);border:1px solid var(--line);display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--teal-dk);flex-shrink:0;font-family:ui-monospace,Menlo,Consolas,monospace}
+.srccard b{font-size:14.2px;font-weight:800;display:block;margin-bottom:5px;line-height:1.55}
+.srccard p{font-size:12.5px;color:var(--ink-3);line-height:1.8}
+.srccard code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--teal-dk);font-size:12.2px}
+.srccard .st{display:inline-block;margin-top:7px;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--teal-lt);border:1px solid #BFE9E3;color:#0B5A54}
+.srccard .st.off{background:var(--bg-2);border-color:var(--line);color:var(--ink-3)}
+
+/* ---------- 详情页（新闻 / FAQ）：正文与元信息 ---------- */
+.artmeta{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:20px}
+.artmeta time{font-size:12.6px;color:var(--ink-3);font-family:ui-monospace,Menlo,Consolas,monospace}
+.artbody{font-size:14.6px;line-height:2.05;color:var(--ink-2)}
+.artbody p{margin-bottom:16px}
+.artbody p:last-child{margin-bottom:0}
+.artbody b,.artbody strong{color:var(--ink);font-weight:800}
+
+/* ---------- 上一条 / 下一条 ---------- */
+.pn{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
+.pn a{background:#fff;border:1px solid var(--line);border-radius:var(--r-md);padding:14px 18px;transition:.18s;display:block}
+.pn a:hover{border-color:var(--teal);box-shadow:0 8px 24px rgba(14,159,142,.09)}
+.pn a span{display:block;font-size:11.5px;font-weight:800;letter-spacing:.08em;color:var(--teal-dk);margin-bottom:6px}
+.pn a b{font-size:13.4px;font-weight:700;line-height:1.6;display:block}
+.pn .pn-next{text-align:right}
+.pn .pn-next:only-child{grid-column:2}
+
+/* ---------- 侧栏资讯列表 ---------- */
+.newslist{display:grid;gap:2px}
+.newslist a{display:block;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.2px;line-height:1.7;color:var(--ink-2);transition:.16s}
+.newslist a:last-child{border-bottom:0}
+.newslist a:hover{color:var(--teal-dk)}
+.newslist a span{display:block;font-size:11.5px;color:var(--ink-3);font-family:ui-monospace,Menlo,Consolas,monospace;margin-bottom:3px}
+
+/* ---------- FAQ 详情页 ---------- */
+.qa-head{background:linear-gradient(135deg,#F7FBFB,#fff);border:1px solid #CBE5E1;border-radius:var(--r-lg);padding:24px 28px;margin-bottom:20px}
+.qa-head .cat{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 12px;border-radius:99px;background:var(--teal-lt);border:1px solid #BFE9E3;color:#0B5A54;margin-bottom:12px}
+.qa-head h2{font-size:19px;font-weight:800;line-height:1.55}
+.qa-body{background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);padding:24px 28px;font-size:14.6px;line-height:2.05;color:var(--ink-2)}
+.qa-body p{margin-bottom:16px}
+.qa-body p:last-child{margin-bottom:0}
+
+/* ---------- 相关问答 ---------- */
+.relqa{display:grid;gap:8px}
+.relqa a{display:block;padding:12px 16px;background:#fff;border:1px solid var(--line);border-radius:var(--r-md);font-size:13.2px;line-height:1.7;color:var(--ink-2);transition:.16s}
+.relqa a:hover{border-color:var(--teal);color:var(--teal-dk);box-shadow:0 6px 18px rgba(14,159,142,.08)}
+
+/* ---------- 全量索引（FAQ 目录页） ---------- */
+.idxsec{margin-bottom:26px}
+.idxsec h3{font-size:15.5px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:9px}
+.idxsec h3::before{content:"";width:3px;height:15px;background:var(--teal);border-radius:2px}
+.idxsec h3 small{font-size:12px;font-weight:600;color:var(--ink-3);margin-left:auto}
+.idxlist{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.idxlist a{display:flex;gap:10px;align-items:baseline;padding:11px 15px;background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);font-size:13.1px;line-height:1.7;color:var(--ink-2);transition:.16s}
+.idxlist a:hover{border-color:var(--teal);color:var(--teal-dk)}
+.idxlist a i{font-style:normal;font-size:11.5px;font-weight:800;color:var(--teal-dk);font-family:ui-monospace,Menlo,Consolas,monospace;flex-shrink:0}
+
+/* ---------- 锚点区滚动偏移 ---------- */
+.faq-sec,.anchor-zone{scroll-margin-top:92px}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:1000px){
+  .terms,.certgrid,.envgrid{grid-template-columns:repeat(2,1fr)}
+  .dev-row{grid-template-columns:1fr;gap:16px}
+  .hero-in{grid-template-columns:1fr}
+  .hotlist,.srcgrid{grid-template-columns:1fr}
+  .steps{grid-template-columns:repeat(2,1fr)}
+  .step::after{display:none}
+  .napgrid{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .terms,.certgrid,.envgrid{grid-template-columns:1fr}
+  .kitem{grid-template-columns:1fr;gap:10px}
+  .steps{grid-template-columns:1fr}
+  .post,.post.lead-post{grid-template-columns:1fr;gap:8px}
+  .qa .qt{font-size:13.4px}
+}

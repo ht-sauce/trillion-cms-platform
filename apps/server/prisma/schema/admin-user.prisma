@@ -1,0 +1,27 @@
+/// 管理后台用户表：用户通过 roleId 绑定角色（用户 → 角色 → 菜单），站点范围由 siteIds 控制
+model AdminUser {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 登录账号
+  username String @unique @db.VarChar(32)
+  /// bcrypt 加密后的密码
+  password String @db.VarChar(128)
+  /// 展示名称
+  displayName String? @map("display_name") @db.VarChar(32)
+  /// 绑定的角色 ID（决定可执行的操作与侧栏可见菜单）
+  roleId String @map("role_id") @db.VarChar(36)
+  /// 授权站点 ID 列表 JSON，如 ["<siteId>","<siteId>"]；平台级角色该字段为空表示全站点
+  siteIds Json @default("[]") @map("site_ids")
+  /// 是否启用
+  enabled Boolean @default(true)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 绑定的角色
+  role Role @relation(fields: [roleId], references: [id])
+
+  /// 按角色筛选用户
+  @@index([roleId])
+}

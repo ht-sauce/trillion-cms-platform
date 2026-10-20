@@ -1,0 +1,35 @@
+# ============================================================
+# 服务端镜像（NestJS + Prisma）
+# 构建上下文为仓库根目录，因此使用多阶段拷贝 workspace 依赖
+# ============================================================
+FROM node:22-alpine AS base
+RUN apk add --no-cache openssl libc6-compat
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY apps/server/package.json ./apps/server/
+COPY packages/shared/package.json ./packages/shared/
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install --filter @trillion/server... --frozen-lockfile || pnpm install --filter @trillion/server
+
+FROM base AS build
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/server/node_modules ./apps/server/node_modules
+COPY . .
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm --filter @trillion/server prisma:generate
+RUN pnpm --filter @trillion/server build
+
+FROM base AS runtime
+ENV NODE_ENV=production
+COPY --from=build /app/apps/server/dist ./apps/server/dist
+COPY --from=build /app/apps/server/node_modules ./apps/server/node_modules
+COPY --from=build /app/apps/server/package.json ./apps/server/package.json
+COPY --from=build /app/apps/server/prisma ./apps/server/prisma
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+WORKDIR /app/apps/server
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s \
+  CMD node -e "fetch('http://127.0.0.1:3001/geoserver/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+CMD ["node", "dist/main"]

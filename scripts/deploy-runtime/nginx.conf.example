@@ -1,0 +1,50 @@
+# nginx 参考配置 · 单域名同源（部署包形态）
+#
+# 用法：复制到 /etc/nginx/sites-available/trillion.conf，改 server_name 与三处路径后：
+#   ln -s /etc/nginx/sites-available/trillion.conf /etc/nginx/sites-enabled/
+#   nginx -t && systemctl reload nginx
+#
+# 路径约定：部署包解压在 /srv/app/deploy（按实际路径修改下方 root / alias 两类路径）。
+# 多站点：apps/geo/sites/ 下每个 <slug> 子目录对应一个站点，各配一个 server 块
+#（复制本文件整段、改 server_name 与 location / 的 root 即可）。
+
+server {
+    listen 80;
+    server_name www.example.com;
+
+    # 管理后台：Nuxt app.baseURL=/geocms/，前缀原样透传
+    location /geocms/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 服务端 API：全局前缀 /geoserver，前缀原样透传；client_max_body_size 放开素材上传
+    location /geoserver/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 20m;
+    }
+
+    # 上传资源直出（PUBLIC_URL_PREFIX=/static；物理目录 apps/server/uploads）
+    location /static/ {
+        alias /srv/app/deploy/apps/server/uploads/;
+        expires 7d;
+    }
+
+    # 站点 SSG 产物（每个站点一个子目录；内容发布后由服务端自动增量重建，无需重启）
+    location / {
+        root /srv/app/deploy/apps/geo/sites/xian-renai-skin;
+        index index.html;
+        try_files $uri $uri/ $uri.html =404;
+    }
+}
+
+# HTTPS：certbot --nginx 签发后同 server 块补 443 段。
+# 启用 HTTPS 后必须编辑 env/.env.production，把 API_BASE 显式设为 https://<域名>/geoserver，
+# 然后 node start.mjs restart（env 变更随重启生效）。

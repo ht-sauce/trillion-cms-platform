@@ -1,0 +1,36 @@
+/// 静态文件表：URL 与物理存储解耦
+/// 表内记录 public_url 供业务直接引用；未来切换对象存储只需改 URL 生成规则 + 迁移脚本，业务表零改动
+model StaticFile {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 归属站点 ID（可空，表示平台级公共文件）
+  siteId String? @map("site_id") @db.VarChar(36)
+  /// 用户上传时的原始文件名（仅管理后台展示）
+  originalName String @map("original_name") @db.VarChar(255)
+  /// 物理存储相对路径，格式 uploads/2026/10/{uuid}.webp
+  storagePath String @map("storage_path") @db.VarChar(255)
+  /// 对外访问 URL，格式 /static/2026/10/{uuid}.webp
+  publicUrl String @map("public_url") @db.VarChar(255)
+  /// MIME 类型，如 image/webp
+  mimeType String @map("mime_type") @db.VarChar(64)
+  /// 文件字节数
+  sizeBytes Int @map("size_bytes")
+  /// 图片宽度（非图片为 null）
+  width Int?
+  /// 图片高度（非图片为 null）
+  height Int?
+  /// 上传人 admin_user.id
+  uploadedBy String? @map("uploaded_by") @db.VarChar(36)
+  /// 图片说明（图集块要求「每张图必须有文字」）
+  caption String? @db.VarChar(255)
+  /// 拍摄区域 / 楼层（图集块可追溯要求）
+  location String? @db.VarChar(128)
+  /// 拍摄日期（YYYY-MM-DD；日期型值用字符串存储，规避时区漂移）
+  takenAt String? @map("taken_at") @db.VarChar(10)
+  /// 图片编号（图集块可追溯要求）
+  imageNo String? @map("image_no") @db.VarChar(64)
+  /// 上传时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([siteId])
+}

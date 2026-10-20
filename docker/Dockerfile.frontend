@@ -1,0 +1,35 @@
+# ============================================================
+# 前端镜像（APP=admin 管理后台 SPA 或 APP=geo GEO项目 SSR 模式）
+# 用法：docker build --build-arg APP=admin -f docker/Dockerfile.frontend .
+# ============================================================
+ARG APP=admin
+
+FROM node:22-alpine AS base
+WORKDIR /app
+
+FROM base AS deps
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY apps/admin/package.json ./apps/admin/
+COPY apps/geo/package.json ./apps/geo/
+COPY packages/shared/package.json ./packages/shared/
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install || true
+
+FROM base AS build
+ARG APP
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm install || true
+RUN pnpm --filter @trillion/${APP} build
+
+FROM base AS runtime
+ARG APP
+ENV NODE_ENV=production
+ENV PORT=3000
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps/${APP}/.output ./apps/${APP}/.output
+COPY --from=build /app/apps/${APP}/package.json ./apps/${APP}/package.json
+WORKDIR /app/apps/${APP}
+EXPOSE 3000
+CMD ["node", ".output/server/index.mjs"]

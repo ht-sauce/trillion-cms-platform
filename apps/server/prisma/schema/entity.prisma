@@ -1,0 +1,20 @@
+/// 实体表：集团品牌 / 产品 / 别名的统一管理，保证全站引用口径一致
+/// GEO 作用：避免“品牌名多种写法”导致的实体识别分散，是 AI 引擎正确理解企业的关键
+model Entity {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 归属站点 ID（null 表示集团级公共实体）
+  siteId String? @map("site_id") @db.VarChar(36)
+  /// 规范名称（对外统一使用）
+  name String @db.VarChar(128)
+  /// 别名 JSON 列表，如 ["腾讯云","腾讯云计算"]
+  aliases Json @default("[]")
+  /// 实体类型：brand=品牌 / product=产品 / org=机构
+  type String @default("brand") @db.VarChar(16)
+  /// 实体描述，用于 llms.txt 与结构化数据
+  description String? @db.VarChar(512)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([siteId])
+}

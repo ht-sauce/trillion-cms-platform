@@ -1,0 +1,36 @@
+{
+  "name": "@trillion/admin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "管理后台：Nuxt 4 + Element Plus（深空控制台暗色主题）",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "start": "node .output/server/index.mjs",
+    "start:prod": "node .output/server/index.mjs",
+    "preview": "nuxt preview",
+    "prepare": "nuxt prepare",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@pinia/nuxt": "^1.0.2",
+    "@trillion/shared": "workspace:*",
+    "@wangeditor/editor": "^5.1.23",
+    "@wangeditor/editor-for-vue": "^5.1.12",
+    "element-plus": "^2.13.0",
+    "pinia": "^3.0.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.9.0",
+    "@nuxt/eslint-config": "^1.17.0",
+    "@types/node": "^24.19.1",
+    "eslint": "^9.0.0",
+    "nuxt": "^4.5.2",
+    "sass": "^1.80.0",
+    "typescript": "^5.6.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.5.0"
+  }
+}

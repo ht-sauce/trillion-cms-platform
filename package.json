@@ -1,0 +1,53 @@
+{
+  "name": "trillion-cms-platform",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@>=9.0.0",
+  "description": "多站点 CMS 平台：apps/admin 管理后台 + apps/geo GEO 项目 + apps/server 服务端",
+  "packageManagerStrict": false,
+  "scripts": {
+    "allDev": "node scripts/dev.mjs",
+    "npm:allDev": "node scripts/dev.mjs",
+    "allDev:test": "node scripts/dev.mjs --env test",
+    "allDev:prod": "node scripts/dev.mjs --env production",
+    "dev:admin": "node scripts/dev.mjs admin",
+    "dev:geo": "node scripts/dev.mjs geo",
+    "dev:server": "node scripts/dev.mjs server",
+    "release": "node scripts/release.mjs",
+    "release:test": "node scripts/release.mjs --env test",
+    "release:prod": "node scripts/release.mjs --env production",
+    "pm2:config": "node scripts/pm2-config.mjs",
+    "release:pm2:prod": "node scripts/release.mjs --env production --build-only && node scripts/pm2-config.mjs --env production && pm2 startOrReload ecosystem.config.json --update-env && pm2 save",
+    "release:pm2:test": "node scripts/release.mjs --env test --build-only && node scripts/pm2-config.mjs --env test && pm2 startOrReload ecosystem.config.json --update-env && pm2 save",
+    "pack:deploy": "node scripts/pack-deploy.mjs",
+    "build:shared": "pnpm --filter @trillion/shared build",
+    "build:admin": "node scripts/exec.mjs admin build",
+    "build:geo": "node scripts/exec.mjs geo build",
+    "build:sites": "node scripts/exec.mjs geo build:sites",
+    "build:site": "node scripts/exec.mjs geo build:site",
+    "build:server": "pnpm build:shared && node scripts/exec.mjs server build",
+    "lint": "pnpm -r --if-present lint",
+    "format": "prettier --write \"**/*.{ts,vue,scss,json,md,mjs}\"",
+    "db:migrate": "node scripts/exec.mjs server prisma:migrate",
+    "db:deploy": "node scripts/db-release.mjs",
+    "db:deploy:test": "node scripts/db-release.mjs --env test",
+    "db:deploy:prod": "node scripts/db-release.mjs --env production",
+    "db:status": "node scripts/db-release.mjs --check",
+    "db:status:test": "node scripts/db-release.mjs --env test --check",
+    "db:status:prod": "node scripts/db-release.mjs --env production --check",
+    "db:generate": "node scripts/exec.mjs server prisma:generate",
+    "db:push": "node scripts/exec.mjs server prisma:push",
+    "db:seed": "node scripts/exec.mjs server prisma:seed",
+    "db:backfill": "node scripts/exec.mjs server prisma:backfill",
+    "db:studio": "node scripts/exec.mjs server prisma:studio",
+    "site:merge": "node scripts/merge-site-data.mjs",
+    "site:check": "node scripts/check-site-data.mjs",
+    "site:bootstrap": "node scripts/bootstrap-site.mjs"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

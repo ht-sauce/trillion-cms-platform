@@ -1,0 +1,41 @@
+/// 埋点事件表：GEO 项目通过 sendBeacon 上报的路由访问记录（PV/UV 数据源）
+model TrackEvent {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 路由路径
+  path String @db.VarChar(255)
+  /// 来源页 URL
+  referrer String @db.VarChar(255)
+  /// 匿名访客 ID（本地随机生成，不含个人信息）；UV 依据该字段去重
+  anonId String @map("anon_id") @db.VarChar(64)
+  /// 客户端 UA
+  userAgent String @map("user_agent") @db.VarChar(512)
+  /// 事件发生时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([siteId, path])
+  @@index([createdAt])
+}
+
+/// AI 爬虫抓取事件表：GEO 数据面，记录大模型爬虫访问情况（后期用于引用效果分析）
+model AiCrawlEvent {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 爬虫类型标识，如 GPTBot / ClaudeBot / PerplexityBot
+  botType String @map("bot_type") @db.VarChar(64)
+  /// 被抓取路径
+  path String @db.VarChar(255)
+  /// HTTP 状态码
+  status Int @default(200)
+  /// 响应字节数
+  bytes Int @default(0)
+  /// 抓取时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  @@index([siteId, botType])
+  @@index([createdAt])
+}
