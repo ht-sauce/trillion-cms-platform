@@ -7,7 +7,7 @@
  *   3) Page.contentHash / publishedHash 计算填充（徽标判定基础）
  *   4) **块副本**：把各站点页面引用到的公共块复制成本站自有块（09 §4.5 块隔离）
  *
- * 执行：pnpm db:backfill（= node scripts/exec.mjs server prisma:backfill）
+ * 执行：pnpm db backfill（= node scripts/exec.mjs server prisma:backfill）
  * 说明：schema 本身不经 prisma migrate（Windows 下 lower_case_table_names=1 会让外键漂移误报），
  *      改 schema 走 prisma db push --accept-data-loss；本脚本只负责数据侧升级。
  */

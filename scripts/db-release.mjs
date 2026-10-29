@@ -2,18 +2,17 @@
 /**
  * 数据库上线器：把数据库结构（Prisma 迁移）**增量发布**到测试 / 生产库
  *
- * 为什么独立成一个命令（而不是并进 `pnpm release:*`）：
+ * 为什么独立成一个命令（而不是并进 `pnpm release`）：
  * 结构变更与代码发布是两件事——执行时机可能不同（先加字段再上代码，或先上代码再回填）、
  * 影响面不同（迁移不可回滚、可能锁表）、审计点不同（谁在何时改了哪个库）。
  * 因此：**代码上线器（`scripts/release.mjs`）绝不执行迁移**，结构变更一律由本命令显式执行；
  * 代码上线器的体检只做只读检查，发现结构落后会拦下并提示执行本命令。
  *
- * 用法：
- *   pnpm db:status                  # 只读：看目标库结构与「已应用 / 未应用」迁移（等价 --check）
- *   pnpm db:deploy                  # development 库：增量应用未执行的迁移
- *   pnpm db:deploy:test             # 测试库（env/.env.test）
- *   pnpm db:deploy:prod             # 生产库（env/.env.production）
- *   pnpm db:deploy --env production # 等价写法（--env 亦可放在命令前）
+ * 用法（根命令 `pnpm db` 会分发到这里，日常不必直接跑本文件）：
+ *   pnpm db status                  # 只读：看目标库结构与「已应用 / 未应用」迁移（等价 --check）
+ *   pnpm db deploy                  # development 库：增量应用未执行的迁移
+ *   pnpm db deploy --env test       # 测试库（env/.env.test）
+ *   pnpm db deploy --env production # 生产库（env/.env.production）
  *
  * 选项：
  *   --check          只体检（配置 + 连通 + 待应用迁移清单），不执行任何变更
@@ -28,9 +27,9 @@
  *   4) 复核：再次 `migrate status` 确认结构已最新
  *
  * 说明：
- * - 上线顺序：含结构变更时先跑本命令、再跑 `pnpm release:<环境>`（代码上线器的体检会强制这个顺序，`--force` 可跳过）
+ * - 上线顺序：含结构变更时先跑本命令、再跑 `pnpm release --env <环境>`（代码上线器的体检会强制这个顺序，`--force` 可跳过）
  * - 本命令**只做增量应用**，永远不会 reset / push 覆盖；迁移 SQL 由开发侧手工写入 `prisma/schema/migrations/`（见 docs/spec/04 §6）
- * - 首次部署：`pnpm db:deploy:prod`（建库 + 全部迁移）→ `node scripts/exec.mjs server prisma:seed --env production`（按需种子）
+ * - 首次部署：`pnpm db deploy --env production`（建库 + 全部迁移）→ `pnpm db seed --env production`（按需种子）
  */
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -54,7 +53,7 @@ const usage = [
   '',
   '只做增量应用（prisma migrate deploy），不会 reset / push；空库会自动建库。',
   '',
-  '例：pnpm db:status / pnpm db:deploy / pnpm db:deploy:test / pnpm db:deploy:prod'
+  '例：pnpm db status / pnpm db deploy / pnpm db deploy --env production'
 ].join('\n')
 
 /** 解析命令行：`--env <name>` / `--env=<name>` / 布尔选项（无位置参数） */
@@ -236,8 +235,8 @@ async function main() {
 
   if (checkOnly) {
     const notes = {
-      pending: '有未应用迁移：执行 pnpm db:deploy 后即可（本命令不自动执行）',
-      missing: '目标库不存在：执行 pnpm db:deploy 会自动建库并应用全部迁移',
+      pending: '有未应用迁移：执行 pnpm db deploy 后即可（本命令不自动执行）',
+      missing: '目标库不存在：执行 pnpm db deploy 会自动建库并应用全部迁移',
       current: '结构已最新'
     }
     console.log(`\n[${TAG}] 检查完成——${notes[status.verdict]}`)
@@ -256,7 +255,7 @@ async function main() {
     ...buildAppEnv(config, DB_APP)
   })
   if (code !== 0) {
-    console.error(`\n[${TAG}] ✗ 迁移失败（退出码 ${code}）；库可能停在中间状态，请先 pnpm db:status 查看现状再重跑`)
+    console.error(`\n[${TAG}] ✗ 迁移失败（退出码 ${code}）；库可能停在中间状态，请先 pnpm db status 查看现状再重跑`)
     process.exit(code)
   }
   console.log(`[${TAG}] ✓ 迁移完成（${((Date.now() - started) / 1000).toFixed(1)}s）`)
@@ -264,7 +263,7 @@ async function main() {
   /** 4) 复核：确认结构已最新 */
   const verified = await inspectMigrations(config)
   if (verified.verdict !== 'current') {
-    console.warn(`\n[${TAG}] 警告：复核结果不为「已最新」，请执行 pnpm db:status 确认`)
+    console.warn(`\n[${TAG}] 警告：复核结果不为「已最新」，请执行 pnpm db status 确认`)
     process.exit(1)
   }
   console.log(

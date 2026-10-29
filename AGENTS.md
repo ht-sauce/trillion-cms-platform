@@ -51,7 +51,8 @@
 - **前端端口写法**：Nuxt 从注入的 `PORT` 读开发端口（`nuxt.config` 的 `devServer.port`）；**不要用 `--port` 传参**，经 pnpm 转发会被 Nuxt 当成 rootDir
 - **服务端**：配置化内容统一放 `src/config/`（含 zod 启动校验，值的来源是 `env/` + `config/`）；Prisma 模型放 `prisma/schema/` 多文件模块化；**每个 model 与字段必须用 `///` 打中文注释**
 - **GEO 项目**：页面 = 模板 + 结构化 Block；SSG 构建脚本 `scripts/build-sites.mjs`
-- **根 scripts/**：`dev.mjs`（开发启动器：先释放端口再并发启动，各工程就绪后打印访问入口清单）、`release.mjs`（**代码**上线器：体检 → 构建 → 生产模式启动，**不碰数据库**）、`db-release.mjs`（**数据库**上线器：体检 → `migrate deploy` → 复核，唯一改结构入口）、`pm2-config.mjs`（PM2 配置生成器）、`pack-deploy.mjs` + `deploy-runtime/`（**部署包**打包器与运行时模板，产出仓库根 `deploy/`）、`port-guard.mjs`（端口查询/结束/释放，启动器共用）、`exec.mjs`（以全局配置执行包脚本）、`pnpm.mjs`（pnpm 调用封装）；零第三方依赖
+- **根 scripts/**：`dev.mjs`（开发启动器：先释放端口再并发启动，各工程就绪后打印访问入口清单）、`build.mjs`（构建器：shared 先行，按目标构建）、`db.mjs`（数据库命令分发：`status`/`deploy`/`migrate`/`seed`…）、`site.mjs`（站点命令分发：`build`/`bootstrap`/`check`/`merge`/`assets`/`verify`）、`release.mjs`（**代码**上线器：体检 → 构建 → 生产模式启动 / `--pm2`，**不碰数据库**）、`db-release.mjs`（**数据库**上线器：体检 → `migrate deploy` → 复核，唯一改结构入口）、`pm2-config.mjs`（PM2 配置生成器）、`pack-deploy.mjs` + `deploy-runtime/`（**部署包**打包器与运行时模板，产出仓库根 `deploy/`）、`port-guard.mjs`（端口查询/结束/释放，启动器共用）、`exec.mjs`（以全局配置执行包脚本）、`cli.mjs`（三个分发脚本共用的参数与环境注入）、`pnpm.mjs`（pnpm 调用封装）；零第三方依赖
+- **根命令只有 8 条（强制，ADR-044）**：`dev` / `build` / `db` / `site` / `release` / `bundle` / `lint` / `format`。应用、环境、动作**一律走参数**（`pnpm dev admin --env test`、`pnpm db deploy --env production`、`pnpm site build --site <slug>`）；**禁止再新增 `xxx:yyy` 后缀别名**（历史上 37 条脚本里 29 条是「同一动作 × 环境 / 应用」的笛卡尔积，就是这么长出来的）。新增能力优先挂到已有命令的子命令或参数上；确需新根命令时先改 `docs/spec/07-deployment.md` §3.5 并补 ADR
 - **无每目录 README.md**：目录与文件说明统一维护在 `docs/PROJECT_STRUCTURE.md` 一个全局文件
 - **架构规格统一维护在 `docs/spec/`**（编号体系：`INDEX` + `00`~`09`）。新增/修改组件、数据表、接口、发布流程、部署形态、**站点编辑器与块代码化**前，先改对应编号文档，再动代码；维护责任表见 `docs/spec/INDEX.md` §4
 
@@ -62,9 +63,9 @@
 - **时间输出**：Prisma 对 DATETIME 按 UTC 读写，接口一律走 `src/common/utils/datetime.ts` 的 `formatDateTime`（中国时区）；**禁止用 `toISOString()` 输出业务时间**
 - 所有内容表挂 `siteId`，查询必须带站点过滤（见 `src/common/utils/site-scope.ts`）
 - **主键与 ID（强制，ADR-043）**：所有表主键为应用生成的字符串 ID（`id String @id @db.VarChar(36) @default(uuid(7))`），所有外键列同为 `String @db.VarChar(36)`；**禁止 `@default(autoincrement())` 与数据库侧 `AUTO_INCREMENT`**（复合主键如 `RoleMenu` 可保留，但不得含自增列）；**字符串 ID 不替代主键约束**——每张表仍必须有真实 PRIMARY KEY；新增/修改数据表前先读 `docs/spec/04-data-model.md` §2.1，改 ID 形态属架构级改动（先改 spec 再动代码，见 ADR-043）
-- **迁移命令分环境**：本地用 `pnpm db:migrate`（`prisma migrate dev`，可能提示 reset，**禁止**在测试/生产使用）；测试 / 生产用 `pnpm db:status[:env]`（只读看）+ `pnpm db:deploy[:env]`（`prisma migrate deploy`，只应用未执行的迁移，非交互、幂等、空库自动建库）
-- **数据库发布与代码上线是两条命令（强制）**：`pnpm release:*` **只发布代码、绝不改数据库**；结构变更一律走 `pnpm db:deploy*`。有结构变更时顺序为「先 `db:deploy` 再 `release`」，代码上线器的体检会只读检查并在结构落后时拦下
-- **共享包**：`packages/shared` 是编译型包，`pnpm build:server` 已内置 `build:shared`；GEO 项目 `prepare` 也已内置先构建 shared（fresh clone 后 `pnpm install` 不会因 dist 缺失失败，根因见 `docs/spec/10-launch-runbook.md` §11）；改完 shared 类型后需重新构建服务端；服务端 `build` 脚本已内建 `prisma generate`（`prisma generate && nest build`），schema 变更后走 `pnpm build:server` / `pnpm release*` 会自动重生成 Prisma Client
+- **迁移命令分环境**：本地用 `pnpm db migrate`（`prisma migrate dev`，可能提示 reset；分发脚本会**直接拒绝**在非 development 环境执行）；测试 / 生产用 `pnpm db status --env <环境>`（只读看）+ `pnpm db deploy --env <环境>`（`prisma migrate deploy`，只应用未执行的迁移，非交互、幂等、空库自动建库）
+- **数据库发布与代码上线是两条命令（强制）**：`pnpm release` **只发布代码、绝不改数据库**；结构变更一律走 `pnpm db deploy`。有结构变更时顺序为「先 `db deploy` 再 `release`」，代码上线器的体检会只读检查并在结构落后时拦下
+- **共享包**：`packages/shared` 是编译型包，`pnpm build` 已内置「先构建 shared 再构建各应用」的顺序（单端构建同样会前置 shared）；GEO 项目 `prepare` 也已内置先构建 shared（fresh clone 后 `pnpm install` 不会因 dist 缺失失败，根因见 `docs/spec/10-launch-runbook.md` §11）；改完 shared 类型后需重新构建服务端；服务端 `build` 脚本已内建 `prisma generate`（`prisma generate && nest build`），schema 变更后走 `pnpm build server` / `pnpm release` 会自动重生成 Prisma Client
 
 ## 6. 开发流程（强制）
 
@@ -109,25 +110,35 @@
 
 ```bash
 pnpm install                       # 若环境禁符号链接：pnpm install --node-linker=hoisted
-pnpm build:shared                  # packages/shared 编译（服务端类型依赖）
-pnpm db:generate && pnpm db:migrate && pnpm db:seed
-pnpm allDev                        # 一键启动全部工程（开发形态：源码直跑；先结束占用端口的旧进程；
+
+# ── 开发 ────────────────────────────────────────────────
+pnpm build                         # 全量构建（shared → server → admin → geo）；单端：pnpm build server
+pnpm db generate && pnpm db migrate && pnpm db seed   # 首次准备数据库
+pnpm dev                           # 一键启动全部工程（开发形态：源码直跑；先结束占用端口的旧进程；
                                    # 服务端 3001 / 管理后台 3000 / GEO 项目 3002；Ctrl+C 全部结束）
-pnpm allDev:test                   # 用 env/.env.test 启动（3101 / 3100 / 3102）
-pnpm dev:server | dev:admin | dev:geo   # 单独启动某一端（同样先释放端口）
-pnpm db:status[:env]               # 数据库只读检查：目标库 + 已应用 / 未应用迁移 + 连通性
-pnpm db:deploy[:env]               # 数据库上线（唯一改结构入口）：增量应用未执行的迁移
-pnpm release --env <环境> --check  # 代码上线前体检：配置 + 数据库迁移状态（只读）
-pnpm release:test | release:prod   # 代码上线：构建 → 生产模式启动（不碰数据库）
-pnpm release --env <环境> --build-only  # 体检 + 构建后停止（Linux 服务器配合 PM2，见 docs/spec/10-launch-runbook.md）
-pnpm pm2:config                    # 生成 PM2 进程配置 ecosystem.config.json（含密钥不入库，ADR-041）
-pnpm release:pm2:prod              # 服务器一条命令上线（PM2 形态）：体检+构建 → 生成 PM2 配置 → 重载 + save
-                                   # = release --build-only && pm2:config && pm2 startOrReload --update-env && pm2 save
-pnpm pack:deploy[:env]             # 本地打包自包含部署包 deploy/（免 git/pnpm/PM2，服务器 node start.mjs 一条命令，ADR-042）
-pnpm build:sites --site <slug>     # 增量 SSG 构建指定站点
+pnpm dev --env test                # 用 env/.env.test 启动（3101 / 3100 / 3102）
+pnpm dev server | admin | geo      # 单独启动某一端（同样先释放端口）
+
+# ── 数据库（唯一改结构入口）─────────────────────────────
+pnpm db status [--env <环境>]      # 只读检查：目标库 + 已应用 / 未应用迁移 + 连通性
+pnpm db deploy [--env <环境>]      # 增量应用未执行的迁移（不可回滚；幂等）
+pnpm db seed|backfill|generate|studio [--env <环境>]
+
+# ── 站点 ───────────────────────────────────────────────
+pnpm site build --site <slug> [--rebuild]   # 增量 SSG 构建指定站点（--rebuild 强制全量）
+pnpm site check <描述.json>        # 建站描述契约校验（也可以 bootstrap / merge / assets）
+pnpm site verify apps/geo/sites/<slug>      # 产物机械检查（12 项）
+
+# ── 上线（不含数据库）──────────────────────────────────
+pnpm release --env <环境> --check  # 只体检：配置 + 数据库迁移状态（只读）
+pnpm release --env <环境>          # 代码上线：体检 → 构建 → 生产模式启动（不碰数据库）
+pnpm release --env <环境> --build-only   # 体检 + 构建后停止（Linux 服务器手工交给 PM2）
+pnpm release --env <环境> --pm2          # 服务器一条命令上线：体检+构建 → 生成 PM2 配置 → 重载 + save
+node scripts/pm2-config.mjs --env <环境> # 只重新生成 ecosystem.config.json（改了 env 不想重新构建时）
+pnpm bundle [--env <环境>]         # 本地打包自包含部署包 deploy/（免 git/pnpm/PM2，服务器 node start.mjs，ADR-042）
 ```
 
 > 提示：`pnpm format` 已排除 `docs/` 与 `env/`（见 `.prettierignore`），文档不参与 Prettier 格式化。
-> 提示：`pnpm allDev` 只启动进程（含端口释放），**不做任何数据库操作**；建库/迁移/种子始终由 `db:generate`、`db:migrate`、`db:seed` 独立完成。
-> 提示：三条命令族不要混用——**开发** `allDev*`（源码直跑）、**代码上线** `release:*`（构建 + 生产模式启动，**绝不改数据库**）、**数据库上线** `db:deploy*`（唯一的改结构入口）。有结构变更时先 `db:deploy` 再 `release`（代码上线器会只读检查并在结构落后时拦下）；`allDev:prod` 只是"用生产环境文件跑开发形态"（本地联调用）。见 `docs/spec/07-deployment.md` §3.5 与 ADR-034。
+> 提示：`pnpm dev` 只启动进程（含端口释放），**不做任何数据库操作**；建库/迁移/种子始终由 `pnpm db generate|migrate|seed` 独立完成。
+> 提示：三条命令不要混用——**开发** `pnpm dev`（源码直跑，`--env` 只是换环境文件）、**代码上线** `pnpm release`（构建 + 生产模式启动，**绝不改数据库**）、**数据库上线** `pnpm db deploy`（唯一的改结构入口）。有结构变更时先 `db deploy` 再 `release`（代码上线器会只读检查并在结构落后时拦下）。见 `docs/spec/07-deployment.md` §3.5 与 ADR-034。
 > 提示：三端开发进程监听 `0.0.0.0`，就绪日志会额外打印「局域网访问」入口（本机 IP）；该清单若被后续日志顶掉会自动补打，并落盘到仓库根 `dev-endpoints.txt`（不入库），因此**工程完全启动后地址仍可见**。仅限内网可信环境使用（见 `docs/spec/08-adr.md` ADR-021）。

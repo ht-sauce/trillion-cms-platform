@@ -14,7 +14,6 @@
     "prepare": "pnpm -F @trillion/shared build && nuxt prepare",
     "lint": "eslint .",
     "build:sites": "node scripts/build-sites.mjs",
-    "build:site": "node scripts/build-sites.mjs",
     "blocks:sync": "node scripts/sync-blocks.mjs"
   },
   "dependencies": {

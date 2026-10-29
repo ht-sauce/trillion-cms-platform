@@ -14,7 +14,8 @@
  *
  * 用法：
  *   node scripts/pm2-config.mjs --env production    # 生成 ecosystem.config.json（缺省 production）
- *   pnpm pm2:config                                 # 等价别名（根 package.json）
+ *   pnpm release --env production --pm2             # 常规路径（体检 + 构建 + 生成 + 重载），无需单独跑本文件
+ *   node scripts/pm2-config.mjs --env production    # 只重新生成配置（改了 env/ 但不想重新构建时）
  *
  * 输出（仓库根 ecosystem.config.json，不入库——含数据库口令与 JWT 密钥，禁止提交或跨机拷贝）：
  *   - 每应用一个进程：trillion-server / trillion-admin / trillion-geo

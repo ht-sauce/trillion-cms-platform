@@ -28,16 +28,16 @@ env/.env.production
 *.log
 logs/
 
-# 启动器产物（pnpm allDev 写入的入口地址清单，终端刷屏时查看）
+# 启动器产物（pnpm dev 写入的入口地址清单，终端刷屏时查看）
 dev-endpoints.txt
 
-# 上线器产物（pnpm release:* 写入的入口与健康检查清单）
+# 上线器产物（pnpm release 写入的入口与健康检查清单）
 release-endpoints.txt
 
 # PM2 配置（scripts/pm2-config.mjs 按环境生成，含数据库口令与 JWT 密钥，禁止入库或跨机拷贝）
 ecosystem.config.json
 
-# 部署包（pnpm pack:deploy 产出，scripts/pack-deploy.mjs + ADR-042；含产物、依赖与环境密钥，禁止入库）
+# 部署包（pnpm bundle 产出，scripts/pack-deploy.mjs + ADR-042；含产物、依赖与环境密钥，禁止入库）
 deploy/
 
 # 编辑器与系统

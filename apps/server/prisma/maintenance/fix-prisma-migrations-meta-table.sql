@@ -1,6 +1,6 @@
 -- 一次性环境修复：Prisma 迁移台账表 `_prisma_migrations` 补齐列默认值
 --
--- 症状：`pnpm db:deploy` 报
+-- 症状：`pnpm db deploy` 报
 --   Error: Field 'applied_steps_count' doesn't have a default value
 --   （schema-engine … apply_migrations.rs；MySQL 错误码 1364，严格模式下 NOT NULL 无默认值且 INSERT 不带该列）
 -- 成因：目标库的 `_prisma_migrations` 由旧版 Prisma CLI 建立，`applied_steps_count` 为

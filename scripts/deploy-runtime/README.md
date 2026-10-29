@@ -60,7 +60,7 @@ node start.mjs status       # 4) 查看健康（三端端口应有 HTTP 响应�
 
 ## 代码更新
 
-本地重新构建打包（`pnpm release:prod --build-only && pnpm pack:deploy`）后整体覆盖本目录：
+本地重新构建打包（`pnpm release --env production --build-only && pnpm bundle`）后整体覆盖本目录：
 
 1. `node start.mjs stop`（先停）
 2. 有结构变更时：解压覆盖后 `node db.mjs deploy`（先库后码）

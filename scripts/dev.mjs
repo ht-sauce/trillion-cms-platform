@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
- * 本地开发启动器（根命令：pnpm allDev）
+ * 本地开发启动器（根命令：pnpm dev）
  *
  * 用途：一条命令拉起全部工程，且启动前先结束占用端口的旧进程，避免「端口被占用」反复排查。
  *
  * 用法：
- *   pnpm allDev                  # 启动全部工程（默认 development 环境）
- *   pnpm allDev --env test       # 用 env/.env.test 启动（测试端口 3100/3101/3102）
- *   pnpm allDev admin geo        # 只启动指定工程
- *   pnpm dev:admin               # 等价于 pnpm allDev admin
+ *   pnpm dev                     # 启动全部工程（默认 development 环境）
+ *   pnpm dev --env test          # 用 env/.env.test 启动（测试端口 3100/3101/3102）
+ *   pnpm dev admin geo           # 只启动指定工程
+ *   pnpm dev server              # 等价于过去的 dev:server（单端启动同样先释放端口）
  *
  * 流程：
  *   1) 解析环境名与目标工程 → 读取根 config/ 全局配置（端口、API 基址、数据库）

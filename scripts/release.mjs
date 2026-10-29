@@ -3,25 +3,29 @@
  * 上线器：一键把平台**代码**发布到测试 / 生产环境（不碰数据库）
  *
  * 三个脚本的分工：
- * - `scripts/dev.mjs`（开发启动器，`pnpm allDev` / `dev:*`）：源码直跑（`nest start --watch` / `nuxt dev`），改代码即时生效
- * - 本文件（上线器，`pnpm release:*`）：构建产物 + 生产模式常驻（`node dist/main`、`node .output/server/index.mjs`）
- * - `scripts/db-release.mjs`（数据库上线器，`pnpm db:deploy*`）：结构变更的**增量发布**，独立命令、独立执行时机
+ * - `scripts/dev.mjs`（开发启动器，`pnpm dev`）：源码直跑（`nest start --watch` / `nuxt dev`），改代码即时生效
+ * - 本文件（上线器，`pnpm release`）：构建产物 + 生产模式常驻（`node dist/main`、`node .output/server/index.mjs`）
+ *   - `--build-only`：只体检 + 构建（Linux 服务器配合 PM2）
+ *   - `--pm2`：体检 + 构建 → 生成 PM2 配置 → 重载 → 保存（服务器一条命令上线）
+ * - `scripts/db-release.mjs`（数据库上线器，`pnpm db deploy`）：结构变更的**增量发布**，独立命令、独立执行时机
  *
  * **为什么数据库不并入本文件**：结构变更与代码发布是两件事——执行时机可能不同（先加字段再上代码，或先上代码再回填）、
  * 影响面不同（迁移不可回滚、可能锁表）、审计点不同（谁在何时改了哪个库）。因此本文件**绝不执行任何迁移**，
- * 只做**只读检查**：发现结构落后就拦下并提示先跑 `pnpm db:deploy --env <环境>`（确需先上代码再用 `--force` 放行）。
+ * 只做**只读检查**：发现结构落后就拦下并提示先跑 `pnpm db deploy --env <环境>`（确需先上代码再用 `--force` 放行）。
  *
  * 用法：
- *   pnpm release:test                                   # 测试环境上线代码（构建 → 生产模式启动）
- *   pnpm release:prod                                   # 生产环境上线代码
+ *   pnpm release --env test                             # 测试环境上线代码（构建 → 生产模式启动）
+ *   pnpm release --env production                       # 生产环境上线代码
  *   pnpm release --env production --check               # 只体检（配置 + 数据库迁移状态），不构建不启动
  *   pnpm release --env production --build-only          # 体检 + 构建后停止，不启动进程（配合 PM2 使用）
+ *   pnpm release --env production --pm2                 # 体检 + 构建 → 生成 PM2 配置 → startOrReload → save
  *   pnpm release --env production --skip-build server   # 只重启服务端（沿用上次构建产物）
  *   pnpm release --env production admin geo             # 只发布前端（不涉及数据库，跳过迁移检查）
  *
  * 选项：
  *   --check          只做体检（配置 + 数据库迁移状态），不做构建、不启动
  *   --build-only     体检 + 构建后停止，不启动进程（Linux 服务器配合 PM2 使用，与 --check / --skip-build 互斥）
+ *   --pm2            体检 + 构建后交给 PM2：生成 ecosystem.config.json → startOrReload → save（与 --check 互斥）
  *   --skip-build     跳过构建（沿用上次产物，用于快速重启）
  *   --force          忽略体检中的阻断项（错误项）继续执行
  *   --help           打印本说明
@@ -34,12 +38,13 @@
  *
  *   `--build-only` 在 2) 后停止：体检与构建照常、不释放端口不启动进程——服务器上的进程启停交给 PM2
  *   （`scripts/pm2-config.mjs` 生成 ecosystem.config.json，操作见 docs/spec/10-launch-runbook.md，决策见 ADR-041）
+ *   `--pm2` 在同一步之后接着做三件事：生成配置 → `pm2 startOrReload --update-env` → `pm2 save`
  *
  * 说明：
  * - 上线器在前台托管三个进程，Ctrl+C 一并结束；Linux 生产长期运行用 PM2 守护（见 docs/spec/10-launch-runbook.md）
- * - 完整上线（首次部署或含结构变更）是**两条命令**：`pnpm db:deploy:prod`（结构）→ `pnpm release:prod`（代码）
+ * - 完整上线（首次部署或含结构变更）是**两条命令**：`pnpm db deploy --env production`（结构）→ `pnpm release --env production`（代码）
  */
-import { execSync } from 'node:child_process'
+import { execSync, spawn } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -96,12 +101,13 @@ const usage = [
   '  目标应用   server / admin / geo（缺省 = 全部）',
   '  --check          只体检（配置 + 数据库迁移状态），不构建不启动',
   '  --build-only     体检 + 构建后停止，不启动进程（Linux 服务器配合 PM2 使用）',
+  '  --pm2            体检 + 构建后交给 PM2：生成配置 → startOrReload → save',
   '  --skip-build     跳过构建（沿用上次产物）',
   '  --force          忽略体检中的阻断项（如结构落后时仍要先上代码）',
   '',
-  '本命令只发布代码，绝不改数据库；结构变更请另跑：pnpm db:deploy --env <环境>',
+  '本命令只发布代码，绝不改数据库；结构变更请另跑：pnpm db deploy --env <环境>',
   '',
-  '例：pnpm release:prod / pnpm release:test / pnpm release --env production --build-only'
+  '例：pnpm release --env production / pnpm release --env production --pm2'
 ].join('\n')
 
 /** 解析命令行：`--env <name>` / `--env=<name>` / 布尔选项 / 其余非选项参数视为目标应用 */
@@ -172,6 +178,48 @@ function runCapture(pnpmArgs, env = {}) {
 }
 
 /**
+ * 执行仓库内的 node 脚本并等待结束（`--pm2` 生成 PM2 配置用；日志继承）
+ * @param {string} scriptPath 相对仓库根的脚本路径
+ * @param {string[]} [args]
+ * @returns {Promise<number>} 退出码
+ */
+function runNodeInherit(scriptPath, args = []) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(REPO_ROOT, scriptPath), ...args], {
+      cwd: REPO_ROOT,
+      env: process.env,
+      stdio: 'inherit'
+    })
+    child.on('error', reject)
+    child.on('exit', (code) => resolve(code ?? 1))
+  })
+}
+
+/**
+ * 执行 pm2 子命令并等待结束（`--pm2` 用；Windows 下需 shell 才能解析 pm2.cmd）
+ *
+ * pm2 未安装时 spawn 会 ENOENT——这里转成一句可读提示，不让它伪装成「上线成功」。
+ * @param {string[]} args
+ * @returns {Promise<number>}
+ */
+function runPm2Inherit(args) {
+  return new Promise((resolve) => {
+    const child = spawn('pm2', args, {
+      cwd: REPO_ROOT,
+      env: process.env,
+      stdio: 'inherit',
+      shell: IS_WIN
+    })
+    child.on('error', (error) => {
+      console.error(`[${TAG}] 调用 pm2 失败：${error.message}`)
+      console.error(`[${TAG}] 请确认服务器已安装 PM2（npm i -g pm2）并在 PATH 中`)
+      resolve(1)
+    })
+    child.on('exit', (code) => resolve(code ?? 1))
+  })
+}
+
+/**
  * 执行一个上线步骤：打印标题、计时、失败即中止
  * @param {string} label 步骤名（打印用）
  * @param {string[]} pnpmArgs
@@ -191,6 +239,24 @@ async function runStep(label, pnpmArgs, options = {}) {
     return code
   }
   console.error(`\n[${TAG}] ✗ ${label} 失败（退出码 ${code}），已中止上线（数据库与运行中的进程未被改动）`)
+  process.exit(code)
+}
+
+/**
+ * 执行一个非 pnpm 的上线步骤（生成 PM2 配置、pm2 重载等）：打印标题、计时、失败即中止
+ * @param {string} label 步骤名（打印用）
+ * @param {() => Promise<number>} action 返回退出码的异步动作
+ */
+async function runStepFn(label, action) {
+  const started = Date.now()
+  console.log(`\n[${TAG}] ▶ ${label} …`)
+  const code = await action()
+  const seconds = ((Date.now() - started) / 1000).toFixed(1)
+  if (code === 0) {
+    console.log(`[${TAG}] ✓ ${label} 完成（${seconds}s）`)
+    return code
+  }
+  console.error(`\n[${TAG}] ✗ ${label} 失败（退出码 ${code}），已中止`)
   process.exit(code)
 }
 
@@ -292,9 +358,9 @@ function printChecks(results) {
  * @returns {Promise<Array<{ level: string, label: string, detail: string }>>}
  */
 async function inspectDatabase(config, withServer) {
-  const deployHint = `pnpm db:deploy --env ${config.appEnv}`
+  const deployHint = `pnpm db deploy --env ${config.appEnv}`
   if (!withServer) {
-    return [check('ok', '数据库迁移', '本次未发布服务端，不做检查（结构变更一律由 pnpm db:deploy 独立发布）')]
+    return [check('ok', '数据库迁移', '本次未发布服务端，不做检查（结构变更一律由 pnpm db deploy 独立发布）')]
   }
 
   const env = { ...process.env, ...buildAppEnv(config, DB_APP) }
@@ -317,7 +383,7 @@ async function inspectDatabase(config, withServer) {
     return [check('error', '数据库迁移', `结构落后于代码，请先执行 ${deployHint} 再上线代码（否则新代码跑在旧结构上）`)]
   }
   return [
-    check('ok', '数据库迁移', `结构已是最新（${config.database.name}，只读检查；迁移由 pnpm db:deploy 独立发布）`)
+    check('ok', '数据库迁移', `结构已是最新（${config.database.name}，只读检查；迁移由 pnpm db deploy 独立发布）`)
   ]
 }
 
@@ -501,9 +567,18 @@ async function main() {
     }
   }
 
+  /** --pm2 不能与 --check 同时用：一个是「只体检」，一个是「体检 + 构建 + 交给 PM2」 */
+  if (flags.has('pm2') && flags.has('check')) {
+    console.error(`[${TAG}] --pm2 与 --check 互斥：前者要求本次完成体检 + 构建并交给 PM2`)
+    process.exit(1)
+  }
+
   const config = loadConfig({ appEnv })
   const names = [...new Set((targets.length ? targets : APP_NAMES).map((name) => findApp(name).name))]
   const checkOnly = flags.has('check')
+  /** 构建后不自行托管进程的两种形态：--build-only（交给人工 / PM2）与 --pm2（本命令直接驱动 PM2） */
+  const pm2Mode = flags.has('pm2')
+  const stopAfterBuild = flags.has('build-only') || pm2Mode
   forced = flags.has('force')
   const withServer = names.includes(DB_APP)
 
@@ -512,11 +587,15 @@ async function main() {
   console.log(`[${TAG}] 代码上线${checkOnly ? '（只体检）' : ''}`)
   for (const line of describeConfig(config, names)) console.log(`  ${line}`)
   if (!checkOnly) {
-    const tail = flags.has('build-only') ? '停止（不启动进程，启停交给 PM2）' : '生产模式启动'
+    const tail = pm2Mode
+      ? '交给 PM2（生成配置 → 重载 → save，不前台托管）'
+      : flags.has('build-only')
+        ? '停止（不启动进程，启停交给 PM2）'
+        : '生产模式启动'
     console.log(
       '  本次动作  ' +
         [flags.has('skip-build') ? '跳过构建' : '构建全部产物', tail].join(' → ') +
-        '（不含数据库；结构变更另执行 pnpm db:deploy）'
+        '（不含数据库；结构变更另执行 pnpm db deploy）'
     )
   }
   console.log('─'.repeat(72))
@@ -550,13 +629,31 @@ async function main() {
     console.log(`\n[${TAG}] 跳过构建（沿用上次产物）`)
   }
 
-  /** --build-only：体检 + 构建后即停止（进程启停交给 PM2，见 scripts/pm2-config.mjs 与 10 号手册） */
-  if (flags.has('build-only')) {
+  /** 构建后即停止的两种形态：--build-only（到此为止）、--pm2（接着驱动 PM2） */
+  if (stopAfterBuild) {
+    if (pm2Mode) {
+      /** 生成配置 → 重载 → save：env 变更后配置必须重生成，否则 PM2 里还是旧端口与旧密钥 */
+      await runStepFn(`生成 PM2 配置（ecosystem.config.json，${config.appEnv}）`, () =>
+        runNodeInherit('scripts/pm2-config.mjs', ['--env', config.appEnv])
+      )
+      await runStepFn('pm2 startOrReload（按新配置启动 / 重载全部进程）', () =>
+        runPm2Inherit(['startOrReload', 'ecosystem.config.json', '--update-env'])
+      )
+      await runStepFn('pm2 save（固化进程清单，配合 pm2 startup 开机自启）', () => runPm2Inherit(['save']))
+      console.log(`\n${'─'.repeat(72)}`)
+      console.log(`[${TAG}] 体检 + 构建 + PM2 重载完成（${config.appEnv}）；数据库未改动`)
+      console.log(`[${TAG}] 查看状态：pm2 status    查看日志：pm2 logs`)
+      console.log(`[${TAG}] 结构变更请另执行 pnpm db deploy --env ${config.appEnv}（本命令从不改数据库）`)
+      console.log('─'.repeat(72))
+      return
+    }
+
     console.log(`\n${'─'.repeat(72)}`)
     console.log(`[${TAG}] 体检 + 构建完成（${config.appEnv}）；进程未启动，数据库未改动`)
     console.log(`[${TAG}] 后续交给 PM2 守护（docs/spec/10-launch-runbook.md）：`)
     console.log(`  node scripts/pm2-config.mjs --env ${config.appEnv}   # env 有变更时重新生成 PM2 配置`)
     console.log('  pm2 startOrReload ecosystem.config.json --update-env && pm2 save')
+    console.log(`[${TAG}] 上面三步也可一条命令完成：pnpm release --env ${config.appEnv} --pm2`)
     console.log('─'.repeat(72))
     return
   }
@@ -585,7 +682,7 @@ async function main() {
     ...describeEndpoints(config, names, {}, { lan: false }),
     '',
     `[${TAG}] 入口地址已写入 ${ENDPOINTS_FILE}`,
-    `[${TAG}] 代码上线完成（数据库未改动）；结构变更请另执行 pnpm db:deploy --env ${config.appEnv}`,
+    `[${TAG}] 代码上线完成（数据库未改动）；结构变更请另执行 pnpm db deploy --env ${config.appEnv}`,
     `[${TAG}] 进程由本命令托管：按 Ctrl+C 结束全部（Linux 生产长期运行用 PM2 守护，见 docs/spec/10-launch-runbook.md）`
   ]
   publishEndpoints(lines)

@@ -16,7 +16,7 @@
  *     --publish       导入后立刻入队整站构建（默认否，交由人工在后台确认发布）
  *     --env <环境>    取 development / test / production（缺省 development）
  *
- * 前置：服务端必须已启动（`pnpm dev:server`），且已执行过 `pnpm db:migrate` 与 `pnpm db:seed`。
+ * 前置：服务端必须已启动（`pnpm dev server`），且已执行过 `pnpm db migrate` 与 `pnpm db seed`。
  */
 import * as fs from 'node:fs'
 import * as path from 'node:path'

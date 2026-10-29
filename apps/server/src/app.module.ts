@@ -31,7 +31,7 @@ import { GeoModule } from './modules/geo/geo.module'
 @Module({
   imports: [
     /**
-     * 环境变量统一来自仓库根 env/ 目录，由启动器（pnpm allDev / pnpm dev:server）注入进程，
+     * 环境变量统一来自仓库根 env/ 目录，由启动器（pnpm dev / pnpm dev server）注入进程，
      * 因此不再读取工程内 .env（避免多份事实来源）；缺失由 validateEnv 直接报错
      */
     ConfigModule.forRoot({

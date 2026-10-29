@@ -620,3 +620,40 @@
   - ⚠️ 单向改造：回退到自增需反向重映射，成本更高
 - **否决**：只补齐主键、继续用 Int 自增（改动最小、可最快解封线上，但未满足「统一 ID 形态」诉求，且仍依赖数据库侧配置）；`cuid()/cuid2()`（非单调，索引局部性差，且无跨语言标准）；`uuid()` v4（随机键导致聚簇索引页分裂）；`ULID`（Prisma 无内建默认，需自写生成器）；数据库侧 `AUTO_INCREMENT` / `DEFAULT(UUID())`（违背「ID 由应用生成」）。
 
+
+## ADR-044 根命令收敛为 8 条：应用 / 环境 / 动作一律走参数，禁止后缀别名
+
+- **日期**：2026-10-29 · **状态**：accepted（入口形态取代 ADR-016 / ADR-034 / ADR-041 / ADR-042 里「新增根命令」的增量做法；这四条的**实质结论**——配置集中派生、库/码分离、PM2 守护、自包含部署包——全部继续有效，只是命令名统一为本文形态。旧名与本文的映射见下表，历史条目正文保留原样不追改）
+- **上下文**：根 `package.json` 长到 **37 条脚本**，但独立动作只有十来个——29 条是「同一动作 × 环境 / 应用」的笛卡尔积（`db:deploy` / `:test` / `:prod`、`db:status` / `:test` / `:prod`、`allDev` / `:test` / `:prod`、`release:test` / `:prod`、`dev:admin` / `:geo` / `:server`、`build:shared` / `:server` / `:admin` / `:geo`…）；此外还有三类明显的坏味道：`build:site` 与 `build:sites` 指向**同一条命令**、`npm:allDev` 是历史残留、`release:pm2:test|prod` 把整段编排塞进 `package.json` 的 `&&` 链（不可单测、每一步没有计时与失败定位，且 `pm2:config` 这个名字与 `pm2` 的语义重复）。每加一个站点构建方式、每加一个环境，脚本表就再长一截，记忆负担与误敲面随之线性增长。
+- **决策**：
+  1. **根命令固定 8 条**：`dev` / `build` / `db` / `site` / `release` / `bundle` / `lint` / `format`。应用、环境、动作**一律走参数**：`pnpm dev admin --env test`、`pnpm db deploy --env production`、`pnpm site build --site <slug>`。
+  2. **三个分发脚本 + 一个公共工具**：`scripts/build.mjs`（构建，shared 永远先行）、`scripts/db.mjs`（数据库，动作分发）、`scripts/site.mjs`（站点，动作分发）、`scripts/cli.mjs`（三者共用的 `--env` 剥离、环境注入、子进程执行）。分发只做路由，实际逻辑仍在 `dev.mjs` / `db-release.mjs` / `pack-deploy.mjs` / `release.mjs` / 各站点脚本里，**没有第二份实现**。
+  3. **环境后缀别名全部取消**：`--env <名字>` 是唯一写法，缺省 `development`。
+  4. **PM2 编排折进上线器**：`release --pm2` = 体检 + 构建 → 生成 `ecosystem.config.json` → `pm2 startOrReload --update-env` → `pm2 save`，三步各有计时与失败中止；`scripts/pm2-config.mjs` 保留（「改了 env 但不想重新构建」时单独跑），但**不再占根命令位**。
+  5. **`pack:deploy` 改名 `bundle`**：`pnpm pack` 是 pnpm **内置命令**（生成 tarball），同名脚本会被内建命令抢走，必须换名。
+  6. **把文档里的禁令写进代码**：`pnpm db migrate` / `pnpm db push` 在非 `development` 环境**直接拒绝执行**（AGENTS §5 早已禁止在测试/生产用 `prisma migrate dev`，此前只靠人记）。
+  7. **准入规则（长期）**：根 `scripts` 固定 8 条，**禁止新增 `xxx:yyy` 后缀别名**；新能力挂到已有命令的子命令或参数上。确需第 9 条根命令时，先改 [`07`](./07-deployment.md) §3.5 并新增 ADR。
+- **旧 → 新映射**（旧名已全部移除，不做兼容别名）：
+
+  | 旧（37 条） | 新 |
+  | --- | --- |
+  | `allDev` / `npm:allDev` / `allDev:test` / `allDev:prod` / `dev:admin` / `dev:geo` / `dev:server` | `pnpm dev [应用...] [--env <环境>]` |
+  | `build:shared` / `build:server` / `build:admin` / `build:geo` | `pnpm build [shared\|server\|admin\|geo]`（缺省全量） |
+  | `db:migrate` / `db:generate` / `db:push` / `db:seed` / `db:backfill` / `db:studio` | `pnpm db <动作> [--env <环境>]` |
+  | `db:deploy` / `db:deploy:test` / `db:deploy:prod` | `pnpm db deploy [--env <环境>]` |
+  | `db:status` / `db:status:test` / `db:status:prod` | `pnpm db status [--env <环境>]` |
+  | `build:sites` / `build:site` | `pnpm site build --site <slug> [--rebuild]` |
+  | `site:bootstrap` / `site:check` / `site:merge` | `pnpm site bootstrap` / `check` / `merge` |
+  | `release` / `release:test` / `release:prod` | `pnpm release [应用...] [--env <环境>]` |
+  | `release:pm2:test` / `release:pm2:prod` / `pm2:config` | `pnpm release --env <环境> --pm2` |
+  | `pack:deploy` | `pnpm bundle [--env <环境>]` |
+  | `lint` / `format` | 不变 |
+
+- **后果**：
+  - ✅ 记忆面 37 → 8；命令可自由组合（任意命令 × 任意环境 / 应用），不再需要为组合预先起名
+  - ✅ 编排逻辑回到脚本里：单步计时、失败即中止、错误信息带上下文；`package.json` 里不再有 `&&` 长链
+  - ✅ 唯一的「默认环境」语义统一为 `development`，漏写 `--env` 不再表现为「敲了另一个别名」（上线器的体检仍会只读检查迁移状态兜住风险）
+  - ⚠️ **破坏性变更**：旧命令彻底不存在（报 `ERR_PNPM_NO_SCRIPT`）。服务器上手抄的脚本、crontab、部署笔记需同步；本仓库内文档已全量替换
+  - ⚠️ 子命令依赖 pnpm 的**参数透传**（已用 pnpm 12.9.1 实测：位置参数与 `--flag` 原样转给脚本）。若未来 pnpm 收紧转发规则，文档写法需退回 `pnpm run db deploy --env <环境>`
+  - ⚠️ 分发脚本多一跳进程（`node scripts/db.mjs` → `pnpm --filter`），启动开销数十毫秒，相对构建 / 迁移时长可忽略
+- **否决**：只删重复项、保留全部环境后缀别名（`build:site`、`npm:allDev` 这类能删，但记忆负担几乎不变，等于没做）；删应用别名、保留环境别名（只减 6 条，且两类别名的复制粘贴成本相同，留一类就还会长回来）；用 `pnpm pack` 作为打包命令名（与 pnpm 内建命令冲突）；把所有能力塞进唯一的 `pnpm app <模块> <动作>`（只剩 1 条，但等于自研一套 git 式子命令 CLI，帮助文案、参数冲突、错误提示全要自己维护，成本高于 8 条）；保留旧名做转发别名（等于没减干净，日后还要再删一次）。

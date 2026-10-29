@@ -67,7 +67,7 @@ function baseUrl(): string {
   const cfg = useRuntimeConfig()
   const apiBase = String(cfg.public.apiBase || '')
   if (!apiBase) {
-    throw new Error('缺少 API 基址：请通过 pnpm allDev / pnpm dev:admin 启动（NUXT_PUBLIC_API_BASE 由根 env/ 派生）')
+    throw new Error('缺少 API 基址：请通过 pnpm dev / pnpm dev admin 启动（NUXT_PUBLIC_API_BASE 由根 env/ 派生）')
   }
   return adaptApiBase(apiBase)
 }

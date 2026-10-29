@@ -2,7 +2,7 @@
 /**
  * 部署包数据库入口：结构变更的唯一改库命令（ADR-042；两条命令分离原则见 ADR-034）
  *
- * 本文件随 `pnpm pack:deploy` 进入部署包根目录，直接调用包内 apps/server 自带的
+ * 本文件随 `pnpm bundle` 进入部署包根目录，直接调用包内 apps/server 自带的
  * prisma CLI（migrate）与 tsx（seed），服务器无需 pnpm：
  *
  *   node db.mjs status    # 只读：目标库 + 已应用 / 未应用迁移 + 连通性
@@ -10,7 +10,7 @@
  *   node db.mjs seed      # 可选：初始化管理员与示例站点（首次部署按需执行）
  *
  * 环境缺省读打包时写入的 `.deploy-env`，可用 `node db.mjs deploy --env test` 覆盖。
- * 只做增量应用：永远不会 reset 或 db push（与仓库侧 `pnpm db:deploy*` 完全同口径）。
+ * 只做增量应用：永远不会 reset 或 db push（与仓库侧 `pnpm db deploy*` 完全同口径）。
  */
 import { spawn } from 'node:child_process'
 import * as fs from 'node:fs'
@@ -113,14 +113,14 @@ async function main() {
     process.exit(subcommand ? 1 : 0)
   }
   if (subcommand !== 'seed' && !fs.existsSync(PRISMA_BIN)) {
-    console.error(`[${TAG}] 部署包不完整：未找到 prisma CLI（node_modules/prisma）——请回本地重新执行 pnpm pack:deploy`)
+    console.error(`[${TAG}] 部署包不完整：未找到 prisma CLI（node_modules/prisma）——请回本地重新执行 pnpm bundle`)
     process.exit(1)
   }
 
   let code
   if (subcommand === 'seed') {
     if (!fs.existsSync(TSX_BIN)) {
-      console.error(`[${TAG}] 部署包不完整：未找到 tsx（node_modules/tsx）——请回本地重新执行 pnpm pack:deploy`)
+      console.error(`[${TAG}] 部署包不完整：未找到 tsx（node_modules/tsx）——请回本地重新执行 pnpm bundle`)
       process.exit(1)
     }
     code = await runInServer('初始化种子数据', process.execPath, [TSX_BIN, 'prisma/seed.ts'], appEnv)

@@ -9,8 +9,8 @@
  *   服务器免 git / pnpm / PM2（操作口径见 docs/spec/10-launch-runbook.md §4.0）
  *
  * 用法：
- *   pnpm pack:deploy                 # 打包 production（缺省）
- *   pnpm pack:deploy --env test     # 打包指定环境
+ *   pnpm bundle                     # 打包 production（缺省）
+ *   pnpm bundle --env test          # 打包指定环境
  *   node scripts/pack-deploy.mjs --help
  *
  * 流程（任一步失败即中止，deploy/ 保持上次成功状态不动）：
@@ -31,7 +31,7 @@ import { spawn } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { REPO_ROOT, SHARED_PACKAGE, loadConfig } from '../config/index.mjs'
+import { REPO_ROOT, loadConfig } from '../config/index.mjs'
 import { spawnPnpm } from './pnpm.mjs'
 
 /** 日志前缀 */
@@ -182,10 +182,10 @@ function runPrismaGenerate(target) {
 /** 体检三端产物与 shared dist；缺失即阻断 */
 function assertBuildOutputs() {
   const required = [
-    [path.join('apps', 'server', 'dist', 'main.js'), 'pnpm build:server'],
-    [path.join('apps', 'admin', '.output', 'server', 'index.mjs'), 'pnpm build:admin'],
-    [path.join('apps', 'geo', '.output', 'server', 'index.mjs'), 'pnpm build:geo'],
-    [path.join('packages', 'shared', 'dist'), `pnpm -F ${SHARED_PACKAGE} build`]
+    [path.join('apps', 'server', 'dist', 'main.js'), 'pnpm build server'],
+    [path.join('apps', 'admin', '.output', 'server', 'index.mjs'), 'pnpm build admin'],
+    [path.join('apps', 'geo', '.output', 'server', 'index.mjs'), 'pnpm build geo'],
+    [path.join('packages', 'shared', 'dist'), 'pnpm build shared']
   ]
   const missing = required.filter(([relative]) => !fs.existsSync(path.join(REPO_ROOT, relative)))
   if (missing.length) {

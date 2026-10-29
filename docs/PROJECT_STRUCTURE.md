@@ -12,7 +12,7 @@
 
 Monorepo 工作区根，只放工程配置、全局配置与全局文档，不放业务代码。
 
-- [`package.json`](../package.json) —— workspace 根：跨应用脚本（`allDev` 开发启动 / `release:*` 代码上线 / `db:deploy*` 数据库上线 / `build:*` / 开发向 `db:*`），所有脚本经根 `scripts/` 的启动器、上线器与执行器执行
+- [`package.json`](../package.json) —— workspace 根：跨应用脚本，**只有 8 条**（ADR-044）：`dev` / `build` / `db` / `site` / `release` / `bundle` / `lint` / `format`——应用、环境、动作一律走参数，全部经根 `scripts/` 的启动器、分发脚本与上线器执行
 - [`pnpm-workspace.yaml`](../pnpm-workspace.yaml) —— 声明工作区范围 `apps/*`、`packages/*` 与依赖构建白名单
 - [`pnpm-lock.yaml`](../pnpm-lock.yaml) —— 依赖锁定文件（自动生成）
 - [`.npmrc`](../.npmrc) —— pnpm 行为配置（`strictDepBuilds=false`，放行 Prisma 引擎等依赖构建脚本）
@@ -20,7 +20,7 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 - [`.prettierignore`](../.prettierignore) —— 格式化忽略清单（产物、依赖、锁文件，以及 `docs/` 与 `env/`）
 - [`.editorconfig`](../.editorconfig) —— 编辑器基础格式（UTF-8、LF、2 空格）
 - [`.gitignore`](../.gitignore) —— Git 忽略（依赖、产物、`sites/` 产物、`uploads/`、`env/.env.production`、PM2 配置 `ecosystem.config.json`、部署包 `deploy/`、启动器 / 上线器写入的入口清单 `dev-endpoints.txt` / `release-endpoints.txt`）
-- `deploy/`（**运行时生成，不入库**）—— `pnpm pack:deploy` 产出的自包含部署包（ADR-042，约 792 MB）：`start.mjs` / `db.mjs` / `nginx.conf.example` / `README.md` + `config/` + `env/.env.<环境>` + `apps/{server,admin,geo}` 产物与依赖，整体拷贝到服务器后 `node start.mjs daemon` 即可运行；模板来源 [`scripts/deploy-runtime/`](../scripts/deploy-runtime)
+- `deploy/`（**运行时生成，不入库**）—— `pnpm bundle` 产出的自包含部署包（ADR-042，约 792 MB）：`start.mjs` / `db.mjs` / `nginx.conf.example` / `README.md` + `config/` + `env/.env.<环境>` + `apps/{server,admin,geo}` 产物与依赖，整体拷贝到服务器后 `node start.mjs daemon` 即可运行；模板来源 [`scripts/deploy-runtime/`](../scripts/deploy-runtime)
 - [`nginx.conf.example`](../nginx.conf.example) —— **生产 nginx 落地配置（直装 · git 仓库形态）**：公网 IP `11.11.11.11` + nginx 直听 `8080` 的单域名同源分流（`/geocms/`→3000、`/geoserver/`→3001、`/static/` 直出、`/`→站点 SSG 产物）；拷贝到 `/etc/nginx/sites-available/` 即用。通用参考（域名 + 80/443）见 [`docs/spec/10-launch-runbook.md`](./spec/10-launch-runbook.md) §7，部署包形态的模板另见 [`scripts/deploy-runtime/`](../scripts/deploy-runtime)
 - [`README.md`](../README.md) —— 项目基础说明：数据库、两种启动方式、常用命令、关键约定
 - [`AGENTS.md`](../AGENTS.md) —— AI 开发规范入口：术语、目录约定、先读后开发流程、禁止事项
@@ -38,7 +38,7 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 
 **各环境的变量值**：数据库、密钥、站点识别等；与 `config/` 分工明确（值 vs 结构/派生）。三个应用不再自带 `.env`。
 
-- [`.env.development`](../env/.env.development) —— 开发环境（本机 MySQL、默认端口），已入库，`pnpm allDev` 开箱可用
+- [`.env.development`](../env/.env.development) —— 开发环境（本机 MySQL、默认端口），已入库，`pnpm dev` 开箱可用
 - [`.env.test`](../env/.env.test) —— 测试环境（端口 3100/3101/3102、独立测试库），与开发环境可同机并存
 - [`.env.production`](../env/.env.production) —— 生产环境（**不入库**，见 `.gitignore`；上线前必须逐项确认密钥与地址）
 - [`.env.example`](../env/.env.example) —— 环境变量模板与逐项说明（新环境 / 新机器从此复制）
@@ -47,18 +47,22 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 
 本地启动与包脚本执行工具，依赖根 `config/`，零第三方依赖。
 
-- [`dev.mjs`](../scripts/dev.mjs) —— **开发启动器**（`pnpm allDev` / `pnpm dev:*`）：加载全局配置 → 结束占用端口的旧进程（逻辑在 `port-guard.mjs`）→ 并发启动工程（各应用 `devScript`，源码直跑）→ 日志加前缀 → **摘要后先打印并落盘一份入口清单**（按配置端口，避免等 Nuxt 首次编译期间终端没有任何地址信息）→ **各工程就绪（日志就绪标志 / 端口监听）且静默 5s 后再打印一份**（含后台登录页、Swagger 文档与局域网入口，按实际监听端口，端口回退时自动修正）；清单被后续日志顶出屏幕时**自动补打**（日志静默 3s 即补打 — 每来一行新日志重置计时；日志持续不停则每 15s 兜底一次；上限 30 次），落盘文件为仓库根 `dev-endpoints.txt`（不入库）→ Ctrl+C 回收全部子进程
-- [`exec.mjs`](../scripts/exec.mjs) —— **包脚本执行器**：以注入全局环境变量的方式执行某工程的 package.json 脚本（`db:*`、`build:*` 等脱离启动器的命令）
-- [`release.mjs`](../scripts/release.mjs) —— **代码上线器**（`pnpm release:test` / `release:prod` / `release --env <环境> [应用...]`）：把平台**代码**发布到测试/生产环境，顺序固定为 **体检（密钥占位值 / 回环地址 / 产物齐备 / 数据库迁移只读检查）→ 构建（shared → 服务端 → 管理后台 → GEO 项目）→ 释放端口 → 生产模式启动（各应用 `start:prod`）→ HTTP 就绪探测（server `/geoserver/health`、admin `/geocms/`、geo `/`）+ `/geoserver/health` 运行时体检 → 打印入口并落盘 `release-endpoints.txt`**；**绝不执行迁移**，结构落后只拦下并提示先跑 `pnpm db:deploy`（目标只有 admin/geo 时跳过该检查）；支持 `--check`（只体检）/ `--build-only`（体检 + 构建后停止，不启动进程，Linux 服务器配合 PM2 使用）/ `--skip-build` / `--force`，任一步失败立即中止
-- [`db-release.mjs`](../scripts/db-release.mjs) —— **数据库上线器**（`pnpm db:deploy[:test|:prod]` / `pnpm db:status[:env]`）：**唯一的改结构入口**，顺序固定为 **体检（环境文件 / 目标库 / 生产库口令为空或占位值即阻断，防改错库）→ 只读检查（`prisma migrate status`：已最新 / 待应用 / 库不存在 / 不可达）→ `prisma migrate deploy`（只应用未执行的迁移，幂等、非交互、空库自动建库）→ 复核**；`--check` 等价 `db:status`（只读），`--force` 忽略阻断项；只做增量应用，永不 `db push` / reset
-- [`pm2-config.mjs`](../scripts/pm2-config.mjs) —— **PM2 配置生成器**（ADR-041，`pnpm pm2:config` / `node scripts/pm2-config.mjs --env <环境>`，缺省 production）：以全局配置派生三端进程定义（进程名 `trillion-*`、`cwd` 对齐各应用包目录、`script` 与 `start:prod` 同口径、`env` 为 `buildAppEnv()` 结果、防崩溃风暴守护参数），写仓库根 `ecosystem.config.json`（PM2 原生 JSON，**含密钥：已 gitignore，禁止提交或跨机拷贝**）；产物缺失只警告不阻断；与上线器 `--build-only` 配套（启动 / 重载 / 开机自启操作见 spec/10-launch-runbook.md）
+- [`dev.mjs`](../scripts/dev.mjs) —— **开发启动器**（`pnpm dev [应用...] [--env <环境>]`）：加载全局配置 → 结束占用端口的旧进程（逻辑在 `port-guard.mjs`）→ 并发启动工程（各应用 `devScript`，源码直跑）→ 日志加前缀 → **摘要后先打印并落盘一份入口清单**（按配置端口，避免等 Nuxt 首次编译期间终端没有任何地址信息）→ **各工程就绪（日志就绪标志 / 端口监听）且静默 5s 后再打印一份**（含后台登录页、Swagger 文档与局域网入口，按实际监听端口，端口回退时自动修正）；清单被后续日志顶出屏幕时**自动补打**（日志静默 3s 即补打 — 每来一行新日志重置计时；日志持续不停则每 15s 兜底一次；上限 30 次），落盘文件为仓库根 `dev-endpoints.txt`（不入库）→ Ctrl+C 回收全部子进程
+- [`cli.mjs`](../scripts/cli.mjs) —— **根命令公共工具**：`build.mjs` / `db.mjs` / `site.mjs` 共用的 `--env` 剥离、按环境注入变量、pnpm / node 子进程执行封装（避免三个分发脚本各写一套）
+- [`build.mjs`](../scripts/build.mjs) —— **构建器**（`pnpm build [目标...] [--env <环境>]`）：缺省全量（shared → server → admin → geo），目标可只给单端；共享类型包永远先行，失败即中止
+- [`db.mjs`](../scripts/db.mjs) —— **数据库命令分发**（`pnpm db <动作> [--env <环境>]`）：`status` / `deploy` 转 [`db-release.mjs`](../scripts/db-release.mjs)，`migrate` / `push` / `generate` / `seed` / `backfill` / `studio` 转服务端包脚本；`migrate` 与 `push` 在非 development 环境**直接拒绝**（结构变更只能走 `deploy`）
+- [`site.mjs`](../scripts/site.mjs) —— **站点命令分发**（`pnpm site <动作>`）：`build`（走 GEO `build:sites`，需 `--site`）/ `bootstrap` / `check` / `merge` / `assets` / `verify`，其余脚本参数原样透传
+- [`exec.mjs`](../scripts/exec.mjs) —— **包脚本执行器**：以注入全局环境变量的方式执行某工程的 package.json 脚本（`site build`、`db.mjs` 之外的零散包脚本都走它）
+- [`release.mjs`](../scripts/release.mjs) —— **代码上线器**（`pnpm release [应用...] [--env <环境>]`）：把平台**代码**发布到测试/生产环境，顺序固定为 **体检（密钥占位值 / 回环地址 / 产物齐备 / 数据库迁移只读检查）→ 构建（shared → 服务端 → 管理后台 → GEO 项目）→ 释放端口 → 生产模式启动（各应用 `start:prod`）→ HTTP 就绪探测（server `/geoserver/health`、admin `/geocms/`、geo `/`）+ `/geoserver/health` 运行时体检 → 打印入口并落盘 `release-endpoints.txt`**；**绝不执行迁移**，结构落后只拦下并提示先跑 `pnpm db deploy`（目标只有 admin/geo 时跳过该检查）；支持 `--check`（只体检）/ `--build-only`（体检 + 构建后停止，不启动进程，Linux 服务器手工交给 PM2）/ `--pm2`（体检 + 构建后自动「生成 PM2 配置 → `startOrReload` → `save`」）/ `--skip-build` / `--force`，任一步失败立即中止
+- [`db-release.mjs`](../scripts/db-release.mjs) —— **数据库上线器**（`pnpm db deploy [--env <环境>]` / `pnpm db status [--env <环境>]`）：**唯一的改结构入口**，顺序固定为 **体检（环境文件 / 目标库 / 生产库口令为空或占位值即阻断，防改错库）→ 只读检查（`prisma migrate status`：已最新 / 待应用 / 库不存在 / 不可达）→ `prisma migrate deploy`（只应用未执行的迁移，幂等、非交互、空库自动建库）→ 复核**；`--check` 等价 `pnpm db status`（只读），`--force` 忽略阻断项；只做增量应用，永不 `db push` / reset
+- [`pm2-config.mjs`](../scripts/pm2-config.mjs) —— **PM2 配置生成器**（ADR-041；常规路径由 `pnpm release --env <环境> --pm2` 内部调用，单独「只重生成配置」时用 `node scripts/pm2-config.mjs --env <环境>`，缺省 production）：以全局配置派生三端进程定义（进程名 `trillion-*`、`cwd` 对齐各应用包目录、`script` 与 `start:prod` 同口径、`env` 为 `buildAppEnv()` 结果、防崩溃风暴守护参数），写仓库根 `ecosystem.config.json`（PM2 原生 JSON，**含密钥：已 gitignore，禁止提交或跨机拷贝**）；产物缺失只警告不阻断；与上线器 `--pm2` / `--build-only` 配套（启动 / 重载 / 开机自启操作见 spec/10-launch-runbook.md）
 - [`port-guard.mjs`](../scripts/port-guard.mjs) —— **端口守护**（启动器与上线器共用）：查询监听端口的进程（Windows `netstat` / POSIX `lsof`）、结束进程（`taskkill /T /F` / `kill`）、释放端口并等待可用（旧进程残留是「端口被占用」的常见根因）
-- [`pack-deploy.mjs`](../scripts/pack-deploy.mjs) —— **部署包打包器**（ADR-042，`pnpm pack:deploy` / `node scripts/pack-deploy.mjs --env <环境>`，缺省 production）：本地把三端产物 + 依赖 + 派生配置汇集为仓库根 `deploy/`（**免源码上线形态**，服务器只要有 Node 20+ / MySQL / nginx，无需 git / pnpm / PM2）。流程：**体检（三端产物 + shared dist 齐备）→ 拷 `config/` 与 `env/.env.<环境>`（含密钥）+ 运行时模板 → `pnpm deploy --node-linker=hoisted` 收集 server / geo（零 symlink，跨机拷贝不断链）并按白名单清理开发期文件 → 服务端包内补跑 `prisma generate`（机器产物随包提供）→ admin 拷 `.output` → 校验关键文件清单 → 输出大小 / 站点 / 拷贝提示**；产物 `deploy/` 与 `scripts/deploy-runtime/` 说明见下方条目，**含数据库口令与 JWT 密钥已 gitignore，禁止入库或跨机拷贝**
-- [`deploy-runtime/`](../scripts/deploy-runtime) —— **部署包运行时模板**（随 `pnpm pack:deploy` 拷入 `deploy/` 根，ADR-042）：`start.mjs`（进程入口：按 `config/apps.mjs` 清单 spawn 各应用、`daemon` 后台守护 + 崩溃自动重启（4s / 上限 10 次）/ `stop` / `status` / `restart`，日志落 `logs/`、pid 落 `.run/`）、`db.mjs`（数据库入口：`status` / `deploy` / `seed`，直接调包内 server 自带 prisma CLI 与 tsx，服务器无需 pnpm）、`README.md`（服务器侧操作说明）、`nginx.conf.example`（单域名同源反代 + 静态托管模板）；操作口径见 spec/10-launch-runbook.md §4.0
+- [`pack-deploy.mjs`](../scripts/pack-deploy.mjs) —— **部署包打包器**（ADR-042，`pnpm bundle` / `node scripts/pack-deploy.mjs --env <环境>`，缺省 production）：本地把三端产物 + 依赖 + 派生配置汇集为仓库根 `deploy/`（**免源码上线形态**，服务器只要有 Node 20+ / MySQL / nginx，无需 git / pnpm / PM2）。流程：**体检（三端产物 + shared dist 齐备）→ 拷 `config/` 与 `env/.env.<环境>`（含密钥）+ 运行时模板 → `pnpm deploy --node-linker=hoisted` 收集 server / geo（零 symlink，跨机拷贝不断链）并按白名单清理开发期文件 → 服务端包内补跑 `prisma generate`（机器产物随包提供）→ admin 拷 `.output` → 校验关键文件清单 → 输出大小 / 站点 / 拷贝提示**；产物 `deploy/` 与 `scripts/deploy-runtime/` 说明见下方条目，**含数据库口令与 JWT 密钥已 gitignore，禁止入库或跨机拷贝**
+- [`deploy-runtime/`](../scripts/deploy-runtime) —— **部署包运行时模板**（随 `pnpm bundle` 拷入 `deploy/` 根，ADR-042）：`start.mjs`（进程入口：按 `config/apps.mjs` 清单 spawn 各应用、`daemon` 后台守护 + 崩溃自动重启（4s / 上限 10 次）/ `stop` / `status` / `restart`，日志落 `logs/`、pid 落 `.run/`）、`db.mjs`（数据库入口：`status` / `deploy` / `seed`，直接调包内 server 自带 prisma CLI 与 tsx，服务器无需 pnpm）、`README.md`（服务器侧操作说明）、`nginx.conf.example`（单域名同源反代 + 静态托管模板）；操作口径见 spec/10-launch-runbook.md §4.0
 - [`pnpm.mjs`](../scripts/pnpm.mjs) —— pnpm 调用封装：跨平台定位 pnpm 可执行入口，避免 Windows 下 `.cmd` 必须走 shell 的参数拼接告警
-- [`bootstrap-site.mjs`](../scripts/bootstrap-site.mjs) —— **建站描述导入 CLI**（09 §12.2，`pnpm site:bootstrap`）：登录后台 → `POST /sites/bootstrap` 灌入整站描述 JSON（站点档案 + 目录树 + 页面与块 + 导航）；幂等，可重复执行
-- [`merge-site-data.mjs`](../scripts/merge-site-data.mjs) —— **建站描述分片合并器**（`pnpm site:merge`）：站点档案 `site-profile.json` + 页面分片 `pages-*.json` → 单份描述（缺省输出 `scripts/data/site.json`，可用 `--out` 指定）；顺带校验目录引用与导航引用可解析
-- [`check-site-data.mjs`](../scripts/check-site-data.mjs) —— **建站描述契约校验器**（`pnpm site:check <描述文件>`，**路径必填**）：以块 SFC 的 `defineBlock` 声明为唯一事实来源，递归比对每个块实例的键名与必填项（`--dump-fields` 只打印字段清单）
+- [`bootstrap-site.mjs`](../scripts/bootstrap-site.mjs) —— **建站描述导入 CLI**（09 §12.2，`pnpm site bootstrap`）：登录后台 → `POST /sites/bootstrap` 灌入整站描述 JSON（站点档案 + 目录树 + 页面与块 + 导航）；幂等，可重复执行
+- [`merge-site-data.mjs`](../scripts/merge-site-data.mjs) —— **建站描述分片合并器**（`pnpm site merge`）：站点档案 `site-profile.json` + 页面分片 `pages-*.json` → 单份描述（缺省输出 `scripts/data/site.json`，可用 `--out` 指定）；顺带校验目录引用与导航引用可解析
+- [`check-site-data.mjs`](../scripts/check-site-data.mjs) —— **建站描述契约校验器**（`pnpm site check <描述文件>`，**路径必填**）：以块 SFC 的 `defineBlock` 声明为唯一事实来源，递归比对每个块实例的键名与必填项（`--dump-fields` 只打印字段清单）
 - [`upload-site-assets.mjs`](../scripts/upload-site-assets.mjs) —— **素材库双轨上传**（ADR-037 轨①）：把 `apps/geo/public/assets/img/**` 图片以 `siteId` 上传进 CMS 素材库（按 `originalName` 幂等判重，结尾做磁盘↔素材库集合对账）；站点页面引用的 `/assets/img/**` 是轨②静态直出，两轨文件名一一对应
 - [`check-built-site.mjs`](../scripts/check-built-site.mjs) —— **站点产物机械检查**（09 §12.3 step7 补充 / §12.4）：对构建产物逐页校验唯一 h1 / title / description / canonical、JSON-LD 可解析、内链完整、图片可达、NAP 电话口径、标签闭合；只做机械校验，**不能替代 §12.5 人眼视觉比对**
 
@@ -110,7 +114,7 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 - [`src/types/role.ts`](../packages/shared/src/types/role.ts) —— 后台角色实体与状态枚举（`platform` / `builtin` 标记）
 - [`src/types/block.ts`](../packages/shared/src/types/block.ts) —— Block 类型清单与中文元数据（管理后台表单使用）
 - **`src/utils/`（跨端运行时工具，非纯类型）**：`placeholders.ts` / `block-code.ts` / **[`geo-url.ts`](../packages/shared/src/utils/geo-url.ts) —— 站点地址与站点前缀的唯一实现**（`LOOPBACK_HOSTS` / `hostnameOf` / `isLoopbackUrl` / `normalizeBaseUrl` / `siteUrlPrefix` / `buildSiteUrl`：回环基址带 `/{slug}`、域名基址不带），服务端预览票据、管理后台列表「预览」、GEO 回环判定共用一份（见 ADR-031）
-- **`dist/`（构建产物）** —— 服务端 `tsconfig.paths` 指向此处，**构建服务端前必须先 `pnpm build:shared`**
+- **`dist/`（构建产物）** —— 服务端 `tsconfig.paths` 指向此处，**构建服务端前必须先 `pnpm build shared`**
 
 ---
 
@@ -155,7 +159,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`maintenance/fix-prisma-migrations-meta-table.sql`](../apps/server/prisma/maintenance/fix-prisma-migrations-meta-table.sql) —— **一次性环境修复（不是迁移）**：旧版 Prisma CLI 建出的 `_prisma_migrations` 台账 `applied_steps_count` 无 DEFAULT，会让 `migrate deploy` 报「Field 'applied_steps_count' doesn't have a default value」而整体失败；本脚本为其补默认值，幂等，用 `prisma db execute --file` 执行（见 10-launch-runbook §4.2）
 - [`maintenance/fix-table-name-case.sql`](../apps/server/prisma/maintenance/fix-table-name-case.sql) —— **一次性环境修复（不是迁移）**：Windows MySQL（`lower_case_table_names=1`）导库会把表名落到小写，Linux 默认区分大小写、Prisma 模型未写 `@@map`，于是报「The table `AdminUser` does not exist」；本脚本按映射把 21 张业务表改回大驼峰（`_prisma_migrations` 保持小写），幂等、仅改表名不动数据行、含外键自动改写与前后核对（见 10-launch-runbook §11）
 - [`seed.ts`](../apps/server/prisma/seed.ts) —— 种子数据：内置角色（`admin` / `site_admin`）与角色菜单授权、平台管理员（绑定 `admin` 角色）、后台菜单（站点管理目录：站点列表 / 新闻资讯 / 高频问答；内容管理下六页：页面 / 编辑器 / 块库 / 块模板 / 导航 / 素材 + 系统设置四个子页）、默认模板、示例站点/栏目/页面、内置块定义（若 `prisma/blocks/*.vue` 存在则写入**模板库** `siteId = 0`，目录缺失时跳过）与示例站点的**块副本**（ADR-035）
-- **`blocks/*.vue`（41 个，块唯一真源）** —— 公共块模板代码（`defineBlock` 字段声明 + 原型类名 DOM，09 §7.4.1 / ADR-036）。改块必须改这里再 `pnpm db:seed` → 站点副本重同步 → `geo blocks:sync`；直接改数据库或只改 GEO 侧 `Blk*.vue` 会在下次 seed / 构建时被覆盖或产生「块不可用」。`telbar`（尾部预约条）/`vcard-grid`（键值对卡片栅格）在仁爱建站时新增（09 §7.2.2）
+- **`blocks/*.vue`（41 个，块唯一真源）** —— 公共块模板代码（`defineBlock` 字段声明 + 原型类名 DOM，09 §7.4.1 / ADR-036）。改块必须改这里再 `pnpm db seed` → 站点副本重同步 → `geo blocks:sync`；直接改数据库或只改 GEO 侧 `Blk*.vue` 会在下次 seed / 构建时被覆盖或产生「块不可用」。`telbar`（尾部预约条）/`vcard-grid`（键值对卡片栅格）在仁爱建站时新增（09 §7.2.2）
 
 ### src/（源码）
 
@@ -429,7 +433,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 ### 工程文件
 
-- [`package.json`](../apps/geo/package.json) —— 依赖与脚本（含 `build:sites` 增量 SSG、`build:site` 指定站点、`start:prod`：`node .output/server/index.mjs` 供上线器常驻 SSR）
+- [`package.json`](../apps/geo/package.json) —— 依赖与脚本（含 `build:sites` 增量 SSG（根命令 `pnpm site build` 调它）、`blocks:sync` 块代码落盘、`start:prod`：`node .output/server/index.mjs` 供上线器常驻 SSR）
 - [`nuxt.config.ts`](../apps/geo/nuxt.config.ts) —— SSG 产物目录、prerender 钩子（从服务端拉路由清单）、构建期环境变量、开发端口（读注入的 `PORT`）、组件自动导入（**`pathPrefix: false`**，否则 `blocks/BlockXxx.vue` 注册名带前缀导致 Block 渲染链路失效）
 - [`tsconfig.json`](../apps/geo/tsconfig.json) —— TS 配置
 - [`eslint.config.mjs`](../apps/geo/eslint.config.mjs) —— ESLint 配置

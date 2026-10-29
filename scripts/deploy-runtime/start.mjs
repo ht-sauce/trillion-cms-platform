@@ -2,7 +2,7 @@
 /**
  * 部署包进程入口：按 config/apps.mjs 清单拉起全部应用并守护（ADR-042）
  *
- * 本文件随 `pnpm pack:deploy` 进入部署包根目录，与包内 `config/`、`env/` 配合工作；
+ * 本文件随 `pnpm bundle` 进入部署包根目录，与包内 `config/`、`env/` 配合工作；
  * 服务器上无需 git / pnpm / PM2，只要有 Node 20+：
  *
  *   node start.mjs              # 前台运行全部应用（Ctrl+C 一并结束；SSH 断开即退出）
@@ -153,7 +153,7 @@ function assertScripts(names) {
     console.error(
       `[${TAG}] 入口脚本缺失：${missing.map((name) => `${findApp(name).title}（${SCRIPT_PATH[name]}）`).join('、')}`
     )
-    console.error(`[${TAG}] 部署包不完整——请回本地重新执行 pnpm release --build-only && pnpm pack:deploy 后整体覆盖`)
+    console.error(`[${TAG}] 部署包不完整——请回本地重新执行 pnpm release --build-only && pnpm bundle 后整体覆盖`)
     process.exit(1)
   }
 }

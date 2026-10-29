@@ -442,7 +442,7 @@ flowchart LR
 
 ### 7.2 内容块（43 个，语义化强制）
 
-全量块清单见 `03` §3.2（`Blk*.vue` 43 个 + BlockRenderer）；通用块定义唯一真源为 `apps/server/prisma/blocks/*.vue`（41 个公共模板 + `telbar`/`vcard-grid` 等按需新增），站点首次使用后自动生成站点私有副本（§4.5 块隔离）。**改块流程：改 `prisma/blocks/*.vue` → `pnpm db:seed`（更新公共模板）→ 对已引入站点执行副本重同步（`apps/server/resync-site-blocks.mjs <siteSlug>`）→ `geo blocks:sync` 落盘 `Blk*.vue` → 重建**。只 seed 不同步副本时，站点线上仍渲染旧版块代码（rendererManifest 按 siteId 升序，站点副本优先）。
+全量块清单见 `03` §3.2（`Blk*.vue` 43 个 + BlockRenderer）；通用块定义唯一真源为 `apps/server/prisma/blocks/*.vue`（41 个公共模板 + `telbar`/`vcard-grid` 等按需新增），站点首次使用后自动生成站点私有副本（§4.5 块隔离）。**改块流程：改 `prisma/blocks/*.vue` → `pnpm db seed`（更新公共模板）→ 对已引入站点执行副本重同步（`apps/server/resync-site-blocks.mjs <siteSlug>`）→ `geo blocks:sync` 落盘 `Blk*.vue` → 重建**。只 seed 不同步副本时，站点线上仍渲染旧版块代码（rendererManifest 按 siteId 升序，站点副本优先）。
 
 > **块定义变更（2026-10-14，新闻去分类）**：`post-list` 去 `ptag` / `category` 字段，新增 `pageSize` 字段（默认 10）+ **客户端分页**——`onMounted` 解析 `?page=`（SSG / SSR 首屏恒第 1 页），渲染原型 `.pager` 结构（`?page=N` 相对链接、原生 `<a>` 整页跳转，当前页 `.on`），`total ≤ pageSize` 不渲染 pager；`article-meta` 去 `category` 字段。公共模板更新后，已引入站点按 §4.5 块隔离口径经 **`PUT /blocks/:key`（site 维度，服务端自动写入本站副本）** 显式同步——本次即照此执行（替代脚本重同步路径）并整站重发；未同步前站点线上仍渲染旧版块代码。
 
@@ -534,7 +534,7 @@ flowchart LR
 
 > ADR-028 修正的历史缺陷：旧实现「新建临时目录 → 只渲染选中路由 → 整体改名覆盖站点目录」会**丢掉站点其他页面**，并使 sitemap / llms.txt / 全站导览缩水为只含变更页。现行流程已含「复制现有产物再合并」的修复。
 
-`apps/geo/scripts/build-sites.mjs` 流程（`pnpm build:sites --site <slug> [--pages 1,2] [--rebuild]`）：
+`apps/geo/scripts/build-sites.mjs` 流程（`pnpm site build --site <slug> [--pages 1,2] [--rebuild]`）：
 
 ```mermaid
 flowchart TB

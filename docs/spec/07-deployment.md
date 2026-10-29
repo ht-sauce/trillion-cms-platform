@@ -11,28 +11,28 @@
 | 形态   | 管理后台                     | GEO 项目                                                         | 服务端                    | MySQL       | 静态托管                    |
 | ------ | ---------------------------- | ---------------------------------------------------------------- | ------------------------- | ----------- | --------------------------- |
 | Docker | `cms-admin`（SPA 3000）      | `cms-geo`（SSR 3002）/ SSG 产物由 nginx 出                       | `cms-server`（3001）      | `cms-mysql` | `cms-nginx`（8080）         |
-| 直装   | 一键 `pnpm allDev`；单端 `pnpm dev:admin`（3000） | 一键同上；单端 `pnpm dev:geo`（SSR）、`pnpm build:sites --site <slug>`（SSG） | 一键同上；单端 `pnpm dev:server`（3001） | 本地实例 | 本地 Nginx 或直接用产物目录 |
+| 直装   | 一键 `pnpm dev`；单端 `pnpm dev admin`（3000） | 一键同上；单端 `pnpm dev geo`（SSR）、`pnpm site build --site <slug>`（SSG） | 一键同上；单端 `pnpm dev server`（3001） | 本地实例 | 本地 Nginx 或直接用产物目录 |
 | 部署包 | `deploy/apps/admin/.output`（Nitro 自包含，3000） | `deploy/apps/geo/.output`（SSR 3002）+ `sites/` 由 nginx 出 | `deploy/apps/server/dist`（3001，全量 node_modules 含 prisma CLI） | 服务器实例 | 包内 `apps/geo/sites/<slug>/` + `nginx.conf.example` 模板 |
 
-> **部署包（ADR-042）**：`pnpm pack:deploy` 在本地把三端产物、依赖（`pnpm deploy --node-linker=hoisted`，零 symlink）、`config/` 与 `env/` 汇集为仓库根 `deploy/`（gitignore），整体拷贝到服务器后 `node db.mjs deploy`（结构）→ `node start.mjs daemon`（守护运行三端，`stop` / `status` / `restart` 子命令）——服务器免 git / pnpm / PM2；操作口径见 [`10`](./10-launch-runbook.md) §4.0。包内 `config/` 仍是端口 / 连接串 / 密钥的唯一派生事实源，`start.mjs` 按其 `APPS` 清单驱动进程管理。
+> **部署包（ADR-042）**：`pnpm bundle` 在本地把三端产物、依赖（`pnpm deploy --node-linker=hoisted`，零 symlink）、`config/` 与 `env/` 汇集为仓库根 `deploy/`（gitignore），整体拷贝到服务器后 `node db.mjs deploy`（结构）→ `node start.mjs daemon`（守护运行三端，`stop` / `status` / `restart` 子命令）——服务器免 git / pnpm / PM2；操作口径见 [`10`](./10-launch-runbook.md) §4.0。包内 `config/` 仍是端口 / 连接串 / 密钥的唯一派生事实源，`start.mjs` 按其 `APPS` 清单驱动进程管理。
 
-> 本地三端由根命令 **`pnpm allDev`** 一次拉起（先结束占用端口的旧进程，再并发启动，Ctrl+C 一并回收）；单端命令 `pnpm dev:server|admin|geo` 走同一个启动器，会先释放对应端口。
+> 本地三端由根命令 **`pnpm dev`** 一次拉起（先结束占用端口的旧进程，再并发启动，Ctrl+C 一并回收）；单端命令 `pnpm dev server|admin|geo` 走同一个启动器，会先释放对应端口。
 > 访问入口清单**打印两次**：① **启动摘要之后立刻打一份**（按配置端口）——就绪清单必须等 Nuxt 首次编译完成，期间终端不能没有地址信息；② **全部工程就绪且日志静默 5s 后再打一份**（按实际监听端口，端口回退时自动修正）。
 > 两次都受补打机制守护：**日志静默 3 秒就把清单重新打到屏幕底部**（每来一行新日志重置计时，即 debounce），日志持续不停时每 15 秒兜底补打一次（上限 30 次），因此编译日志、Nuxt devtools 提示等把清单顶掉后地址都会自动回来；
 > 同时入口会落盘到仓库根 `dev-endpoints.txt`（已 gitignore）：摘要阶段先写（按配置端口，终端会提示文件路径），就绪后覆盖为实际监听端口版 —— 即使某端迟迟不就绪、或终端被日志刷屏，也随时能打开该文件查到本机与局域网入口。
-> **`allDev` 只负责启动进程，不做任何数据库操作**：不建库、不迁移、不写种子数据；数据库初始化始终是独立的 `pnpm db:generate / db:migrate / db:seed`（服务端启动时会连库，库未就绪则服务端启动失败，其余两端不受影响）。
+> **`pnpm dev` 只负责启动进程，不做任何数据库操作**：不建库、不迁移、不写种子数据；数据库初始化始终是独立的 `pnpm db generate` / `pnpm db migrate` / `pnpm db seed`（服务端启动时会连库，库未就绪则服务端启动失败，其余两端不受影响）。
 >
-> **开发形态 vs 上线形态**（`allDev` 只覆盖前者；**代码上线与数据库上线是两条命令**）：
+> **开发形态 vs 上线形态**（`pnpm dev` 只覆盖前者；**代码上线与数据库上线是两条命令**）：
 >
 > | 形态 | 命令 | 做什么 | 是否构建 | 是否改数据库 |
 > | ---- | ---- | ------ | -------- | ------------ |
-> | 开发 | `pnpm allDev` / `allDev:test` / `allDev:prod` | 源码直跑（`nest start --watch`、`nuxt dev`），改代码即时生效 | 否 | 否 |
-> | 代码上线 | `pnpm release:test` / `release:prod` | 构建产物常驻（`node dist/main`、`node .output/server/index.mjs`） | 是 | **否**（只做只读检查，结构落后即拦下） |
-> | 数据库上线 | `pnpm db:deploy:test` / `db:deploy:prod` | 增量应用迁移（`prisma migrate deploy`） | 否 | **是**（唯一的改结构入口） |
+> | 开发 | `pnpm dev` / `pnpm dev --env test` / `pnpm dev --env production` | 源码直跑（`nest start --watch`、`nuxt dev`），改代码即时生效 | 否 | 否 |
+> | 代码上线 | `pnpm release --env test` / `pnpm release --env production` | 构建产物常驻（`node dist/main`、`node .output/server/index.mjs`）；`--pm2` 交给 PM2 | 是 | **否**（只做只读检查，结构落后即拦下） |
+> | 数据库上线 | `pnpm db deploy --env test` / `pnpm db deploy --env production` | 增量应用迁移（`prisma migrate deploy`） | 否 | **是**（唯一的改结构入口） |
 >
 > **为什么拆成两条命令**：结构变更与代码发布是两件事——执行时机可能不同（先加字段再上代码，或先上代码再回填）、
 > 影响面不同（迁移不可回滚、可能锁表）、审计点不同（谁在何时改了哪个库）。所以代码上线器**绝不执行迁移**，
-> 发现结构落后只负责拦下并提示先跑 `pnpm db:deploy`。完整流程与选项见 §3.5；容器形态（§3.4）仍由 compose 显式注入变量。
+> 发现结构落后只负责拦下并提示先跑 `pnpm db deploy`。完整流程与选项见 §3.5；容器形态（§3.4）仍由 compose 显式注入变量。
 
 ```mermaid
 flowchart TB
@@ -105,19 +105,19 @@ flowchart TB
 
 | 命令                              | 环境        | 端口（server/admin/geo） | 数据库          |
 | --------------------------------- | ----------- | ------------------------ | --------------- |
-| `pnpm allDev`                     | development | 3001 / 3000 / 3002       | `trillionCms`   |
-| `pnpm allDev:test`                | test        | 3101 / 3100 / 3102       | `trillionCms_test` |
-| `pnpm allDev:prod`                | production  | 3001 / 3000 / 3002       | 由生产文件决定  |
-| `pnpm allDev --env <name>`        | 自定义      | 由文件内 `PORT_*` 决定   | 由文件决定      |
-| `pnpm release:test`               | test        | 3101 / 3100 / 3102       | `trillionCms_test` |
-| `pnpm release:prod`               | production  | 由生产文件决定           | 由生产文件决定  |
+| `pnpm dev`                        | development | 3001 / 3000 / 3002       | `trillionCms`   |
+| `pnpm dev --env test`             | test        | 3101 / 3100 / 3102       | `trillionCms_test` |
+| `pnpm dev --env production`       | production  | 3001 / 3000 / 3002       | 由生产文件决定  |
+| `pnpm dev --env <name>`           | 自定义      | 由文件内 `PORT_*` 决定   | 由文件决定      |
+| `pnpm release --env test`         | test        | 3101 / 3100 / 3102       | `trillionCms_test` |
+| `pnpm release --env production`   | production  | 由生产文件决定           | 由生产文件决定  |
 | `pnpm release --env <name>`       | 自定义      | 由文件内 `PORT_*` 决定   | 由文件决定      |
-| `pnpm db:deploy:test`             | test        | ——（不启进程）           | `trillionCms_test` |
-| `pnpm db:deploy:prod`             | production  | ——（不启进程）           | 由生产文件决定  |
-| `pnpm db:deploy --env <name>`     | 自定义      | ——（不启进程）           | 由文件决定      |
+| `pnpm db deploy --env test`       | test        | ——（不启进程）           | `trillionCms_test` |
+| `pnpm db deploy --env production` | production  | ——（不启进程）           | 由生产文件决定  |
+| `pnpm db deploy --env <name>`     | 自定义      | ——（由文件决定）         | 由文件决定      |
 
 环境名默认 `development`，决定加载 `env/.env.<名字>`；新增环境只需复制 `env/.env.example` 为新文件。
-`allDev*` = 开发形态（源码直跑），`release:*` = **代码上线**（构建 + 生产模式启动，不碰数据库），`db:deploy*` = **数据库上线**（唯一的改结构入口）。
+`pnpm dev` = 开发形态（源码直跑），`pnpm release` = **代码上线**（构建 + 生产模式启动，不碰数据库），`pnpm db deploy` = **数据库上线**（唯一的改结构入口）。
 
 ### 3.3 变量清单（由 `config/` 派生后注入）
 
@@ -144,7 +144,7 @@ flowchart TB
 容器编排仍由 [`docker/docker-compose.yml`](../../docker/docker-compose.yml) 的 `environment` 显式注入（容器内服务名 / 路径与本地不同：`DB_HOST=mysql`、`SITES_OUTPUT_DIR=/app/sites`、`NUXT_PUBLIC_API_BASE=http://cms-server:3001/geoserver`，2026-10-15 已随 ADR-040 同步为 `/geoserver` 结尾，healthcheck 同口径）。
 两边变量名与语义一致，差异仅在取值（见 §3.3 的派生规则）；本地开发请使用 `env/`，容器部署请使用 compose。
 
-### 3.5 一键上线（代码 `pnpm release:*` / 数据库 `pnpm db:deploy*`）
+### 3.5 一键上线（代码 `pnpm release` / 数据库 `pnpm db deploy`）
 
 上线被拆成两个**各自独立、各可重复执行**的命令，避免手工敲七八条命令、漏步骤或对错环境：
 
@@ -155,42 +155,42 @@ flowchart TB
 
 ```bash
 # ① 数据库上线（唯一的改结构入口；无结构变更时可跳过）
-pnpm db:status:prod                 # 只读：看已应用 / 未应用迁移与目标库
-pnpm db:deploy:prod                 # 增量应用未执行的迁移（幂等；空库自动建库）
+pnpm db status --env production                 # 只读：看已应用 / 未应用迁移与目标库
+pnpm db deploy --env production                 # 增量应用未执行的迁移（幂等；空库自动建库）
 
 # ② 代码上线（绝不改数据库）
-pnpm release:prod                   # 生产环境上线代码（env/.env.production，不入库，上线前逐项确认）
-pnpm release:test                   # 测试环境上线代码（env/.env.test：3101 / 3100 / 3102）
-pnpm release --env production --check               # 只体检：配置 + 数据库迁移状态（不构建、不启动、不改库）
-pnpm release --env production server                # 只上线服务端
-pnpm release --env production --skip-build server   # 沿用上次产物只重启服务端
+pnpm release --env production                   # 生产环境上线代码（env/.env.production，不入库，上线前逐项确认）
+pnpm release --env test                         # 测试环境上线代码（env/.env.test：3101 / 3100 / 3102）
+pnpm release --env production --check          # 只体检：配置 + 数据库迁移状态（不构建、不启动、不改库）
+pnpm release --env production server           # 只上线服务端
+pnpm release --env production --skip-build server  # 沿用上次产物只重启服务端
 ```
 
-#### ① 数据库上线（`pnpm db:deploy*`）
+#### ① 数据库上线（`pnpm db deploy`）
 
 | 命令 | 环境 | 底层 | 用途 |
 | ---- | ---- | ---- | ---- |
-| `pnpm db:status` / `db:status:test` / `db:status:prod` | development / test / production | `prisma migrate status` | **只读**：看「已应用 / 未应用」迁移清单、目标库与连通性 |
-| `pnpm db:deploy` / `db:deploy:test` / `db:deploy:prod` | 同上 | `prisma migrate deploy` | **增量应用**未执行的迁移（幂等、非交互；目标库不存在时自动建库） |
-| `pnpm db:deploy --env <环境>` / `--check` | 自定义 | 同上 | `--env` 亦可透传；`--check` 等价 `db:status` |
+| `pnpm db status [--env <环境>]` | development（缺省）/ test / production | `prisma migrate status` | **只读**：看「已应用 / 未应用」迁移清单、目标库与连通性 |
+| `pnpm db deploy [--env <环境>]` | 同上 | `prisma migrate deploy` | **增量应用**未执行的迁移（幂等、非交互；目标库不存在时自动建库） |
+| `pnpm db status --env <环境>` | 自定义 | `prisma migrate status` | 只读检查（等价于直接跑 `scripts/db-release.mjs --check`） |
 
 | 步骤 | 做什么 | 失败后果 |
 | ---- | ------ | -------- |
 | 1 体检 | 环境文件 / 必填变量 / 目标库与连接串 / **生产库口令为空或疑似占位值 → 阻断**（防「改错库」） | **阻断**（`--force` 可放行），不执行任何变更 |
 | 2 只读检查 | `prisma migrate status`：已最新 / 待应用 / 库不存在 / 不可达，各有明确结论 | 不可达或凭据错误 → 中止 |
-| 3 增量发布 | `prisma migrate deploy`：按 `apps/server/prisma/schema/migrations` 顺序**只应用未执行的迁移** | 中止并提示「库可能停在中间状态，先 `pnpm db:status` 查看现状再重跑」 |
+| 3 增量发布 | `prisma migrate deploy`：按 `apps/server/prisma/schema/migrations` 顺序**只应用未执行的迁移** | 中止并提示「库可能停在中间状态，先 `pnpm db status` 查看现状再重跑」 |
 | 4 复核 | 再次 `migrate status` 确认结构已最新 | 复核不为「已最新」→ 退出码 1 并提示人工确认 |
 
 > **只做增量应用**：永远不会 `db push`（绕过迁移历史）或 reset（毁数据）。迁移 SQL 由开发侧手工写在 `apps/server/prisma/schema/migrations/`（理由见 [`04`](./04-data-model.md) §6）。
-> 首次部署（空库）：`pnpm db:deploy:prod`（建库 + 全部迁移）→ `node scripts/exec.mjs server prisma:seed --env production`（按需初始化管理员与示例站点）→ `pnpm release:prod`（代码）。
+> 首次部署（空库）：`pnpm db deploy --env production`（建库 + 全部迁移）→ `pnpm db seed --env production`（按需初始化管理员与模板 / 公共块）→ `pnpm release --env production`（代码）。
 
-#### ② 代码上线（`pnpm release:*`）
+#### ② 代码上线（`pnpm release`）
 
 | 步骤 | 做什么 | 失败后果 |
 | ---- | ------ | -------- |
 | 1 体检 | 环境文件 / 必填变量 / `JWT_SECRET` 占位值与长度 / `PUBLIC_HOST` 回环 / `CORS_ORIGINS` / 生产库口令 / `--skip-build` 时产物是否齐备；**数据库只读检查**（见下） | **阻断**（`--force` 可放行），不触碰数据库与进程 |
 | 2 构建 | 共享类型包 → 服务端 → 管理后台 → GEO 项目（串行，逐项计时） | **中止**：数据库与运行中的进程均未被改动 |
-| 3 启动 | 释放目标端口（`scripts/port-guard.mjs`，与 `allDev` 同一套）→ 各应用 `start:prod` 生产模式常驻 | —— |
+| 3 启动 | 释放目标端口（`scripts/port-guard.mjs`，与 `pnpm dev` 同一套）→ 各应用 `start:prod` 生产模式常驻 | —— |
 | 4 就绪与收尾 | HTTP 探测各端、`GET /geoserver/health` 校验**运行时**数据库连通，打印入口清单并落盘仓库根 `release-endpoints.txt`（不入库） | 未就绪的端单独列出并指向其日志 |
 
 **数据库只读检查（本命令唯一的数据库动作）**：
@@ -198,8 +198,8 @@ pnpm release --env production --skip-build server   # 沿用上次产物只重�
 | 检查结论 | 处理 |
 | -------- | ---- |
 | 结构已是最新 | 放行（`[ok] 数据库迁移`） |
-| 有未应用迁移 | **阻断**，提示先执行 `pnpm db:deploy --env <环境>`（确需先上代码：`--force`） |
-| 目标库不存在 | **阻断**，提示先执行 `pnpm db:deploy`（会自动建库并应用全部迁移） |
+| 有未应用迁移 | **阻断**，提示先执行 `pnpm db deploy --env <环境>`（确需先上代码：`--force`） |
+| 目标库不存在 | **阻断**，提示先执行 `pnpm db deploy`（会自动建库并应用全部迁移） |
 | 数据库不可达 / 凭据无效 | **阻断**，提示确认 `DB_*`（运行时健康检查同样会失败） |
 | 本次未发布服务端（`admin` / `geo`） | 跳过检查——两个前端不依赖数据库连接 |
 
@@ -208,20 +208,21 @@ pnpm release --env production --skip-build server   # 沿用上次产物只重�
 | 选项 | 作用 |
 | ---- | ---- |
 | `--check` | 只体检（含数据库迁移状态），不构建不启动不改库；上线前先跑它最省事 |
-| `--build-only` | 体检 + 构建后停止，不启动进程（Linux 服务器配合 PM2，ADR-041；与 `--check` / `--skip-build` 互斥） |
+| `--build-only` | 体检 + 构建后停止，不启动进程（Linux 服务器手工交给 PM2，ADR-041；与 `--check` / `--skip-build` 互斥） |
+| `--pm2` | 体检 + 构建 → 生成 `ecosystem.config.json` → `pm2 startOrReload --update-env` → `pm2 save`（服务器一条命令上线；与 `--check` 互斥） |
 | `--skip-build` | 跳过构建，沿用上次产物（快速重启；体检会校验产物是否齐备） |
 | `--force` | 忽略体检中的阻断项（例如结构落后但本次要先上代码、或尚未更换 `JWT_SECRET` 的首次联调） |
 | 位置参数 | 目标应用 `server` / `admin` / `geo`，缺省全部；只发布前端时自动跳过数据库检查 |
 
-> 上线器在**前台托管**三个进程（与 `allDev` 一致），Ctrl+C 一并结束；**Linux 直装生产环境用 PM2 守护**（生成式 PM2 配置 + 上线器 `--build-only`，见 [`10`](./10-launch-runbook.md) 与 ADR-041），Docker 形态由容器托管（§1）。
+> 上线器在**前台托管**三个进程（与 `pnpm dev` 一致），Ctrl+C 一并结束；**Linux 直装生产环境用 PM2 守护**（生成式 PM2 配置 + 上线器 `--build-only`，见 [`10`](./10-launch-runbook.md) 与 ADR-041），Docker 形态由容器托管（§1）。
 
-#### 数据库迁移命令对照（`db:migrate` vs `db:deploy`）
+#### 数据库迁移命令对照（`pnpm db migrate` vs `pnpm db deploy`）
 
 | 命令 | 底层 | 用途 | 用在 |
 | ---- | ---- | ---- | ---- |
-| `pnpm db:migrate` | `prisma migrate dev` | 生成并应用迁移、校验 drift，**可能提示 reset 数据库** | **仅本地开发** |
-| `pnpm db:deploy` | `prisma migrate deploy` | 只应用未执行的迁移，非交互、幂等、空库自动建库 | 测试 / 生产（唯一改结构入口） |
-| `pnpm db:status` | `prisma migrate status` | 只读查看迁移状态 | 上线前确认、排查漂移 |
+| `pnpm db migrate` | `prisma migrate dev` | 生成并应用迁移、校验 drift，**可能提示 reset 数据库** | **仅本地开发** |
+| `pnpm db deploy` | `prisma migrate deploy` | 只应用未执行的迁移，非交互、幂等、空库自动建库 | 测试 / 生产（唯一改结构入口） |
+| `pnpm db status` | `prisma migrate status` | 只读查看迁移状态 | 上线前确认、排查漂移 |
 
 ## 4. 持久化
 
@@ -254,21 +255,21 @@ compose 的 `server` 依赖 `mysql` 的 `service_healthy` 才启动，避免冷�
 
 ```bash
 pnpm install
-pnpm db:generate                     # 生成 Prisma Client（构建服务端时也会自动生成，见 apps/server 的 build 脚本）
-pnpm db:migrate                      # 读取 env/.env.development，自动建库 trillionCms 并应用迁移
-pnpm db:seed                         # 可选：写入 admin 账号与示例站点
-pnpm allDev                          # 一条命令拉起三端（先释放端口，Ctrl+C 一并结束）
-pnpm build:server && pnpm build:admin && pnpm build:geo
-pnpm build:sites --site <slug>       # SSG 单站点出产物（参数经根执行器透传）
+pnpm db generate                     # 生成 Prisma Client（构建服务端时也会自动生成，见 apps/server 的 build 脚本）
+pnpm db migrate                      # 读取 env/.env.development，自动建库 trillionCms 并应用迁移
+pnpm db seed                         # 可选：写入 admin 账号与示例站点
+pnpm dev                          # 一条命令拉起三端（先释放端口，Ctrl+C 一并结束）
+pnpm build server && pnpm build admin && pnpm build geo
+pnpm site build --site <slug>       # SSG 单站点出产物（参数经根执行器透传）
 ```
 
 **测试 / 生产（直装形态）上线**（结构变更与代码发布分两步，各自可重复跑）：
 
 ```bash
-pnpm db:status:prod                     # 1) 结构自查（只读）：已应用 / 未应用迁移
-pnpm db:deploy:prod                     # 2) 数据库上线：增量应用未执行的迁移（无结构变更时输出「结构已是最新」）
+pnpm db status --env production                     # 1) 结构自查（只读）：已应用 / 未应用迁移
+pnpm db deploy --env production                     # 2) 数据库上线：增量应用未执行的迁移（无结构变更时输出「结构已是最新」）
 pnpm release --env production --check   # 3) 代码上线前体检：配置 + 数据库迁移状态（只读）
-pnpm release:prod                       # 4) 代码上线：构建 → 生产模式启动（不改数据库）
+pnpm release --env production                       # 4) 代码上线：构建 → 生产模式启动（不改数据库）
 #    端口由 env/.env 的 PORT_* 决定，缺省 3001 / 3000 / 3002；入口与健康检查写入 release-endpoints.txt
 #    只重启某一端：pnpm release --env production --skip-build server
 ```
@@ -283,10 +284,10 @@ pnpm release:prod                       # 4) 代码上线：构建 → 生产模
 | SSG 站点埋点要求服务端公网可达                      | 本地内网部署时埋点数据不会入库，但不影响页面                              |
 | 端口被上一次未正常退出的工程占用                    | 启动器会先结束占用端口的旧进程再启动（`scripts/dev.mjs`）                 |
 | 提示缺少环境变量文件 `env/.env.<环境>`              | 从模板创建：`copy env/.env.example env/.env.<环境>`                       |
-| 目标库不存在（`P1003`）                             | `pnpm db:deploy` 会自动建库并应用全部迁移，首次部署属正常（代码上线器会明确提示先跑它） |
+| 目标库不存在（`P1003`）                             | `pnpm db deploy` 会自动建库并应用全部迁移，首次部署属正常（代码上线器会明确提示先跑它） |
 | 生产上线被体检拦下（`JWT_SECRET` 占位值 / 产物缺失） | 先改 `env/.env.production`、先构建；确需联调再 `--force`                  |
-| 代码上线体检报「结构落后于代码」                    | 说明有未应用迁移：先跑 `pnpm db:deploy --env <环境>`（确需先上代码再 `--force`） |
-| `db:deploy:prod` 报「生产环境数据库口令为空」       | 防「改错库」的护栏：先补 `env/.env.production` 的 `DB_PASSWORD`（本地演练可用 `--force`） |
+| 代码上线体检报「结构落后于代码」                    | 说明有未应用迁移：先跑 `pnpm db deploy --env <环境>`（确需先上代码再 `--force`） |
+| `pnpm db deploy --env production` 报「生产环境数据库口令为空」       | 防「改错库」的护栏：先补 `env/.env.production` 的 `DB_PASSWORD`（本地演练可用 `--force`） |
 
 ## 8. 站点渲染引擎运行形态（2026-10-06 新增，详见 [`09`](./09-site-editor.md) §7.5）
 

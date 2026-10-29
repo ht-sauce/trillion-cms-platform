@@ -13,7 +13,7 @@
 | **形态 A · 仓库形态（非部署包，当前采用）**     | 服务器**自己装好 Node / pnpm / PM2 / MySQL / nginx**，源码经 git 拉到服务器；单机公网生产 / 测试 | §3 → §4.1\~§4.6（日常见 §5 / §6）       |
 | **形态 B · 部署包形态（ADR-042，当前不用）** | 服务器**无 git / pnpm / PM2**：本地构建并打包，整体拷贝上传，`node start.mjs` 一条命令运行        | §4.0（含末尾「部署包日常更新」）                 |
 | Docker 编排                      | 容器化交付（本期不采用，形态保留）                                                       | [`07`](./07-deployment.md) §1、§3.4 |
-| 开发形态（`pnpm allDev`）            | 本地开发联调，前台托管                                                             | `README.md` / `AGENTS.md` §9       |
+| 开发形态（`pnpm dev`）            | 本地开发联调，前台托管                                                             | `README.md` / `AGENTS.md` §9       |
 
 两形态**共用**：环境值口径与派生逻辑（§4.1）、数据库上线（§4.2；部署包对应 `node db.mjs deploy`，同一套迁移）、nginx 反代（§7）、验收清单（§8）。
 **只在两点上分叉**：① **代码怎么上服务器**——形态 A `git pull` + `pnpm install` + 构建；形态 B 本地打包整体覆盖。② **进程怎么起停**——形态 A 用 PM2（§2 / §4.4 / §6）；形态 B 用包内 `start.mjs`（自带守护，**不需要 PM2**）。
@@ -60,7 +60,7 @@ flowchart TB
 
 ### 2.1 为什么是 PM2
 
-`pnpm release:*` 在**前台托管**三端进程，SSH 会话断开即全部退出，公网生产不可接受。备选中：
+`pnpm release` 在**前台托管**三端进程，SSH 会话断开即全部退出，公网生产不可接受。备选中：
 
 - **systemd unit 直写**：三端各一份 unit，环境变量要么散落 unit 文件（第二份事实来源，与 `config/` 派生体系脱节），要么绕行 `EnvironmentFile` 改造派生逻辑——维护成本高、易漂移；
 - **Docker**：本期不采用（镜像与构建链路维护成本，形态保留见 `07`）；
@@ -70,7 +70,7 @@ PM2 在服务器上**全局安装**（`npm i -g pm2`），不进 `package.json`�
 
 ### 2.2 生成式 PM2 配置（唯一事实来源不搬家）
 
-新增 [`scripts/pm2-config.mjs`](../../scripts/pm2-config.mjs)（零第三方依赖，`pnpm pm2:config`）：
+新增 [`scripts/pm2-config.mjs`](../../scripts/pm2-config.mjs)（零第三方依赖；常规路径已折进上线器的 `--pm2`，本文件只在「只重生成配置」时直接调用）：
 
 ```bash
 node scripts/pm2-config.mjs --env production
@@ -98,12 +98,12 @@ node scripts/pm2-config.mjs --env production
 服务器上**不使用**上线器的前台启动段（§1 进程启停一律交给 PM2）。给 `scripts/release.mjs` 增加 `--build-only` 选项：
 
 ```bash
-pnpm release:prod --build-only    # 体检（含数据库只读检查）→ 构建 → 停止；不释放端口、不启动进程
+pnpm release --env production --build-only    # 体检（含数据库只读检查）→ 构建 → 停止；不释放端口、不启动进程
 ```
 
 体检 → 构建的完整链路（JWT 占位值检查、迁移落后拦截、串行构建计时）全部复用，只是把「释放端口 → 启动 → 探测」三段让渡给 PM2。
 
-> **等价手工路径**（不想用 `--build-only` 时）：`pnpm release --env production --check`（只体检）+ 手工构建 `pnpm build:server && pnpm build:admin && pnpm build:geo`（经根执行器注入同一套派生配置）。
+> **等价手工路径**（不想用 `--build-only` 时）：`pnpm release --env production --check`（只体检）+ 手工构建 `pnpm build server && pnpm build admin && pnpm build geo`（经根执行器注入同一套派生配置）。
 
 ### 2.4 与两条命令分离原则的关系
 
@@ -111,7 +111,7 @@ pnpm release:prod --build-only    # 体检（含数据库只读检查）→ 构�
 
 ```mermaid
 flowchart LR
-  A["pnpm db:deploy:prod<br/>数据库上线（结构）"] --> B["pnpm release:prod --build-only<br/>代码上线（体检 + 构建）"]
+  A["pnpm db deploy --env production<br/>数据库上线（结构）"] --> B["pnpm release --env production --build-only<br/>代码上线（体检 + 构建）"]
   B --> C["pm2 startOrReload<br/>ecosystem.config.json --update-env"]
   C --> D["pm2 save<br/>固化进程清单"]
 ```
@@ -126,8 +126,8 @@ flowchart LR
 >
 > | 核对项      | 怎么核                                                                                   | 不一致的后果                                                  |
 > | -------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-> | MySQL 库名 | `mysql -u<user> -p -e "show databases;"`，库名大小写要与 `env/.env.<环境>` 的 `DB_NAME` **完全一致** | Linux 下库名区分大小写（开发机 Windows 不区分），不一致 `db:deploy` 报「库不存在」 |
-> | MySQL 账号 | `DB_USER` / `DB_PASSWORD` 要能真连上目标库（`mysql -h<host> -u<user> -p <库名> -e "select 1;"`）  | 连接被拒，`db:status` / `db:deploy` 第一步即失败                   |
+> | MySQL 库名 | `mysql -u<user> -p -e "show databases;"`，库名大小写要与 `env/.env.<环境>` 的 `DB_NAME` **完全一致** | Linux 下库名区分大小写（开发机 Windows 不区分），不一致 `pnpm db deploy` 报「库不存在」 |
+> | MySQL 账号 | `DB_USER` / `DB_PASSWORD` 要能真连上目标库（`mysql -h<host> -u<user> -p <库名> -e "select 1;"`）  | 连接被拒，`pnpm db status` / `pnpm db deploy` 第一步即失败                   |
 > | MySQL 时区 | `mysql -e "select @@global.time_zone, @@session.time_zone;"` 应为 `+08:00`              | 时间字段读写漂 8 小时                                            |
 > | Node 版本  | `node -v`；**PM2 用哪个 Node 跑，就用同一个 Node 执行** **`pnpm install`** **/ 构建**                | 原生模块 ABI 不一致，进程拉起即崩                                     |
 > | PM2 进程面  | `pm2 ls` 看既有应用；`startOrReload` 只增改 `trillion-*` 三端，`pm2 save` 会整体固化当前清单（期望行为）         | ——                                                      |
@@ -159,7 +159,7 @@ default-time-zone    = '+08:00'
 bind-address         = 127.0.0.1
 ```
 
-建库与专用账号（**预建库**，专用账号即无需全局建库权限；`db:deploy` 对已存在空库直接应用迁移）：
+建库与专用账号（**预建库**，专用账号即无需全局建库权限；`pnpm db deploy` 对已存在空库直接应用迁移）：
 
 ```sql
 CREATE DATABASE trillionCms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -168,7 +168,7 @@ GRANT ALL PRIVILEGES ON trillionCms.* TO 'trillion'@'127.0.0.1';
 FLUSH PRIVILEGES;
 ```
 
-> **禁止在服务器上执行** **`pnpm db:migrate`**（`prisma migrate dev`，可能提示 reset）：结构变更唯一入口是 `pnpm db:deploy*`（`07` §3.5 / `04` §6）。
+> **禁止在服务器上执行** **`pnpm db migrate`**（`prisma migrate dev`，可能提示 reset）：结构变更唯一入口是 `pnpm db deploy*`（`07` §3.5 / `04` §6）。
 
 ***
 
@@ -192,8 +192,8 @@ FLUSH PRIVILEGES;
 #### ① 本地：构建并打包（Windows / Linux 均可）
 
 ```bash
-pnpm release:prod --build-only   # 体检 + 构建三端产物（已有产物可跳过）
-pnpm pack:deploy                 # 产出仓库根 deploy/（自包含部署包，gitignore 不入库）
+pnpm release --env production --build-only   # 体检 + 构建三端产物（已有产物可跳过）
+pnpm bundle                 # 产出仓库根 deploy/（自包含部署包，gitignore 不入库）
 ```
 
 打包器 `scripts/pack-deploy.mjs` 会：体检产物齐备 → 拷 `config/` 与 `env/.env.production`（**含密钥**）→ 汇集三端产物与运行时入口（`start.mjs` / `db.mjs` / `README.md` / `nginx.conf.example`）。产物目录：
@@ -232,7 +232,7 @@ node start.mjs status                      # 查看三端进程与端口健康
 
 ```bash
 # 本地
-pnpm release:prod --build-only && pnpm pack:deploy     # 重新打包
+pnpm release --env production --build-only && pnpm bundle     # 重新打包
 # 上传解压覆盖前：先 node start.mjs stop；服务器侧 uploads 有新增素材时先备份该目录，覆盖后还原
 node db.mjs deploy                                     # 有结构变更时（先库后码）
 node start.mjs daemon                                  # 重新拉起（env 有变更时重新打包即可，无需生成配置）
@@ -257,7 +257,7 @@ chmod 600 env/.env.production        # 含口令与密钥，仅部署账号可�
 | `DB_HOST/PORT/USER/PASSWORD/NAME`  | 是              | `127.0.0.1 / 3306 / trillion / <强口令> / trillionCms`（口令为空或疑似占位值会被 db 上线器阻断）                                          |
 | `JWT_SECRET`                       | 是              | **32 位以上随机串**（`openssl rand -base64 48`）；占位值或过短会被体检阻断                                                               |
 | `UPLOAD_DIR` / `PUBLIC_URL_PREFIX` | 缺省             | `uploads` / `/static`（nginx §7 同口径）                                                                                 |
-| `NUXT_PUBLIC_SITE_SLUG`            | 可空             | 站点解析以请求 Host / `Site.domain` 匹配为主（ADR-031）；构建目标由 `build:sites --site` 指定                                            |
+| `NUXT_PUBLIC_SITE_SLUG`            | 可空             | 站点解析以请求 Host / `Site.domain` 匹配为主（ADR-031）；构建目标由 `pnpm site build --site` 指定                                            |
 | `TZ`                               | 缺省             | `Asia/Shanghai`                                                                                                     |
 
 > 服务端可选变量（`INTERNAL_API_TOKEN` / 预览票据等）留空即走派生或缺省（`config/index.mjs`、`apps/server/src/config/configuration.ts`），无需手工填写。
@@ -269,18 +269,18 @@ pnpm install                          # 必须完整跑完（如环境禁符号�
                                       # ⚠️ install 阶段 @prisma/client 的 postinstall 是「先写占位 stub，再尝试 prisma generate」：
                                       #    生成失败（CLI 缺失 / 中断 / 报错）会把 stub 留在原地，类型检查直接失败（现象见 §11）
 pnpm -F @trillion/server exec prisma -v     # 复核 prisma CLI 就位（属 devDependency，install 中断时会缺失）
-pnpm db:generate --env production     # 【兜底】仅怀疑客户端仍是占位 stub 时补跑（正常构建已自动生成）
-pnpm db:status:prod                   # 只读：目标库 + 已应用 / 未应用迁移 + 连通性
-pnpm db:deploy:prod                   # 增量应用未执行的迁移（首次为全部迁移；空库自动建库）
+pnpm db generate --env production     # 【兜底】仅怀疑客户端仍是占位 stub 时补跑（正常构建已自动生成）
+pnpm db status --env production                   # 只读：目标库 + 已应用 / 未应用迁移 + 连通性
+pnpm db deploy --env production                   # 增量应用未执行的迁移（首次为全部迁移；空库自动建库）
 node scripts/exec.mjs server prisma:seed --env production   # 初始化管理员与示例站点（按需）
 ```
 
-> **为什么 `prisma generate` 不再需要手工跑**：`prisma/schema/*.prisma` 里的 `model` 是 **schema 声明（DSL）**，不是运行时代码；真正的客户端代码是按 schema 生成到 `node_modules/.prisma/client` 的产物。**`apps/server` 的 `build` 脚本已内建这一步**（2026-10-20 起：`"build": "prisma generate && nest build"`），因此 `pnpm release*` / `pnpm build:server` / `pnpm pack:deploy` 都会先重生成再编译，schema 变更后无需任何人工补跑。手工 `pnpm db:generate --env production` 只在一种情况下仍有价值：怀疑 `node_modules/.prisma/client` 里仍是 install 时留下的占位 stub（现象与处置见 §11）。
+> **为什么 `prisma generate` 不再需要手工跑**：`prisma/schema/*.prisma` 里的 `model` 是 **schema 声明（DSL）**，不是运行时代码；真正的客户端代码是按 schema 生成到 `node_modules/.prisma/client` 的产物。**`apps/server` 的 `build` 脚本已内建这一步**（2026-10-20 起：`"build": "prisma generate && nest build"`），因此 `pnpm release*` / `pnpm build server` / `pnpm bundle` 都会先重生成再编译，schema 变更后无需任何人工补跑。手工 `pnpm db generate --env production` 只在一种情况下仍有价值：怀疑 `node_modules/.prisma/client` 里仍是 install 时留下的占位 stub（现象与处置见 §11）。
 
 ### 4.3 代码上线（体检 + 构建，不启动）
 
 ```bash
-pnpm release:prod --build-only        # 体检（含数据库只读检查）→ 构建 → 停止（不启动）
+pnpm release --env production --build-only        # 体检（含数据库只读检查）→ 构建 → 停止（不启动）
 ```
 
 ### 4.4 PM2 接管 + 开机自启
@@ -288,7 +288,7 @@ pnpm release:prod --build-only        # 体检（含数据库只读检查）→ 
 首次部署可以直接用一条命令把「构建 → 生成配置 → 拉起 → 固化清单」串起来（对尚未启动的进程，`startOrReload` 等价 `start`）：
 
 ```bash
-pnpm release:pm2:prod                            # 体检 + 构建 → 生成 ecosystem.config.json → startOrReload → pm2 save
+pnpm release --env production --pm2                            # 体检 + 构建 → 生成 ecosystem.config.json → startOrReload → pm2 save
 pm2 startup systemd -u <部署用户> --hp /home/<部署用户>   # 按打印出的命令执行一次，开机自启
 pm2 ls                                           # 复核三端 online
 ```
@@ -296,7 +296,7 @@ pm2 ls                                           # 复核三端 online
 分步等价写法（想逐段确认时用）：
 
 ```bash
-node scripts/pm2-config.mjs --env production     # 生成 ecosystem.config.json（或 pnpm pm2:config）
+node scripts/pm2-config.mjs --env production     # 生成 ecosystem.config.json（或 node scripts/pm2-config.mjs）
 pm2 start ecosystem.config.json                  # 三端拉起（cwd=仓库根执行，§2.2）
 pm2 save                                         # 固化当前进程清单
 pm2 startup systemd -u <部署用户> --hp /home/<部署用户>   # 按打印出的命令执行一次，开机自启
@@ -304,11 +304,11 @@ pm2 startup systemd -u <部署用户> --hp /home/<部署用户>   # 按打印出
 
 ### 4.5 nginx 与 SSG 产物（**先 nginx，后构建**）
 
-顺序不能颠倒：`pnpm build:sites`（以及服务端的发布任务）都按 `NUXT_PUBLIC_API_BASE` 请求接口，生产环境即「对外地址/geoserver」，nginx 没起来就取不到站点数据（排障见 §11 对应条目）。
+顺序不能颠倒：`pnpm site build`（以及服务端的发布任务）都按 `NUXT_PUBLIC_API_BASE` 请求接口，生产环境即「对外地址/geoserver」，nginx 没起来就取不到站点数据（排障见 §11 对应条目）。
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx     # ① 先按 §7 配好 nginx（listen + 四处 location）并生效
-pnpm build:sites --site xian-renai-skin --env production   # ② 再全量构建当前唯一站点（slug=xian-renai-skin，站点 id=3）
+pnpm site build --site xian-renai-skin --env production   # ② 再全量构建当前唯一站点（slug=xian-renai-skin，站点 id=3）
 ```
 
 产物落在 `apps/geo/sites/xian-renai-skin/`，§7 的 `location /` 直接出该目录；此后内容发布由服务端自动增量重建，无需手工重复此步。
@@ -337,14 +337,14 @@ pnpm build:sites --site xian-renai-skin --env production   # ② 再全量构建
 cd <repo>
 git pull
 pnpm install                                    # lockfile 变化时必需
-pnpm db:status:prod                             # 看是否有未应用迁移
-pnpm db:deploy:prod                             # 有则先应用（唯一改结构入口）
-pnpm release:prod --build-only                  # 体检 + 构建（不启动）
+pnpm db status --env production                             # 看是否有未应用迁移
+pnpm db deploy --env production                             # 有则先应用（唯一改结构入口）
+pnpm release --env production --build-only                  # 体检 + 构建（不启动）
 pm2 startOrReload ecosystem.config.json --update-env   # 按新产物重载三端
 pm2 save
 ```
 
-> 后三步（构建 → 生成 PM2 配置 → 重载 + save）可合并为一条命令：`pnpm release:pm2:prod`（= `release --env production --build-only && pm2:config && pm2 startOrReload --update-env && pm2 save`）。数据库那两步**不能合并进来**（库/码分离，ADR-034），仍需先单独跑 `db:deploy:prod`。
+> 后三步（构建 → 生成 PM2 配置 → 重载 + save）可合并为一条命令：`pnpm release --env production --pm2`（= `release --env production --build-only` → `node scripts/pm2-config.mjs --env production` → `pm2 startOrReload ecosystem.config.json --update-env` → `pm2 save`，后三步由 `release.mjs` 内部串起来）。数据库那两步**不能合并进来**（库/码分离，ADR-034），仍需先单独跑 `pnpm db deploy --env production`。
 > `--update-env` 必须带上：PM2 在 start/reload 时快照环境变量，漏掉会用**旧 env** 跑新代码。env 文件有改动时先重跑 `node scripts/pm2-config.mjs --env production` 再重载；配置结构变化导致重载异常时 `pm2 delete trillion-<app>` 后重新 `pm2 start ecosystem.config.json`。
 
 ***
@@ -424,7 +424,7 @@ server {
 }
 ```
 
-> - 本文件是**参考模板**：仓库内没有任何脚本会安装 / 写入 / reload nginx（`release:*`、`pm2:*`、`db:*`、`dev.mjs` 均不碰），它只在部署包形态被当作参考附带（`deploy-runtime/nginx.conf.example`）。服务器**已有 nginx** 时**禁止覆盖既有 server 块**：按自身发行版约定新增独立块或把四处 `location` 合并进去（Debian/Ubuntu 走 `sites-available` + `sites-enabled` 软链，RHEL/CentOS 走 `conf.d/*.conf`），改完 `nginx -t` 通过再 `systemctl reload nginx`（不要 `restart`）。
+> - 本文件是**参考模板**：仓库内没有任何脚本会安装 / 写入 / reload nginx（`pnpm release`、`scripts/pm2-config.mjs`、`pnpm db`、`dev.mjs` 均不碰），它只在部署包形态被当作参考附带（`deploy-runtime/nginx.conf.example`）。服务器**已有 nginx** 时**禁止覆盖既有 server 块**：按自身发行版约定新增独立块或把四处 `location` 合并进去（Debian/Ubuntu 走 `sites-available` + `sites-enabled` 软链，RHEL/CentOS 走 `conf.d/*.conf`），改完 `nginx -t` 通过再 `systemctl reload nginx`（不要 `restart`）。
 > - 对外端口由 `listen` 决定：本示例 `listen 80`（HTTPS 再补 443）。若服务器直连高位端口（如 `listen 8080`、公网只放行 8080），则 `env/.env.production` 的 `API_BASE` 与 `CORS_ORIGINS` 必须同口径写成 `http://<IP 或域名>:8080`，§8 验收地址亦同口径。
 > - HTTPS：`certbot --nginx` 签发后同 server 块补 443 段；**启用 HTTPS 后必须把** **`API_BASE`** **显式设为** **`https://<域名>/geoserver`**（§4.1）。
 > - SSR 模式站点不适用 `location /` 的静态 root，改为 `proxy_pass http://127.0.0.1:3002;`（渲染模式是站点级开关，见 `03` / `09`）。
@@ -454,8 +454,8 @@ server {
 
 | 层      | 手段                                                                                                                 | 说明                                  |
 | ------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
-| 代码     | `git checkout <上一可用提交/Tag>` → `pnpm release:prod --build-only` → `pm2 startOrReload ... --update-env` → `pm2 save` | 回滚前 `git log --oneline` 记录当前提交，便于恢复 |
-| 数据库结构  | **不自动回滚**（迁移 forward-only）：回滚到旧代码后，如有不兼容迁移需手写反向迁移再走 `pnpm db:deploy:prod`                                          | 与 ADR-034 一致：结构变更不可 reset           |
+| 代码     | `git checkout <上一可用提交/Tag>` → `pnpm release --env production --build-only` → `pm2 startOrReload ... --update-env` → `pm2 save` | 回滚前 `git log --oneline` 记录当前提交，便于恢复 |
+| 数据库结构  | **不自动回滚**（迁移 forward-only）：回滚到旧代码后，如有不兼容迁移需手写反向迁移再走 `pnpm db deploy --env production`                                          | 与 ADR-034 一致：结构变更不可 reset           |
 | SSG 产物 | 后台「回退上一版」（`.old` 目录保留上一版，ADR-032）；或重新构建                                                                            | 产物可再生成，属可再生产物                       |
 | 环境变量   | 还原 `env/.env.production` → `node scripts/pm2-config.mjs --env production` → `pm2 startOrReload ... --update-env`   | 密钥轮换（如 `JWT_SECRET`）会使现有登录态失效，属预期   |
 
@@ -477,17 +477,17 @@ server {
 
 | 坑                                                                                                                                    | 处理                                                                                                                                                                                                                                                                                                                                                           |
 | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 首次 `pnpm install` 时 geo 的 `prepare`（nuxt prepare）报 `Cannot find module .../apps/geo/node_modules/@trillion/shared`                   | 根因：`packages/shared` 是编译型包（`exports` 指向 `dist/`，dist 不入库），而 geo 的 `nuxt.config.ts` 顶层 import 它（admin 不在配置层引用故不受影响）。已修复：geo 的 `prepare` 现内置先构建 shared（`pnpm -F @trillion/shared build && nuxt prepare`）；存量克隆手动执行 `pnpm build:shared` 后重跑 `pnpm install` 即可                                                                                                    |
-| `exec.mjs` 执行的包脚本（如 `pnpm db:generate`）报 `ERR_PNPM_EXECUTOR_RUN_SCRIPT_SPAWN`（`No such file or directory`），且依赖实际齐全（`.bin/prisma` 存在） | 历史坑：`buildAppEnv` 曾只派生业务变量、不继承系统环境，Node spawn 的 env 是子进程完整环境 → 子进程缺 `PATH` → Linux 下 CLI shebang（`#!/usr/bin/env node`）解析失败；Windows 因 `.cmd` wrapper 走文件关联不查 PATH 而被掩盖。已在 `buildAppEnv` 以 `...process.env` 为基底修复（业务派生值在后覆盖同名），`exec.mjs` / `release.mjs` / PM2 配置全部受益                                                                                        |
+| 首次 `pnpm install` 时 geo 的 `prepare`（nuxt prepare）报 `Cannot find module .../apps/geo/node_modules/@trillion/shared`                   | 根因：`packages/shared` 是编译型包（`exports` 指向 `dist/`，dist 不入库），而 geo 的 `nuxt.config.ts` 顶层 import 它（admin 不在配置层引用故不受影响）。已修复：geo 的 `prepare` 现内置先构建 shared（`pnpm -F @trillion/shared build && nuxt prepare`）；存量克隆手动执行 `pnpm build shared` 后重跑 `pnpm install` 即可                                                                                                    |
+| `exec.mjs` 执行的包脚本（如 `pnpm db generate`）报 `ERR_PNPM_EXECUTOR_RUN_SCRIPT_SPAWN`（`No such file or directory`），且依赖实际齐全（`.bin/prisma` 存在） | 历史坑：`buildAppEnv` 曾只派生业务变量、不继承系统环境，Node spawn 的 env 是子进程完整环境 → 子进程缺 `PATH` → Linux 下 CLI shebang（`#!/usr/bin/env node`）解析失败；Windows 因 `.cmd` wrapper 走文件关联不查 PATH 而被掩盖。已在 `buildAppEnv` 以 `...process.env` 为基底修复（业务派生值在后覆盖同名），`exec.mjs` / `release.mjs` / PM2 配置全部受益                                                                                        |
 | `pm2 startOrReload` 报端口被占用                                                                                                           | 旧进程未被 PM2 收管（如手工 `node` 起过）：先 `pm2 delete` 对应项或 `kill` 旧进程再重载                                                                                                                                                                                                                                                                                                |
 | `pm2 startup` 打印的命令带 sudo                                                                                                            | 必须按打印原样执行一次，否则重启后进程清单不会自动恢复                                                                                                                                                                                                                                                                                                                                  |
 | 忘带 `--update-env`                                                                                                                    | reload 后仍是旧环境变量——env 变更后必须带（必要时 `pm2 delete` 后 start，§5）                                                                                                                                                                                                                                                                                                     |
 | Prisma 引擎 / npm 下载慢                                                                                                                  | 配置 npm 镜像与 `prisma` 官方镜像变量（按机房网络情况，一次性配置）                                                                                                                                                                                                                                                                                                                    |
-| Linux MySQL 大小写敏感默认值与开发机（Windows `lower_case_table_names=1`）不一致                                                                      | 表名全小写无实际影响；**严禁**为对齐开发机去改 `lower_case_table_names`（8.0 初始化后不可变更），迁移状态一律以 `pnpm db:status:prod` 为准                                                                                                                                                                                                                                                            |
+| Linux MySQL 大小写敏感默认值与开发机（Windows `lower_case_table_names=1`）不一致                                                                      | 表名全小写无实际影响；**严禁**为对齐开发机去改 `lower_case_table_names`（8.0 初始化后不可变更），迁移状态一律以 `pnpm db status --env production` 为准                                                                                                                                                                                                                                                            |
 | 服务器时区 / MySQL 时区不对                                                                                                                   | `timedatectl` 与 my.cnf `default-time-zone='+08:00'` 双确认（§3），否则时间字段漂 8 小时                                                                                                                                                                                                                                                                                     |
 | 上传文件写入失败                                                                                                                             | 确认部署用户对 `apps/server/uploads/` 有写权限；nginx `/static/` alias 路径与 `UPLOAD_DIR` 实际落点一致                                                                                                                                                                                                                                                                           |
-| 站点构建 / 发布任务取不到接口数据                                                                                                                   | 手动构建必须带 `--env production`（漏掉会按 development 读 `env/.env.development`，apiBase 落到 `127.0.0.1:3001`，见 §4.5）；`pnpm build:sites` 与服务端发布任务都按 `NUXT_PUBLIC_API_BASE` 请求接口（生产即对外地址），**nginx 必须先起来**（§4.5）；若云主机访问不了自己的公网 IP（NAT 回环不生效），把 `env/.env.production` 的 `API_BASE` 改成 `http://127.0.0.1:<nginx 对外端口>/geoserver`——服务端与构建脚本走本机 nginx，浏览器端会自动换成当前页面主机名（ADR-021） |
-| 服务端 `nest build` 报 `TS2694: Namespace '...Prisma' has no exported member 'InputJsonValue'`、模型类型退化成 `unknown`                           | 根因：`@prisma/client` 的 postinstall **先**把占位 stub（`scripts/default-index.d.ts`，`PrismaClient` 全部 `any`）写进 `node_modules/.prisma/client`，**再**尝试 `prisma generate`；生成失败（CLI 缺失 / 中断 / 报错）时 stub 会留在原地，TS 解析到的就是它。已修复：`apps/server` 的 `build` 脚本内建 `prisma generate`；未拉到该改动时先手工补 `pnpm db:generate --env production`（先让 `pnpm install` 完整跑完，确保 prisma CLI 存在） |
+| 站点构建 / 发布任务取不到接口数据                                                                                                                   | 手动构建必须带 `--env production`（漏掉会按 development 读 `env/.env.development`，apiBase 落到 `127.0.0.1:3001`，见 §4.5）；`pnpm site build` 与服务端发布任务都按 `NUXT_PUBLIC_API_BASE` 请求接口（生产即对外地址），**nginx 必须先起来**（§4.5）；若云主机访问不了自己的公网 IP（NAT 回环不生效），把 `env/.env.production` 的 `API_BASE` 改成 `http://127.0.0.1:<nginx 对外端口>/geoserver`——服务端与构建脚本走本机 nginx，浏览器端会自动换成当前页面主机名（ADR-021） |
+| 服务端 `nest build` 报 `TS2694: Namespace '...Prisma' has no exported member 'InputJsonValue'`、模型类型退化成 `unknown`                           | 根因：`@prisma/client` 的 postinstall **先**把占位 stub（`scripts/default-index.d.ts`，`PrismaClient` 全部 `any`）写进 `node_modules/.prisma/client`，**再**尝试 `prisma generate`；生成失败（CLI 缺失 / 中断 / 报错）时 stub 会留在原地，TS 解析到的就是它。已修复：`apps/server` 的 `build` 脚本内建 `prisma generate`；未拉到该改动时先手工补 `pnpm db generate --env production`（先让 `pnpm install` 完整跑完，确保 prisma CLI 存在） |
 | 服务端报 `The table \`AdminUser\` does not exist in the current database`（表名大小写不匹配）                                                            | 根因：Linux MySQL 默认 `lower_case_table_names=0`（区分大小写），而 Windows（`lctn=1`）导出会把表名**落成小写**，从 Windows 导库到 Linux 后表名全变 `adminuser`；Prisma 模型未写 `@@map`，按模型名 `AdminUser` 查 → 报「表不存在」。处理：`RENAME TABLE \`adminuser\` TO \`AdminUser\`, …`（21 张业务表一次原子改名，**`_prisma_migrations` 必须保持小写不要改**）；InnoDB 会自动改写子表里指向被改名表的外键定义（已在生产同版本 8.0.40 / `lctn=0` 实测：外键定义同步更新、插入正常）。**每次从 Windows 导库到 Linux 都要跑一遍**；彻底免除需给所有 model 加 `@@map` 把物理名钉成小写（代价：同步改迁移基线 DDL 与线上台账 checksum）。脚本：`apps/server/prisma/maintenance/fix-table-name-case.sql`（幂等，含前后核对与外键复查，已实测） |
 
 ***
@@ -501,10 +501,10 @@ server {
 | 1 | `scripts/pm2-config.mjs`（新文件）           | ✅ 零第三方依赖：`loadConfig({ appEnv })` → 遍历 `APPS` 生成三端进程定义（§2.2 表）→ 写仓库根 `ecosystem.config.json`；支持 `--env`，缺省 production；产物缺失只警告；生成后打印安全提示（含密钥勿入库勿拷贝）                                                                           | `PROJECT_STRUCTURE.md` 根 scripts 小节                                          |
 | 2 | `scripts/release.mjs` 增加 `--build-only` | ✅ 体检（含数据库只读检查）→ 构建 → 收尾输出 PM2 后续命令（不释放端口、不启动进程、不探测）；与 `--check` / `--skip-build` 互斥（启动即报错）                                                                                                                                   | 文件头注释用法段、`07` §3.5 选项表                                                       |
 | 3 | `.gitignore`                            | ✅ 追加 `ecosystem.config.json`（与 `release-endpoints.txt` 同段）                                                                                                                                                                   | ——                                                                           |
-| 4 | 根 `package.json`                        | ✅ `"pm2:config": "node scripts/pm2-config.mjs"` 别名                                                                                                                                                                           | `AGENTS.md` §9、`README.md` §4                                                |
+| 4 | 根 `package.json`                        | ✅ 不设独立 `pm2:config` 脚本：常规路径是 `pnpm release --env <环境> --pm2`，只重生成配置时用 `node scripts/pm2-config.mjs --env <环境>`（ADR-044 收敛根命令）                                                                                                                                                                           | `AGENTS.md` §9、`README.md` §4                                                |
 | 5 | 文档回写                                    | ✅ `07` §3.5 / §7、README 上线段、`release.mjs` 托管提示语均已对齐 PM2 口径                                                                                                                                                                   | `07`、`README`                                                                |
-| 6 | 部署包形态（ADR-042）                          | ✅ `scripts/pack-deploy.mjs`（本地打包，`pnpm pack:deploy`）+ `scripts/deploy-runtime/` 运行时模板（`start.mjs` 清单驱动守护 / `db.mjs` 库上线 / `README.md` / `nginx.conf.example`）→ 仓库根 `deploy/`（gitignore）；操作口径见 §4.0                           | `07` §1、本手册 §1 / §4.0 / §5、`AGENTS.md` §9、`README.md`、`PROJECT_STRUCTURE.md` |
-| 7 | 一条命令上线（PM2 形态）                          | ✅ 根 `package.json` 增 `release:pm2:prod` / `release:pm2:test`：`release --build-only && pm2:config && pm2 startOrReload --update-env && pm2 save`（只是包一层别名，不动 `release.mjs` / `pm2-config.mjs` 边界；数据库仍单独走 `db:deploy*`，ADR-034） | `AGENTS.md` §9、本手册 §4.4 / §5                                                 |
+| 6 | 部署包形态（ADR-042）                          | ✅ `scripts/pack-deploy.mjs`（本地打包，`pnpm bundle`）+ `scripts/deploy-runtime/` 运行时模板（`start.mjs` 清单驱动守护 / `db.mjs` 库上线 / `README.md` / `nginx.conf.example`）→ 仓库根 `deploy/`（gitignore）；操作口径见 §4.0                           | `07` §1、本手册 §1 / §4.0 / §5、`AGENTS.md` §9、`README.md`、`PROJECT_STRUCTURE.md` |
+| 7 | 一条命令上线（PM2 形态）                          | ✅ 由 `pnpm release --env <环境> --pm2` 提供：`release.mjs` 内部依次「体检 + 构建 → 生成 `ecosystem.config.json` → `pm2 startOrReload --update-env` → `pm2 save`」（编排在脚本里而不是 `package.json` 的一长串 `&&`；数据库仍单独走 `pnpm db deploy`，ADR-034） | `AGENTS.md` §9、本手册 §4.4 / §5                                                 |
 
 > 代码侧已全部完成；剩余动作在服务器侧：按 §4 走一遍完整首次部署，并按 §8 验收。
 

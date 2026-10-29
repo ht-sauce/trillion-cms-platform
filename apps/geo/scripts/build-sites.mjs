@@ -65,12 +65,12 @@ if (!siteSlug) {
 }
 
 /**
- * API 基址：由根 env/ 派生后注入（pnpm build:sites 走根执行器；服务端发布管线亦显式注入）
+ * API 基址：由根 env/ 派生后注入（pnpm site build 走根分发脚本；服务端发布管线亦显式注入）
  * 不内置默认地址，缺失直接失败，避免构建产物指向错误端口
  */
 const apiBase = process.env.NUXT_PUBLIC_API_BASE
 if (!apiBase) {
-  console.error('[build] 缺少 NUXT_PUBLIC_API_BASE：请使用 pnpm build:sites 执行（变量由根 env/ 与 config/ 派生）')
+  console.error('[build] 缺少 NUXT_PUBLIC_API_BASE：请使用 pnpm site build 执行（变量由根 env/ 与 config/ 派生）')
   process.exit(1)
 }
 

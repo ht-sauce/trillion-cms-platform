@@ -113,7 +113,7 @@ mindmap
 | 时间格式  | `2026-10-05 10:10:10`（秒精度，`@db.DateTime(0)`）          |
 | 产物目录  | `apps/geo/sites/<站点slug>/`（按站点分类，public 同级）     |
 | 本地存储  | `apps/server/uploads/yyyy/mm/{uuid}.ext`，对外 `/static/**` |
-| 共享包    | 编译型包，构建服务端前必须先 `pnpm build:shared`            |
+| 共享包    | 编译型包，构建服务端前必须先 `pnpm build shared`            |
 
 ---
 

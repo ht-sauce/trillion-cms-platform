@@ -88,7 +88,7 @@ apps/geo/sites/<站点slug>/
 
 ### 3.1 构建期已知告警（上游噪音，可忽略）
 
-`pnpm build:sites` 的预渲染阶段会打印两条来自 `@nuxt/nitro-server@4.5.2` 的 rollup 告警（已确认 `nuxt` 与 `@nuxt/nitro-server` 当前均为最新版，升级无法消除）：
+`pnpm site build` 的预渲染阶段会打印两条来自 `@nuxt/nitro-server@4.5.2` 的 rollup 告警（已确认 `nuxt` 与 `@nuxt/nitro-server` 当前均为最新版，升级无法消除）：
 
 1. `.../nitro-server/dist/runtime/utils/cache-driver.mjs is imported by "virtual:#nitro-internal-virtual/storage", but could not be resolved – treating it as an external dependency`
 2. `"H3Error", "H3Event", "deleteCookie", "getCookie" and "setCookie" are imported from external module "h3" but never used`

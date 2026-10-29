@@ -204,7 +204,7 @@ apps/server/prisma/
 - **禁止写单一大 schema 文件**；新增模型按领域新建文件
 - 迁移：`prisma migrate dev --name <语义名>`；生产：`prisma migrate deploy`
 - 种子：`prisma db seed`（经 `tsx prisma/seed.ts` 执行），可重复执行（已用 upsert 幂等设计）
-- **迁移历史（2026-10-20 重建为单条基线）**：仓库内只保留 `20261020120000_init_id_string`（由 `prisma migrate diff --from-empty` 生成，含 21 张表的完整 DDL、全部外键与 `PRIMARY KEY`）。此前的 `20261005103528_init` 等历史迁移与当下 schema 已严重漂移（缺 `path` / `content_hash` / `draft` / `Role` 关联等），故于 2026-10-20 以基线整体替换；**空库**直接 `pnpm db:deploy*` 即建成当前结构
+- **迁移历史（2026-10-20 重建为单条基线）**：仓库内只保留 `20261020120000_init_id_string`（由 `prisma migrate diff --from-empty` 生成，含 21 张表的完整 DDL、全部外键与 `PRIMARY KEY`）。此前的 `20261005103528_init` 等历史迁移与当下 schema 已严重漂移（缺 `path` / `content_hash` / `draft` / `Role` 关联等），故于 2026-10-20 以基线整体替换；**空库**直接 `pnpm db deploy*` 即建成当前结构
 - **主键与 ID 改造（2026-10-20，ADR-043）**：全表主键由 Int 自增改为 **uuid v7 字符串**（应用侧生成、时间有序），存量数据经「old→new 映射表 + `INSERT ... SELECT` 改写全部外键列 + JSON 内嵌 id（`AdminUser.siteIds` / `PublishTask.targets.pageIds`）」一次性重映射；本地库已按此重建，线上库以本地重建结果整体替换（见 §2.1）
 - **主键校验（强制）**：建表 / 迁移完成后必须复核「每张表都有真实 PRIMARY KEY」——字符串 ID **不替代**主键约束；漏主键会让 Prisma 省略 id 的 INSERT 直接被 MySQL 拒绝（`P2011 Null constraint violation` / 1075），线上曾因此全线写失败
 - **迁移方式**：Windows 下 MySQL `lower_case_table_names=1` 会让 `prisma migrate dev` 对自关联外键产生 drift 误报（并要求 reset），故一律为**手工维护 SQL + `prisma migrate deploy`** 路径，避免误 reset 开发库

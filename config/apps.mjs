@@ -2,7 +2,7 @@
  * 应用清单（启动器 / 执行器 / 上线器共用）
  *
  * 字段说明：
- * - `name`：命令行短名（`pnpm allDev admin`）
+ * - `name`：命令行短名（`pnpm dev admin`）
  * - `packageName`：`pnpm --filter` 使用的包名
  * - `dir`：工程目录（相对仓库根）
  * - `title`：中文名（日志与摘要展示）

@@ -40,7 +40,7 @@ export function useApiBase(): string {
   const apiBase = String(cfg.public.apiBase || '')
   if (!apiBase) {
     throw new Error(
-      '缺少 API 基址：请通过 pnpm allDev / pnpm dev:geo 启动（SSG 构建请用 pnpm build:sites；变量由根 env/ 派生）'
+      '缺少 API 基址：请通过 pnpm dev / pnpm dev geo 启动（SSG 构建请用 pnpm site build；变量由根 env/ 派生）'
     )
   }
   return adaptApiBase(apiBase)

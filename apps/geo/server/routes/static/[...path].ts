@@ -13,7 +13,7 @@
 export default defineEventHandler((event) => {
   const apiBase = String(useRuntimeConfig().public.apiBase || '')
   if (!apiBase) {
-    throw createError({ statusCode: 500, message: '缺少 API 基址：请通过 pnpm allDev / pnpm dev:geo 启动' })
+    throw createError({ statusCode: 500, message: '缺少 API 基址：请通过 pnpm dev / pnpm dev geo 启动' })
   }
 
   /**

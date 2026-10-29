@@ -200,7 +200,7 @@ export function buildAppEnv(config, appName) {
     /**
      * 内部接口令牌：服务端与 GEO 项目（构建脚本 / 渲染引擎中间件）之间的共享密钥。
      * 未显式配置时由 JWT_SECRET 派生——避免开发环境出现「无令牌即放行」的裸奔分支，
-     * 同时让 `pnpm allDev` 开箱可用（两端由同一份 config/ 派生，天然一致）。
+     * 同时让 `pnpm dev` 开箱可用（两端由同一份 config/ 派生，天然一致）。
      */
     INTERNAL_API_TOKEN: config.vars.INTERNAL_API_TOKEN || deriveInternalToken(config.vars.JWT_SECRET),
     APP_DIR: path.join(config.root, app.dir)

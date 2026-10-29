@@ -3,7 +3,7 @@
  *
  * 启动即校验，缺配置直接报错，避免运行到一半才发现数据库连不上。
  * 注意：**端口与数据库不再有应用内默认值**，变量统一由仓库根 `env/.env.<环境>` 提供，
- * 经启动器（`pnpm allDev` / `pnpm dev:server`）注入进程；直接 `nest start` 会因缺变量启动失败。
+ * 经启动器（`pnpm dev` / `pnpm dev server`）注入进程；直接 `nest start` 会因缺变量启动失败。
  */
 import { z } from 'zod'
 
@@ -40,7 +40,7 @@ export function validateEnv(raw: Record<string, unknown>): Record<string, unknow
   if (!parsed.success) {
     const issues = parsed.error.issues.map((item) => `  - ${item.path.join('.')}: ${item.message}`).join('\n')
     throw new Error(
-      `环境变量校验失败：\n${issues}\n提示：请通过 pnpm allDev / pnpm dev:server 启动（环境变量统一放在根 env/ 目录）`
+      `环境变量校验失败：\n${issues}\n提示：请通过 pnpm dev / pnpm dev server 启动（环境变量统一放在根 env/ 目录）`
     )
   }
   return parsed.data as Record<string, unknown>
