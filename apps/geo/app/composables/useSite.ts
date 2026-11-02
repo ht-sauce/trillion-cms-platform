@@ -28,7 +28,6 @@ export interface SiteConfig {
   name: string
   slug: string
   domain: string
-  renderMode: string
   defaultLocale: string
 
   // ---- 标识 ----

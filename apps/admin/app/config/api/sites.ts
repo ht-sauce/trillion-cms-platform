@@ -27,7 +27,6 @@ export interface SiteItem {
   seoKeywords: string | null
   defaultLocale: string
   robotsPolicy: { allowAllAi: boolean; blockedAgents: string[]; extraAllowedAgents: string[] }
-  renderMode: 'ssg' | 'ssr'
   themeConfig: { primary: string; accent: string; background: string; text: string; radius?: number }
   status: 'active' | 'disabled'
   /** 最新构建任务（`null` = 从未构建）：站点列表「构建状态」列的数据来源 */
@@ -39,7 +38,7 @@ export interface SiteItem {
 export type SitePayload = Partial<SiteItem>
 
 export const sitesApi = {
-  list(params: { page?: number; pageSize?: number; keyword?: string; renderMode?: string; status?: string } = {}) {
+  list(params: { page?: number; pageSize?: number; keyword?: string; status?: string } = {}) {
     return get<Paged<SiteItem>>('/sites', params as Record<string, unknown>)
   },
   detail(id: string) {

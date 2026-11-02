@@ -122,6 +122,19 @@ flowchart LR
 - 站点级可通过 `Site.robotsPolicy` 屏蔽特定 UA 或追加放行
 - 抓取行为由 nginx 侧采集后经 `POST /track/ai-crawl` 入 `AiCrawlEvent` 表
 
+### 4.3 站点访问通道与流量监控（ADR-045，2026-11-02）
+
+**线上所有站点流量统一由 GEO 服务承接**（`server/middleware/site-entry.ts`）：nginx 只按主域名做薄 server 块反代（透传 `Host`），GEO 按域名解析站点后优先直出 `sites/<slug>/` 产物文件（磁盘读，等价静态托管性能），未命中放行 SSR 兜底——产物目录从「nginx 的 root」变为「GEO 的磁盘缓存层」，发布管线零改动。
+
+| 请求形态 | 行为 |
+| --- | --- |
+| Host 非回环 + 产物命中 | 磁盘直出：HTML `no-cache`（发布即时生效）、`/_nuxt/**` `immutable` 长缓存、其余资产短缓存 |
+| Host 非回环 + 产物未命中（未构建 / 新页 / 404） | 放行 SSR，读已发布内容实时渲染 |
+| 带 `?__preview=` 票据 | 一律放行 SSR 走草稿链路（§7.5 / 09 §7.5），nginx 418 分流取消 |
+| Host 为回环（本地开发） | 中间件直接放行，仍走「URL 首段前缀」形态（ADR-031） |
+
+**流量监控两层**：① 服务端访问日志——入口中间件输出单行 JSON（host / method / path / status / 耗时 / UA，静态资产与回环地址跳过），覆盖爬虫抓取、无 JS 访问等埋点盲区；② 页面级埋点——`TrackEvent`（按 siteId 隔离，`NUXT_PUBLIC_TRACK_ENABLED=1` 时启用）。看板入库为后续演进项（届时走 `04` 加表流程）。
+
 ## 5. 发布前体检（`checkPageGeo`）
 
 | 检查项              | 级别  | 扣分 | 说明                                    |

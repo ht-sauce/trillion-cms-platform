@@ -72,7 +72,6 @@ export class PublicService {
       name: site.name,
       slug: site.slug,
       domain: site.domain,
-      renderMode: site.renderMode,
       defaultLocale: site.defaultLocale,
 
       // ---- 标识 ----

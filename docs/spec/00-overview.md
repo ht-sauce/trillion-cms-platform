@@ -21,6 +21,7 @@ mindmap
       站点全生命周期管理
       内容结构化生产
       双模式发布
+      （SSG 产物 + 统一入口兜底）
       埋点与 AI 爬虫监控
     使用者
       平台管理员
@@ -63,7 +64,7 @@ mindmap
 | P7  | **时间口径唯一**           | `utils/datetime.ts` + 覆盖 `Date.prototype.toJSON`，禁止 `toISOString()` 输出 | 接口时间早 8 小时                     |
 | P8  | **发布即产出 GEO 资产**    | 每次发布强制生成 robots.txt / sitemap.xml / llms.txt / JSON-LD                | GEO 目标落空                          |
 
-> P6 的实现约定见 [ADR-003](./08-adr.md#adr-003-双模式渲染引擎ssg--ssr-站点级开关)。
+> P6 的实现约定见 [ADR-003](./08-adr.md#adr-003-双模式渲染引擎ssg--ssr-站点级开关)（已由 ADR-045/046 演进为统一入口，SSR 退出站点配置维度）。
 
 ## 5. 质量属性目标
 
@@ -83,7 +84,7 @@ mindmap
 
 - 站点全生命周期管理（含企业资质、备案号、SEO/GEO 默认值）
 - Channel / Page / 结构化 Block 的内容生产与三态流转
-- SSG 增量发布 + SSR 实时渲染双模式
+- SSG 增量发布 + 统一入口（产物直出，SSR 兜底，ADR-045/046）
 - 站点会员（JWT-M）+ 静态站文件 islands
 - 埋点与 AI 爬虫监控（含看板）
 - 静态文件管理（本地存储 + URL 解耦）

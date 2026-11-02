@@ -35,7 +35,6 @@ const form = ref<Partial<SiteItem>>({
   seoDescription: '',
   seoKeywords: '',
   defaultLocale: 'zh-CN',
-  renderMode: 'ssg',
   status: 'active',
   robotsPolicy: { allowAllAi: true, blockedAgents: [], extraAllowedAgents: [] },
   /** 站点主题默认值来自 config（与服务端 SITE_DEFAULTS 对齐），页面内不写色值 */

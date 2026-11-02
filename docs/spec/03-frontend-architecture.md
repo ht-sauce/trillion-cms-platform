@@ -11,11 +11,11 @@
 | 维度         | 管理后台 `apps/admin`                       | GEO 项目 `apps/geo`                                  |
 | ------------ | ------------------------------------------- | ---------------------------------------------------- |
 | 使用者       | 平台管理员、站点管理员                      | 访客、AI 爬虫、站点会员                              |
-| 渲染模式     | **SPA**（纯客户端渲染，见 ADR-017）         | **SSG / SSR 双模式**（`Site.renderMode` 站点级开关） |
+| 渲染模式     | **SPA**（纯客户端渲染，见 ADR-017）         | **SSG 产物直出 + SSR 兜底**（统一入口，ADR-045/046；无站点级开关） |
 | 是否需要登录 | 是（JWT-A，token 存 localStorage）          | 否（会员功能为客户端动效岛屿）                       |
 | 数据来源     | 受保护业务接口 `/geoserver/**`              | 公开只读接口 `/geoserver/public/**`                  |
 | UI 体系      | Element Plus + 深空控制台令牌（12px / 8px） | 站点主题（`Site.themeConfig` 驱动 CSS 变量）         |
-| 产物形态     | `.output/`（SPA 静态资源，可任意静态托管）  | SSG：静态目录 `sites/<slug>/`；SSR：Node 服务        |
+| 产物形态     | `.output/`（SPA 静态资源，可任意静态托管）  | SSG 产物 `sites/<slug>/`（GEO 统一入口直出，SSR 兜底） |
 
 ```mermaid
 flowchart TB
@@ -27,7 +27,7 @@ flowchart TB
     A5["stores/auth.ts · 登录态<br/>stores/menu.ts · 菜单树"]
   end
 
-  subgraph geo["apps/geo（双模式）"]
+  subgraph geo["apps/geo（统一入口 · ADR-045）"]
     G1["useSiteKey · Host→站点标识"]
     G2["useSite / usePage · 取数"]
     G3["PageRender · 元数据+JSON-LD"]
@@ -128,25 +128,23 @@ sequenceDiagram
 
 ## 3. GEO 项目（站点渲染引擎）
 
-### 3.1 双模式取数
+### 3.1 取数通道（ADR-045：产物直出 + SSR 兜底）
 
 ```mermaid
 flowchart LR
-  subgraph SSG["SSG 模式"]
-    S1["构建期：prerender:routes 钩子<br/>GET /public/routes/:key"]
-    S2["逐路由预渲染 → HTML"]
-    S3["产物 sites/&lt;slug&gt;/"]
-    S1 --> S2 --> S3
+  subgraph HIT["产物命中"]
+    S1["site-entry 中间件<br/>Host → 站点 → sites/&lt;slug&gt;/ 文件查找"]
+    S2["磁盘直出 HTML / _nuxt / robots.txt"]
+    S1 --> S2
   end
-  subgraph SSR["SSR 模式"]
-    R1["运行期：请求到达"]
+  subgraph SSR["SSR 兜底 / 预览"]
+    R1["产物未命中 或 __preview 票据"]
     R2["useSiteKey 解析站点<br/>Host / 本地 URL 前缀"]
-    R3["GET /public/page/:key?path=..."]
+    R3["GET /public/page/:key?path=...<br/>（票据走 /preview/page/:id 读草稿）"]
     R4["实时渲染返回"]
     R1 --> R2 --> R3 --> R4
   end
   API["GET /geoserver/public/** 同一批接口"]
-  S1 --> API
   R3 --> API
 ```
 

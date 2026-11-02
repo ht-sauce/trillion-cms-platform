@@ -6,7 +6,6 @@ import { IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength } fr
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import type {
   OpeningHourRule,
-  RenderMode,
   RobotsMeta,
   RobotsPolicy,
   SameAsEntry,
@@ -29,11 +28,6 @@ export class QuerySiteDto {
   @IsOptional()
   @IsString()
   keyword?: string
-
-  @ApiPropertyOptional({ description: '渲染模式 ssg/ssr' })
-  @IsOptional()
-  @IsString()
-  renderMode?: RenderMode
 
   @ApiPropertyOptional({ description: '状态 active/disabled' })
   @IsOptional()
@@ -137,11 +131,6 @@ export class CreateSiteDto {
   @ApiPropertyOptional({ description: 'AI 爬虫策略 JSON' })
   @IsOptional()
   robotsPolicy?: RobotsPolicy
-
-  @ApiPropertyOptional({ description: '渲染模式' })
-  @IsOptional()
-  @IsString()
-  renderMode?: RenderMode
 
   @ApiPropertyOptional({ description: '主题令牌 JSON' })
   @IsOptional()

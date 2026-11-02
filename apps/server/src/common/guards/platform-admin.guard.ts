@@ -1,6 +1,6 @@
 /**
  * 平台级操作守卫
- * 判据：当前用户绑定的角色带 platform 标记（建站、改 renderMode、菜单/角色/用户维护等）
+ * 判据：当前用户绑定的角色带 platform 标记（建站、菜单/角色/用户维护等）
  */
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common'
 import type { Request } from 'express'

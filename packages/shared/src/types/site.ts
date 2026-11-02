@@ -1,6 +1,3 @@
-/** 站点渲染模式：站点级开关，可随时切换 */
-export type RenderMode = 'ssg' | 'ssr'
-
 /** 站点启停状态 */
 export type SiteStatus = 'active' | 'disabled'
 
@@ -71,8 +68,6 @@ export interface SiteEntity {
   defaultLocale: string
   /** AI 爬虫策略 */
   robotsPolicy: RobotsPolicy
-  /** 渲染模式 */
-  renderMode: RenderMode
   /** 主题配置 */
   themeConfig: ThemeConfig
   /** 站点状态 */

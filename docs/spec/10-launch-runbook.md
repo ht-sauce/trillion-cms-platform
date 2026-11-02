@@ -226,7 +226,7 @@ node start.mjs status                      # 查看三端进程与端口健康
 
 #### ③ nginx
 
-`nginx.conf.example` 为单域名同源模板（`/geocms/` → 3000、`/geoserver/` → 3001、`/static/` → `apps/server/uploads/`、`/` → `apps/geo/sites/<slug>/`），复制到 `/etc/nginx/sites-available/` 后按域名与部署路径改两处 root / alias，多站点按 `sites/` 子目录各配一个 server 块；`nginx -t && systemctl reload nginx` 生效（完整说明见 §7）。
+`nginx.conf.example` 为主域名薄块统一反代模板（ADR-045：`/geocms/` → 3000、`/geoserver/` → 3001、`/static/` → `apps/server/uploads/`、`location /` 全量反代 GEO :3002，站点分发由 GEO 按 Host 完成），复制到 `/etc/nginx/sites-available/` 后按主域名改 `server_name` 与证书路径，多主域名各配一个薄 server 块（站点零配置）；`nginx -t && systemctl reload nginx` 生效（完整说明见 §7）。
 
 #### 部署包日常更新（代码更新）
 
@@ -311,7 +311,7 @@ sudo nginx -t && sudo systemctl reload nginx     # ① 先按 §7 配好 nginx�
 pnpm site build --site xian-renai-skin --env production   # ② 再全量构建当前唯一站点（slug=xian-renai-skin，站点 id=3）
 ```
 
-产物落在 `apps/geo/sites/xian-renai-skin/`，§7 的 `location /` 直接出该目录；此后内容发布由服务端自动增量重建，无需手工重复此步。
+产物落在 `apps/geo/sites/xian-renai-skin/`，§7 的 `location /` 反代给 GEO 按域名直出该目录（ADR-045，未构建前 SSR 兜底）；此后内容发布由服务端自动增量重建，无需手工重复此步。
 
 > **`--env production`** **必带**：`--env` 决定读哪个 `env/.env.<环境>`，缺省是 `development`（读 `env/.env.development`，apiBase 落到 `127.0.0.1:3001`）——生产端口与地址全都不生效，表现为连不上接口。手动执行构建命令时一律显式给出环境（`--env` 由根执行器 `scripts/exec.mjs` 识别，位置在脚本名前后均可）。
 
@@ -368,9 +368,11 @@ pm2 save
 
 ***
 
-## 7. nginx 参考配置（单域名同源）
+## 7. nginx 参考配置（单域名同源 · ADR-045 统一入口）
 
-推荐**单域名同源**拓扑：站点页面、管理后台（`/geocms/`）、服务端 API（`/geoserver/`）、上传资源（`/static/`）同域分流——浏览器侧零跨域，`CORS_ORIGINS` 仅作声明。路径前缀与服务端全局前缀（ADR-040）一致，**proxy\_pass 不做路径重写**：
+推荐**单域名同源**拓扑：站点页面、管理后台（`/geocms/`）、服务端 API（`/geoserver/`）、上传资源（`/static/`）同域分流——浏览器侧零跨域，`CORS_ORIGINS` 仅作声明。路径前缀与服务端全局前缀（ADR-040）一致，**proxy\_pass 不做路径重写**。
+
+**站点流量统一由 GEO 承接（ADR-045）**：`location /` 全量反代 `cms-geo:3002` 并透传 `Host`，GEO 按域名解析站点、优先直出 `sites/<slug>/` 产物文件（磁盘读 ≈ 静态托管性能），未命中放行 SSR 兜底——nginx 不再 root 产物目录，**配置量随主域名数封顶、不随站点数增长**（多主域名时每个域名一个薄 server 块，见 `nginx.conf.example` 双域名形态）：
 
 ```nginx
 server {
@@ -402,19 +404,8 @@ server {
         expires 7d;
     }
 
-    # 站点 SSG 产物（按站点目录分发；多站点时按 server_name 各配一份 root）
+    # 站点统一入口：全部交给 GEO（按 Host 直出产物 / SSR 兜底 / 预览票据读草稿，ADR-045）
     location / {
-        # 内容编辑器草稿预览：带 ?__preview=<票据> 的请求交给 GEO 渲染进程；
-        # 418 + 有名 location 是「条件代理」的安全写法（不建议把 proxy_pass 写进 if）
-        error_page 418 = @geo_preview;
-        if ($arg___preview) { return 418; }
-        root /srv/app/trillion-cms-platform/apps/geo/sites/xian-renai-skin;
-        index index.html;
-        try_files $uri $uri/ $uri.html =404;
-    }
-
-    # GEO 渲染进程（SSR，端口 = env 的 PORT_GEO）：只承接预览票据请求
-    location @geo_preview {
         proxy_pass http://127.0.0.1:3002;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -426,9 +417,10 @@ server {
 
 > - 本文件是**参考模板**：仓库内没有任何脚本会安装 / 写入 / reload nginx（`pnpm release`、`scripts/pm2-config.mjs`、`pnpm db`、`dev.mjs` 均不碰），它只在部署包形态被当作参考附带（`deploy-runtime/nginx.conf.example`）。服务器**已有 nginx** 时**禁止覆盖既有 server 块**：按自身发行版约定新增独立块或把四处 `location` 合并进去（Debian/Ubuntu 走 `sites-available` + `sites-enabled` 软链，RHEL/CentOS 走 `conf.d/*.conf`），改完 `nginx -t` 通过再 `systemctl reload nginx`（不要 `restart`）。
 > - 对外端口由 `listen` 决定：本示例 `listen 80`（HTTPS 再补 443）。若服务器直连高位端口（如 `listen 8080`、公网只放行 8080），则 `env/.env.production` 的 `API_BASE` 与 `CORS_ORIGINS` 必须同口径写成 `http://<IP 或域名>:8080`，§8 验收地址亦同口径。
-> - HTTPS：`certbot --nginx` 签发后同 server 块补 443 段；**启用 HTTPS 后必须把** **`API_BASE`** **显式设为** **`https://<域名>/geoserver`**（§4.1）。
-> - SSR 模式站点不适用 `location /` 的静态 root，改为 `proxy_pass http://127.0.0.1:3002;`（渲染模式是站点级开关，见 `03` / `09`）。
-> - **内容编辑器预览必配三件套**（缺一则 iframe 超时或渲染报错）：① 上例 `?__preview=` 分流到 `PORT_GEO` 的 location；② `env/.env.production` 显式给 `GEO_BASE_URL=<对外基址>`（`config/index.mjs` 的 `GEO_BASE_URL` 已支持 env 覆盖派生值；缺省派生值落在 GEO 内部端口，浏览器打不开）；③ 站点表 `domain` 写**纯主机名**（渲染引擎按 `Host` 去端口反查站点）。GEO 进程仍只监听本机，不直接对公网开放；票据是 HMAC 短时效签名，未持票请求一律走静态产物。
+> - HTTPS：`certbot --nginx` 签发后同 server 块补 443 段；**启用 HTTPS 后必须把** **`API_BASE`** **显式设为** **`https://<域名>/geoserver`**（§4.1）。免费泛域名证书只有 ACME 系支持（Let's Encrypt / ZeroSSL，DNS-01 验证 + acme.sh 自动续期，`-d a.com -d '*.a.com'` 一张证书同时覆盖裸域与子域）；多主域名 = 两张独立证书 + 各自 server 块（`nginx.conf.example` 附完整 acme.sh 示例）。
+> - **`proxy_set_header Host $host` 是站点解析的命门**：丢了它 GEO 收到的 Host 是 `127.0.0.1`（回环），会错误地走「URL 首段前缀」分支，线上站点解析即乱。
+> - **预览与监控两件套**（缺一则后台预览 iframe 超时）：① 上例 `Host` 透传（站点解析与预览票据共用，无需单独的 `?__preview=` 分流段）；② `env/.env.production` 显式给 `GEO_BASE_URL=<对外基址>`（缺省派生值落在 GEO 内部端口，浏览器打不开）；另加一条——站点表 `domain` 写**纯主机名**（GEO 按 `Host` 去端口反查站点）。GEO 进程仍只监听本机，不直接对公网开放；票据是 HMAC 短时效签名，未持票请求走产物直出 / SSR 线上态。
+> - **可用性（ADR-045 代价）**：GEO 服务是站点访问单点，必须 PM2 守护（§2）+ 健康检查（§8 #2）兜底；`pm2 logs trillion-geo` 里的 `[access] {...}` 单行 JSON 即站点级访问日志（host / site / path / status / 耗时，静态资产不记），可直接 grep / 采集到监控管道。
 
 ***
 
@@ -444,9 +436,10 @@ server {
 | 6  | 静态资源         | 任一 `/static/...` 图片 200；页面无 404 资源（浏览器控制台）                                 |
 | 7  | GEO 四层产物     | `/robots.txt`、`/sitemap.xml`、`/llms.txt` 可达；详情页源码含 JSON-LD                 |
 | 8  | 内容发布闭环       | 后台改一篇新闻保存 → 站点详情页出现更新（发布任务自动 SSG）                                          |
-| 9  | 崩溃自愈         | `pm2 restart trillion-server`（或 kill 进程）后数秒内自动 online                      |
-| 10 | 开机自启         | `pm2 save` 已执行、`pm2 startup` 已挂 systemd；服务器重启后 `pm2 ls` 三端自动 online        |
-| 11 | 入口清单         | 仓库根 `release-endpoints.txt` 已落盘（体检构建产生，不入库）                                |
+| 9  | 统一入口直出（ADR-045） | `pm2 logs trillion-geo --lines 20` 出现 `[access] {...,"cache":"file"}`（产物命中直出）；发布新内容后再访问同页，日志仍正常（HTML no-cache 即时生效） |
+| 10 | 崩溃自愈         | `pm2 restart trillion-server`（或 kill 进程）后数秒内自动 online                      |
+| 11 | 开机自启         | `pm2 save` 已执行、`pm2 startup` 已挂 systemd；服务器重启后 `pm2 ls` 三端自动 online        |
+| 12 | 入口清单         | 仓库根 `release-endpoints.txt` 已落盘（体检构建产生，不入库）                                |
 
 ***
 

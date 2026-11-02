@@ -427,14 +427,14 @@ export class NewsFaqService {
 
   /**
    * 受影响页面的页面级自动发布（系统入口：构建中允许排队）
-   * 仅 SSG 站点需要构建；只发布其中已发布状态的页面；返回发布任务 id（无需发布时为 null）
+   * 只发布其中已发布状态的页面；返回发布任务 id（无需发布时为 null）
    */
   private async publishAffected(user: AuthUser, siteId: string, pageIds: string[]): Promise<string | null> {
     const site = await this.prisma.site.findUnique({
       where: { id: siteId },
-      select: { id: true, renderMode: true }
+      select: { id: true }
     })
-    if (!site || site.renderMode !== 'ssg') return null
+    if (!site) return null
     const targets = await this.prisma.page.findMany({
       where: { id: { in: pageIds }, siteId, status: 'published' },
       select: { id: true }

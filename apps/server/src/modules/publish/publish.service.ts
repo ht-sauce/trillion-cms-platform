@@ -288,7 +288,6 @@ export class PublishService implements OnModuleInit {
   async publishPage(user: AuthUser, siteId: string, pageIds: string[]) {
     const site = await this.prisma.site.findUnique({ where: { id: siteId } })
     if (!site) throw new NotFoundException('站点不存在')
-    if (site.renderMode !== 'ssg') throw new BadRequestException('SSR 模式站点无需发布')
 
     const ids = (pageIds || []).filter(Boolean)
     if (!ids.length) throw new BadRequestException('请指定要发布的页面')
@@ -323,7 +322,6 @@ export class PublishService implements OnModuleInit {
   async rebuild(user: AuthUser, siteId: string) {
     const site = await this.prisma.site.findUnique({ where: { id: siteId } })
     if (!site) throw new NotFoundException('站点不存在')
-    if (site.renderMode !== 'ssg') throw new BadRequestException('SSR 模式站点无需发布')
     return this.enqueue(user, siteId, 'site', { pageIds: [] })
   }
 
@@ -639,11 +637,6 @@ export class PublishService implements OnModuleInit {
       const site = await this.prisma.site.findUnique({ where: { id: task.siteId } })
       if (!site) {
         await this.finish(taskId, 'failed', '站点不存在')
-        return
-      }
-
-      if (site.renderMode !== 'ssg') {
-        await this.finish(taskId, 'success', `站点 ${site.slug} 为 SSR 模式，无需构建，内容即时生效`)
         return
       }
 

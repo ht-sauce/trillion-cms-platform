@@ -1,19 +1,25 @@
-# nginx 生产配置 · 单域名同源（直装 · git 仓库形态）
+# nginx 生产配置 · 主域名薄块统一反代（直装 · git 仓库形态）
 #
-# 实例：公网 IP 11.11.11.11，nginx 直接监听 8080（公网只放行 8080；3000~3002 不对外，由本配置反代）。
-# 服务器上落地（三者缺一不可）：
+# 架构口径（ADR-045，2026-11-02）：站点流量统一由 GEO 服务承接——nginx 只按「主域名」配
+# 薄 server 块（证书 + 一条共享反代片段），location / 全量反代 GEO :3002 并透传 Host；
+# GEO 按域名解析站点、优先直出 sites/<slug>/ 产物文件（磁盘读 ≈ 静态托管性能），未命中放行 SSR 兜底。
+# **nginx 配置量随主域名数封顶、不随站点数增长**：加站点 = 后台建站 + 发布 + DNS 解析，服务器零操作；
+# 加主域名才需要复制一个 server 块 + 签一张证书。
+#
+# 实例：两个独立主域名 a.com 与 b.cn（各配一张证书）。服务器上落地（三者缺一不可）：
 #   sudo cp nginx.conf.example /etc/nginx/sites-available/trillion.conf
 #   sudo ln -s /etc/nginx/sites-available/trillion.conf /etc/nginx/sites-enabled/trillion.conf
 #   sudo nginx -t && sudo systemctl reload nginx
 #
 # 约定：仓库位于 /srv/app/trillion-cms-platform（见 docs/spec/10-launch-runbook.md §4）。
-# 若实际路径不同，改下方 root / alias 两处即可；多站点时 apps/geo/sites/ 下每个 <slug> 子目录配一个 server 块。
-# 拓扑说明与验收清单见 docs/spec/10-launch-runbook.md §7 / §8。
 
+# 共享反代片段：三个 server 块的 location / 与 API 段完全相同，抽成一处避免漂移
+# （落盘为 /etc/nginx/snippets/trillion-proxy.conf，或直接内联进各 server 块）
+
+# ---------------- server 块 1：a.com（站点 A 及其子域站点） ----------------
 server {
-    # 对外端口 8080（与 env/.env.production 的 API_BASE / CORS_ORIGINS 同口径）
     listen 8080;
-    server_name 11.11.11.11;
+    server_name a.com;
 
     # 管理后台：Nuxt app.baseURL=/geocms/，前缀原样透传，proxy_pass 不做路径重写
     location /geocms/ {
@@ -24,7 +30,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # 服务端 API：全局前缀 /geoserver，前缀原样透传；client_max_body_size 放开素材上传
+    # 服务端 API：全局前缀 /geoserver；client_max_body_size 放开素材上传
     location /geoserver/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_set_header Host $host;
@@ -40,20 +46,10 @@ server {
         expires 7d;
     }
 
-    # 站点 SSG 产物（内容发布后由服务端自动增量重建，无需重启 nginx）
+    # 站点统一入口：全部交给 GEO（按 Host 直出产物 / SSR 兜底 / 预览票据读草稿，ADR-045）
+    # proxy_set_header Host $host 是命门：丢了它 GEO 收到的是 127.0.0.1（回环），
+    # 会错误地走「URL 首段前缀」分支，线上站点解析即乱。
     location / {
-        # 内容编辑器草稿预览：带 ?__preview=<票据> 的请求交给 GEO 渲染进程（读草稿），其余仍走静态产物。
-        # 用 418 + 有名 location，避免把 proxy_pass 写进 if（nginx「if 陷阱」的经典坑）。
-        error_page 418 = @geo_preview;
-        if ($arg___preview) { return 418; }
-        root /srv/app/trillion-cms-platform/apps/geo/sites/xian-renai-skin;
-        index index.html;
-        try_files $uri $uri/ $uri.html =404;
-    }
-
-    # GEO 渲染进程（SSR，端口取 env 的 PORT_GEO）：只承接预览票据请求。
-    # Host 与站点同源 → 渲染引擎按主域名反查站点，故无需 /<slug> 前缀（ADR-031）。
-    location @geo_preview {
         proxy_pass http://127.0.0.1:3002;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -62,14 +58,64 @@ server {
     }
 }
 
-# 防火墙：公网只放行 8080 与 SSH；3000~3002 保持仅本机可访问（预览请求由 nginx 反代进入，GEO 自身仍不对公网监听）。
-# 换域名或上 HTTPS：改 listen 443 ssl + server_name <域名>（certbot --nginx 可自动补段），
-# 同时把 env/.env.production 的 API_BASE 与 CORS_ORIGINS 改成 https://<域名>，
-# 否则后台接口仍会打到 http://11.11.11.11:8080/geoserver 这个旧基址。
+# ---------------- server 块 2：b.cn（站点 B 及其子域站点） ----------------
+# 与块 1 只差 server_name 与证书路径；站点分发完全由 GEO 按 Host 完成，nginx 不感知站点。
+server {
+    listen 8080;
+    server_name b.cn;
+
+    location /geocms/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /geoserver/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        client_max_body_size 20m;
+    }
+
+    location /static/ {
+        alias /srv/app/trillion-cms-platform/apps/server/uploads/;
+        expires 7d;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# ---------------- HTTPS（上线时启用） ----------------
+# 换 HTTPS：每个 server 块加 listen 443 ssl + 证书两行（certbot --nginx 或 acme.sh 均可自动补段），
+# 同时把 env/.env.production 的 API_BASE 与 CORS_ORIGINS 改成 https://<域名>。
 #
-# 预览三件套（缺一不可，否则后台 iframe 超时或渲染报错）：
-#   1) 本配置里的「?__preview= 分流到 PORT_GEO」location；
-#   2) env/.env.production 显式给 GEO_BASE_URL=<对外基址>（例：http://11.11.11.11:8080；
-#      config/index.mjs 支持用 env 覆盖派生值）——派生缺省会落到 GEO 内部端口，浏览器打不开；
-#   3) 站点表 domain 写**纯主机名**：GEO 按 Host 去端口后反查站点（apps/geo/app/composables/useSiteKey.ts）。
-# 说明与验收见 docs/spec/10-launch-runbook.md §7 / §8。
+# 免费泛域名证书只有 ACME 系支持（Let's Encrypt / ZeroSSL）：必须 DNS-01 验证 + acme.sh 自动续期；
+# 泛域名不含裸域，一张证书用 -d a.com -d '*.a.com' 同时覆盖。acme.sh 示例（DNSPod 为例）：
+#   export DP_Id="xxx" DP_Key="xxx"
+#   acme.sh --issue --dns dns_dnspod -d a.com -d '*.a.com'
+#   acme.sh --install-cert -d a.com \
+#     --key-file       /etc/ssl/a.com.key \
+#     --fullchain-file /etc/ssl/a.com.fullchain.pem \
+#     --reloadcmd      "nginx -s reload"
+# 两个主域名 = 两张独立证书（各配各的 DNS API 插件，续期互不影响）。
+#
+# 预览与监控两件套（缺一不可）：
+#   1) proxy_set_header Host $host（上文已含）——站点解析与预览票据都靠它；
+#   2) env/.env.production 显式给 GEO_BASE_URL=<对外基址>（例：https://a.com）——
+#      派生缺省会落到 GEO 内部端口，后台预览 iframe 打不开。
+#   站点表 domain 写纯主机名：GEO 按 Host 去端口后反查站点（apps/geo/app/composables/useSiteKey.ts）。
+#
+# 可选：SITE_PRODUCTS_DIR 覆盖 GEO 读取的产物根目录（缺省 <apps/geo>/sites，一般无需配置）。
+#
+# 可用性提示（ADR-045）：GEO 服务是站点访问的单点（原 nginx 静态直出形态下 Node 挂了站点仍可访问），
+# 必须由 PM2 守护 + 上线器健康检查兜底（docs/spec/10-launch-runbook.md §5）。

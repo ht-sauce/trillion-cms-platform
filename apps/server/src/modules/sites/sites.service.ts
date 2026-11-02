@@ -54,7 +54,6 @@ export class SitesService {
         { domains: { some: { domain: { contains: query.keyword } } } }
       ]
     }
-    if (query.renderMode) where.renderMode = query.renderMode
     if (query.status) where.status = query.status
 
     const [list, total] = await Promise.all([
@@ -118,7 +117,6 @@ export class SitesService {
         seoKeywords: rest.seoKeywords,
         defaultLocale: rest.defaultLocale || SITE_DEFAULTS.locale,
         robotsPolicy: toJsonInput(rest.robotsPolicy ?? AI_CRAWLER_DEFAULTS),
-        renderMode: rest.renderMode || SITE_DEFAULTS.renderMode,
         themeConfig: toJsonInput(rest.themeConfig ?? SITE_DEFAULTS.theme),
         status: rest.status || SITE_DEFAULTS.status,
         ...(aliases.length ? { domains: { create: aliases.map((domain) => ({ domain })) } } : {})

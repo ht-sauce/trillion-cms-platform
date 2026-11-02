@@ -75,7 +75,7 @@ erDiagram
 | 网站信息         | `name`、`slug`（唯一，同时是产物目录名）、`domain`（**主域名**）、`icpNumber`、`policeNumber`               | `slug` 改动需同步迁移产物目录（v1 未提供自动迁移）；`domain` 是**主域名**（域名或 `host:port`），生产填正式域名、本地开发填本地地址（如 `localhost:3002`），后台列表「预览」按**主域名 + `slug` 前缀**拼装（本地多站点共用 `localhost:3002` 时靠前缀区分目标站点）、SEO 绝对 URL（sitemap / llms.txt / JSON-LD）用主域名；别名域名见 3.1 下方的 `SiteDomain` |
 | 企业主体         | `companyName`、`creditCode`、`businessLicenseFileId`、`companyAddress`、`contactPhone`、`contactEmail`      | 营业执照图片仅后台存档，不对外渲染                                          |
 | SEO / GEO 默认值 | `seoTitle`、`seoDescription`、`seoKeywords`、`logoFileId`、`faviconFileId`、`defaultLocale`、`robotsPolicy` | 页面未单独配置时的兜底；`seoDescription` 同时作为 `llms.txt` 站点级摘要来源 |
-| 平台配置         | `renderMode`（`ssg`/`ssr`）、`themeConfig`、`status`、`createdAt`、`updatedAt`                              | `themeConfig` 为 JSON，驱动 GEO 项目外观 CSS 变量                           |
+| 平台配置         | `themeConfig`、`status`、`createdAt`、`updatedAt`                                                           | `themeConfig` 为 JSON，驱动 GEO 项目外观 CSS 变量（原 `renderMode` 站点级开关已随 ADR-046 退役，统一入口下无站点级渲染模式） |
 
 **多域名映射（主域名 + 别名域名）**：一个站点可被多个域名访问，其中 `Site.domain` 是**主域名**（唯一），其余域名以 `SiteDomain`（`siteId` + `domain` 唯一）记录，例如 `www.xxx.com`、`xxx.cn`、备案备用域名。
 
@@ -204,7 +204,8 @@ apps/server/prisma/
 - **禁止写单一大 schema 文件**；新增模型按领域新建文件
 - 迁移：`prisma migrate dev --name <语义名>`；生产：`prisma migrate deploy`
 - 种子：`prisma db seed`（经 `tsx prisma/seed.ts` 执行），可重复执行（已用 upsert 幂等设计）
-- **迁移历史（2026-10-20 重建为单条基线）**：仓库内只保留 `20261020120000_init_id_string`（由 `prisma migrate diff --from-empty` 生成，含 21 张表的完整 DDL、全部外键与 `PRIMARY KEY`）。此前的 `20261005103528_init` 等历史迁移与当下 schema 已严重漂移（缺 `path` / `content_hash` / `draft` / `Role` 关联等），故于 2026-10-20 以基线整体替换；**空库**直接 `pnpm db deploy*` 即建成当前结构
+- **迁移历史（2026-11-02 再次重建为单条基线）**：仓库内只保留 `20261102133000_init_current_schema`（由 `prisma migrate diff --from-empty` 生成，含 21 张表的完整 DDL、全部外键与 `PRIMARY KEY`，无 `render_mode` 列——ADR-046）。上一版基线 `20261020120000_init_id_string`（ADR-043，2026-10-20）连同 render_mode 条件删列迁移一并废弃；**空库**直接 `pnpm db deploy*` 即建成当前结构
+- **本地 Windows 的 drift 误报（已知环境特性，勿据此 reset）**：Windows MySQL `lower_case_table_names=1` 会把表名存/显为小写，`prisma migrate dev` 的影子库对比按字符串匹配表名 → 误报 7 个外键缺失并要求 reset。**drift 状态下绝不执行 `pnpm db migrate`（会提示 reset 丢全库数据）**；本地结构变更走「手写迁移 + `prisma db execute` + `migrate resolve --applied`」路径；Linux 环境（`lctn=0`，按 §10 维护脚本修正过表名）不受影响，`pnpm db deploy*` 一切正常
 - **主键与 ID 改造（2026-10-20，ADR-043）**：全表主键由 Int 自增改为 **uuid v7 字符串**（应用侧生成、时间有序），存量数据经「old→new 映射表 + `INSERT ... SELECT` 改写全部外键列 + JSON 内嵌 id（`AdminUser.siteIds` / `PublishTask.targets.pageIds`）」一次性重映射；本地库已按此重建，线上库以本地重建结果整体替换（见 §2.1）
 - **主键校验（强制）**：建表 / 迁移完成后必须复核「每张表都有真实 PRIMARY KEY」——字符串 ID **不替代**主键约束；漏主键会让 Prisma 省略 id 的 INSERT 直接被 MySQL 拒绝（`P2011 Null constraint violation` / 1075），线上曾因此全线写失败
 - **迁移方式**：Windows 下 MySQL `lower_case_table_names=1` 会让 `prisma migrate dev` 对自关联外键产生 drift 误报（并要求 reset），故一律为**手工维护 SQL + `prisma migrate deploy`** 路径，避免误 reset 开发库

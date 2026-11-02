@@ -84,6 +84,15 @@ export default defineNuxtConfig({
       publicDir: process.env.NUXT_BUILD_OUTPUT || 'dist'
     },
     /**
+     * 关闭 nitro 内嵌静态资产服务（node-server preset 会把构建期 publicDir 资产收进
+     * server bundle 的 assets 清单，该 handler 在 server middleware 之前执行且未命中即 404 短路）。
+     * ADR-045：运行时的静态服务统一由 server/middleware/site-entry.ts 承担——
+     * 按 Host 解析站点后直出 sites/<slug>/ 产物（HTML / _nuxt / robots.txt / sitemap.xml / llms.txt），
+     * 多站点资产天然隔离；构建期清单只含单站点快照，继续开着反而会拦截线上多站点资产请求。
+     * dev 模式（nuxt dev / 预览）不受影响：_nuxt 由 vite dev server 提供，不走此配置。
+     */
+    serveStatic: false,
+    /**
      * 构建期不预渲染任何路由：页面 HTML 全部由 scripts/build-sites.mjs 拉起渲染服务
      * 「SSR 爬取」产出（ADR-032），此处预渲染会同时踩两个坑：
      *   1. 短路 SSR——页面路径被烘焙进 server bundle 的静态资产表（页面 → 构建期 HTML 文件），

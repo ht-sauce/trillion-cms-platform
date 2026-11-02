@@ -6,12 +6,6 @@
  * 2. 角色名称**不再在此硬编码**——/geoserver/auth/me 会随用户返回 roleName（角色表数据）
  */
 
-/** 渲染模式标签 */
-export const RENDER_MODE_LABEL: Record<string, string> = {
-  ssg: 'SSG 静态',
-  ssr: 'SSR 动态'
-}
-
 /**
  * 内容状态标签（含三态流）
  * 颜色只给**语义类名**（定义在 `assets/scss/main.scss`），TS 里不允许出现色值

@@ -541,12 +541,7 @@ if (!site) throw new Error('站点不存在或已停用')
 const allRoutes = (await fetchJson(`${apiBase}/public/routes/${siteSlug}`)).data || []
 if (!allRoutes.length) throw new Error('没有可构建的已发布页面，请先发布页面')
 
-console.log(`[build] 站点 ${siteSlug}（${site.renderMode}）已发布页面 ${allRoutes.length} 个`)
-
-if (site.renderMode !== 'ssg') {
-  console.log('[build] 该站点非 SSG 模式，无需静态构建，内容即时生效')
-  process.exit(0)
-}
+console.log(`[build] 站点 ${siteSlug} 已发布页面 ${allRoutes.length} 个`)
 
 const targetIds = pages
   ? pages

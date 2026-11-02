@@ -21,7 +21,7 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 - [`.editorconfig`](../.editorconfig) —— 编辑器基础格式（UTF-8、LF、2 空格）
 - [`.gitignore`](../.gitignore) —— Git 忽略（依赖、产物、`sites/` 产物、`uploads/`、`env/.env.production`、PM2 配置 `ecosystem.config.json`、部署包 `deploy/`、启动器 / 上线器写入的入口清单 `dev-endpoints.txt` / `release-endpoints.txt`）
 - `deploy/`（**运行时生成，不入库**）—— `pnpm bundle` 产出的自包含部署包（ADR-042，约 792 MB）：`start.mjs` / `db.mjs` / `nginx.conf.example` / `README.md` + `config/` + `env/.env.<环境>` + `apps/{server,admin,geo}` 产物与依赖，整体拷贝到服务器后 `node start.mjs daemon` 即可运行；模板来源 [`scripts/deploy-runtime/`](../scripts/deploy-runtime)
-- [`nginx.conf.example`](../nginx.conf.example) —— **生产 nginx 落地配置（直装 · git 仓库形态）**：公网 IP `11.11.11.11` + nginx 直听 `8080` 的单域名同源分流（`/geocms/`→3000、`/geoserver/`→3001、`/static/` 直出、`/`→站点 SSG 产物）；拷贝到 `/etc/nginx/sites-available/` 即用。通用参考（域名 + 80/443）见 [`docs/spec/10-launch-runbook.md`](./spec/10-launch-runbook.md) §7，部署包形态的模板另见 [`scripts/deploy-runtime/`](../scripts/deploy-runtime)
+- [`nginx.conf.example`](../nginx.conf.example) —— **生产 nginx 落地配置（直装 · git 仓库形态）**：主域名薄块统一反代（ADR-045）——两个独立主域名各一个 server 块（`server_name` + 证书路径），`/geocms/`→3000、`/geoserver/`→3001、`/static/` 直出、`/` 全量反代 GEO :3002 并透传 `Host`（站点分发由 GEO 按 Host 完成，nginx 不感知站点）；附 acme.sh 泛域名证书签发示例；拷贝到 `/etc/nginx/sites-available/` 即用。通用参考（域名 + 80/443）见 [`docs/spec/10-launch-runbook.md`](./spec/10-launch-runbook.md) §7，部署包形态的模板另见 [`scripts/deploy-runtime/`](../scripts/deploy-runtime)
 - [`README.md`](../README.md) —— 项目基础说明：数据库、两种启动方式、常用命令、关键约定
 - [`AGENTS.md`](../AGENTS.md) —— AI 开发规范入口：术语、目录约定、先读后开发流程、禁止事项
 
@@ -107,7 +107,7 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 - [`tsconfig.json`](../packages/shared/tsconfig.json) —— shared 独立编译配置（`src` → `dist`，输出 `.js` + `.d.ts`）
 - [`eslint.config.mjs`](../packages/shared/eslint.config.mjs) —— shared 的 ESLint 配置
 - [`src/index.ts`](../packages/shared/src/index.ts) —— 类型统一出口
-- [`src/types/site.ts`](../packages/shared/src/types/site.ts) —— 站点实体（主域名 `domain` + 别名域名 `domains`）、渲染模式、主题令牌、静态文件类型
+- [`src/types/site.ts`](../packages/shared/src/types/site.ts) —— 站点实体（主域名 `domain` + 别名域名 `domains`）、主题令牌、静态文件类型
 - [`src/types/content.ts`](../packages/shared/src/types/content.ts) —— 栏目 / 页面 / 模板定义与结构化 Block 数据类型
 - [`src/types/api.ts`](../packages/shared/src/types/api.ts) —— 统一响应、分页、管理员、会员、埋点载荷类型
 - [`src/types/menu.ts`](../packages/shared/src/types/menu.ts) —— 后台菜单实体与菜单树节点类型（含状态枚举）
@@ -143,7 +143,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 
 - [`schema/main.prisma`](../apps/server/prisma/schema/main.prisma) —— generator 与 datasource 配置（多文件 schema 入口）
 - [`schema/defaults.prisma`](../apps/server/prisma/schema/defaults.prisma) —— 默认值说明文档（robotsPolicy / themeConfig / blocks JSON 结构）
-- [`schema/site.prisma`](../apps/server/prisma/schema/site.prisma) —— `Site` 站点表（企业元数据 + 网站信息 + SEO/GEO 默认值 + 渲染模式）与 `SiteDomain` 站点别名域名表（主域名仍是 `Site.domain`，本表存别名，多域名映射见 ADR-022）
+- [`schema/site.prisma`](../apps/server/prisma/schema/site.prisma) —— `Site` 站点表（企业元数据 + 网站信息 + SEO/GEO 默认值；原 `renderMode` 字段已随 ADR-046 删除）与 `SiteDomain` 站点别名域名表（主域名仍是 `Site.domain`，本表存别名，多域名映射见 ADR-022）
 - [`schema/static-file.prisma`](../apps/server/prisma/schema/static-file.prisma) —— `StaticFile` 静态文件 URL 表（URL 与物理存储解耦）
 - [`schema/admin-user.prisma`](../apps/server/prisma/schema/admin-user.prisma) —— `AdminUser` 管理后台用户（角色 + 授权站点）
 - [`schema/member.prisma`](../apps/server/prisma/schema/member.prisma) —— `Member` 站点会员（按 siteId 隔离）
@@ -155,7 +155,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`schema/menu.prisma`](../apps/server/prisma/schema/menu.prisma) —— `Menu` 后台侧栏菜单（`parentId` 自关联，最多三级）
 - [`schema/role.prisma`](../apps/server/prisma/schema/role.prisma) —— `Role` 后台角色（`platform` 平台级标记、`builtin` 内置保护）与 `RoleMenu` 角色-菜单授权关系
 - [`schema/migrations/migration_lock.toml`](../apps/server/prisma/schema/migrations/migration_lock.toml) —— 迁移锁（Prisma 生成）
-- [`schema/migrations/20261020120000_init_id_string/migration.sql`](../apps/server/prisma/schema/migrations/20261020120000_init_id_string/migration.sql) —— **唯一迁移（2026-10-20 重建基线）**：21 张表的完整 DDL、全部外键与主键（`prisma migrate diff --from-empty` 生成）；主键为 uuid v7 字符串（ADR-043）。此前历史迁移与当前 schema 已严重漂移，整体替换废弃（见 04 §6）
+- [`schema/migrations/20261102133000_init_current_schema/migration.sql`](../apps/server/prisma/schema/migrations/20261102133000_init_current_schema/migration.sql) —— **唯一迁移（2026-11-02 重建基线）**：21 张表的完整 DDL、全部外键与主键（`prisma migrate diff --from-empty` 生成，无 `render_mode` 列——ADR-046）。上一版基线（ADR-043 的 `init_id_string`）与历史迁移一并废弃（见 04 §6；本地 Windows 的 migrate drift 误报说明亦见该节）
 - [`maintenance/fix-prisma-migrations-meta-table.sql`](../apps/server/prisma/maintenance/fix-prisma-migrations-meta-table.sql) —— **一次性环境修复（不是迁移）**：旧版 Prisma CLI 建出的 `_prisma_migrations` 台账 `applied_steps_count` 无 DEFAULT，会让 `migrate deploy` 报「Field 'applied_steps_count' doesn't have a default value」而整体失败；本脚本为其补默认值，幂等，用 `prisma db execute --file` 执行（见 10-launch-runbook §4.2）
 - [`maintenance/fix-table-name-case.sql`](../apps/server/prisma/maintenance/fix-table-name-case.sql) —— **一次性环境修复（不是迁移）**：Windows MySQL（`lower_case_table_names=1`）导库会把表名落到小写，Linux 默认区分大小写、Prisma 模型未写 `@@map`，于是报「The table `AdminUser` does not exist」；本脚本按映射把 21 张业务表改回大驼峰（`_prisma_migrations` 保持小写），幂等、仅改表名不动数据行、含外键自动改写与前后核对（见 10-launch-runbook §11）
 - [`seed.ts`](../apps/server/prisma/seed.ts) —— 种子数据：内置角色（`admin` / `site_admin`）与角色菜单授权、平台管理员（绑定 `admin` 角色）、后台菜单（站点管理目录：站点列表 / 新闻资讯 / 高频问答；内容管理下六页：页面 / 编辑器 / 块库 / 块模板 / 导航 / 素材 + 系统设置四个子页）、默认模板、示例站点/栏目/页面、内置块定义（若 `prisma/blocks/*.vue` 存在则写入**模板库** `siteId = 0`，目录缺失时跳过）与示例站点的**块副本**（ADR-035）
@@ -208,7 +208,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`sites.controller.ts`](../apps/server/src/modules/sites/sites.controller.ts) —— 站点列表/详情/新建/编辑/删除（写操作限平台管理员）
 - [`sites.service.ts`](../apps/server/src/modules/sites/sites.service.ts) —— 站点 CRUD、**别名域名规范化与全局唯一校验**（随站点全量同步）、文件引用解析、JSON 字段与时间格式化、**列表/详情附加 `build`（最新构建任务摘要，批量取避免 N+1）**
 - [`dto.ts`](../apps/server/src/modules/sites/dto.ts) —— 入参校验 DTO（QuerySiteDto / CreateSiteDto / UpdateSiteDto）
-- [`constants.ts`](../apps/server/src/modules/sites/constants.ts) —— 站点默认值（AI 策略放行、主题令牌、渲染模式）
+- [`constants.ts`](../apps/server/src/modules/sites/constants.ts) —— 站点默认值（AI 策略放行、主题令牌）
 
 ### src/modules/static-files（静态文件）
 
@@ -350,7 +350,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`api/users.ts`](../apps/admin/app/config/api/users.ts) —— 后台用户 CRUD 与角色绑定接口
 - [`api/news-faq.ts`](../apps/admin/app/config/api/news-faq.ts) —— 新闻资讯 / 高频问答接口（**表驱动 id 寻址**：读 `NewsArticle` / `FaqItem` 表，列表 / 按 `id` 详情（不传 siteId）/ 增删改；列表不返回正文，编辑回显走 `articleDetail` / `faqDetail`；`pageId` 为发布产物弱引用；保存后由服务端同步派生块并自动页面级发布）
 - [`api/index.ts`](../apps/admin/app/config/api/index.ts) —— API 统一出口
-- [`menu.ts`](../apps/admin/app/config/menu.ts) —— 渲染模式/状态等字典映射（含 **`BUILD_STATUS_META`：构建状态唯一口径**——未构建 / 排队中 / 构建中 / 构建成功 / 构建失败，站点列表、内容编辑器、总览发布任务三处共用）；**侧栏菜单与角色名均已改为后台数据驱动，不在此硬编码**；状态色只给 `.c-*` 语义类名）
+- [`menu.ts`](../apps/admin/app/config/menu.ts) —— 站点状态等字典映射（含 **`BUILD_STATUS_META`：构建状态唯一口径**——未构建 / 排队中 / 构建中 / 构建成功 / 构建失败，站点列表、内容编辑器、总览发布任务三处共用；原 `RENDER_MODE_LABEL` 已随 ADR-046 删除）；**侧栏菜单与角色名均已改为后台数据驱动，不在此硬编码**；状态色只给 `.c-*` 语义类名）
 - [`site-defaults.ts`](../apps/admin/app/config/site-defaults.ts) —— 站点主题默认值（与服务端 `SITE_DEFAULTS.theme` 对齐；唯一允许写颜色字面量的 TS 文件）
 - [`pagination.ts`](../apps/admin/app/config/pagination.ts) —— **分页统一配置**：默认每页 20、档位 `[10, 20, 30, 50, 100]`、`el-pagination` 统一 layout（与服务端 `common/constants.ts` 对齐）
 - [`glossary.ts`](../apps/admin/app/config/glossary.ts) —— **专有名词字典（界面文案唯一事实来源，58 条）**：`TERMS.<key>` = `{ label, hint }`，按「地址与域名 / 内容 / 平台与 GEO / 块 / 导航 / 监控与运行 / 权限」分组（slug / canonical / 产物清单 / 内容指纹 / 块标识 / 公共模板 / PV / 站点授权 …）；页面禁止硬编码名词与解释，配合 `components/TermHint.vue` 出问号说明；文档侧同口径解释见 [`GLOSSARY.md`](./GLOSSARY.md)
@@ -406,7 +406,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 - [`login.vue`](../apps/admin/app/pages/login.vue) —— 登录页（深空控制台风格）
 - [`index.vue`](../apps/admin/app/pages/index.vue) —— 总览仪表盘：PV/UV、AI 抓取、发布任务、热门路由
-- [`sites/index.vue`](../apps/admin/app/pages/sites/index.vue) —— 站点列表（搜索/筛选/分页；**域名映射列**：主域名 + 别名域名；**站点前缀列**：站点标识 `slug`，进编辑页可改；**构建状态列**：未构建 / 排队中 / 构建中 / 构建成功 / 构建失败 + 时间（进行中显示已运行时长，失败悬停看日志尾部；有进行中任务时每 4 秒静默轮询）；渲染模式列与模式筛选本期隐藏（纯 SSG）；操作列「预览」新标签打开**主域名 + 站点前缀**、「编辑」进入深入编辑页、「内容编辑器」进入 `/content/editor?siteId=<id>`、「下载」打开 `SiteDownloadDialog` 下载产物包）
+- [`sites/index.vue`](../apps/admin/app/pages/sites/index.vue) —— 站点列表（搜索/筛选/分页；**域名映射列**：主域名 + 别名域名；**站点前缀列**：站点标识 `slug`，进编辑页可改；**构建状态列**：未构建 / 排队中 / 构建中 / 构建成功 / 构建失败 + 时间（进行中显示已运行时长，失败悬停看日志尾部；有进行中任务时每 4 秒静默轮询）；操作列「预览」新标签打开**主域名 + 站点前缀**、「编辑」进入深入编辑页、「内容编辑器」进入 `/content/editor?siteId=<id>`、「下载」打开 `SiteDownloadDialog` 下载产物包）
 - [`sites/[id].vue`](../apps/admin/app/pages/sites/%5Bid%5D.vue) —— 站点深入编辑页（单页三分区、无 Tab：基本信息（含**站点前缀 slug**、**主域名 + 别名域名增删**）/ 企业资质 / SEO 设置；渲染模式与主题色不在此页）
 - [`sites/news.vue`](../apps/admin/app/pages/sites/news.vue) —— 新闻资讯管理（按站点隔离：站点切换 + 关键词搜索；表格列标题 / 访问路径 / 发布日期 / 发布状态徽标；操作编辑、删除（删除与保存均由服务端自动触发站点构建）；弹窗 `NewsDialog`）
 - [`sites/faqs.vue`](../apps/admin/app/pages/sites/faqs.vue) —— 高频问答管理（按站点隔离：站点切换 + 关键词搜索 + 分类筛选（选项来自分类接口，清空 = 全部）；表格列问题 / 分类 / 访问路径 / 发布状态徽标；操作编辑、删除；弹窗 `FaqDialog`，新分类保存后刷新分类清单）
@@ -565,10 +565,11 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - `public/assets/css/{theme-b,site}.css` —— 新增：设计稿原型样式**原样落地**（ADR-036）
 - `public/assets/img/{cert,device,doctor,env}/**` —— 新增：设计稿图片资产 60 个（ADR-037）
 - `server/middleware/preview.ts` —— 新增：预览票据校验、草稿渲染、禁索引、关埋点
+- `server/middleware/site-entry.ts` —— 新增：站点统一入口中间件（ADR-045）——Host 非回环时按域名解析站点（内存缓存 + 负缓存），优先直出 `sites/<slug>/` 产物文件（`fileOfPath` 口径，HTML no-cache + 304、`_nuxt` immutable），未命中放行 SSR 兜底；输出 `[access]` 单行 JSON 站点级访问日志（静态资产与回环地址跳过）；产物根可用 `SITE_PRODUCTS_DIR` 覆盖。**依赖 `nuxt.config` 的 `nitro.serveStatic: false`**（否则 nitro 内嵌资产层先拦 `_nuxt/**`）
 - `server/routes/static/[...path].ts` —— 新增：`/static/**` 同源代理（Nitro 路由 → 服务端素材库 `useStaticAssets`，透传状态码 / content-type / 查询串，dev SSR 与渲染服务共用）
 - `scripts/build-sites.mjs` —— **改动**：复制现有产物 → 增量生成 → 全量索引与主站索引 → 合并清单 → 清理下线页 → 保留上一版；2026-10-07 进一步改为「构建缓存判定（命中跳过 Vite）+ SSR 爬取 targets + 跨站点构建锁」（ADR-032）
 - `scripts/sync-blocks.mjs` —— 新增：块代码落盘（数据库 → `app/components/blocks/Blk*.vue`，幂等跳过未变化块）
-- `nuxt.config.ts` —— **改动**：组件自动导入 `pathPrefix: false`、`publicDir` 指向构建期产物目录、prerender 关闭（ADR-032）
+- `nuxt.config.ts` —— **改动**：组件自动导入 `pathPrefix: false`、`publicDir` 指向构建期产物目录、prerender 关闭（ADR-032）；`nitro.serveStatic: false`（ADR-045）——nitro 内嵌静态资产层在 server middleware 之前且未命中即 404 短路，会拦截多站点 `_nuxt` 资产请求，运行时静态服务统一交给 `server/middleware/site-entry.ts`
 
 ### /apps/admin（管理后台）
 

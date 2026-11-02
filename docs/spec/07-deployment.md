@@ -10,9 +10,9 @@
 
 | 形态   | 管理后台                     | GEO 项目                                                         | 服务端                    | MySQL       | 静态托管                    |
 | ------ | ---------------------------- | ---------------------------------------------------------------- | ------------------------- | ----------- | --------------------------- |
-| Docker | `cms-admin`（SPA 3000）      | `cms-geo`（SSR 3002）/ SSG 产物由 nginx 出                       | `cms-server`（3001）      | `cms-mysql` | `cms-nginx`（8080）         |
+| Docker | `cms-admin`（SPA 3000）      | `cms-geo`（SSR 3002，站点页统一入口，ADR-045）                   | `cms-server`（3001）      | `cms-mysql` | `cms-nginx`（8080）         |
 | 直装   | 一键 `pnpm dev`；单端 `pnpm dev admin`（3000） | 一键同上；单端 `pnpm dev geo`（SSR）、`pnpm site build --site <slug>`（SSG） | 一键同上；单端 `pnpm dev server`（3001） | 本地实例 | 本地 Nginx 或直接用产物目录 |
-| 部署包 | `deploy/apps/admin/.output`（Nitro 自包含，3000） | `deploy/apps/geo/.output`（SSR 3002）+ `sites/` 由 nginx 出 | `deploy/apps/server/dist`（3001，全量 node_modules 含 prisma CLI） | 服务器实例 | 包内 `apps/geo/sites/<slug>/` + `nginx.conf.example` 模板 |
+| 部署包 | `deploy/apps/admin/.output`（Nitro 自包含，3000） | `deploy/apps/geo/.output`（SSR 3002）+ `sites/`（GEO 读取的磁盘缓存层） | `deploy/apps/server/dist`（3001，全量 node_modules 含 prisma CLI） | 服务器实例 | 包内 `apps/geo/sites/<slug>/` + `nginx.conf.example` 模板 |
 
 > **部署包（ADR-042）**：`pnpm bundle` 在本地把三端产物、依赖（`pnpm deploy --node-linker=hoisted`，零 symlink）、`config/` 与 `env/` 汇集为仓库根 `deploy/`（gitignore），整体拷贝到服务器后 `node db.mjs deploy`（结构）→ `node start.mjs daemon`（守护运行三端，`stop` / `status` / `restart` 子命令）——服务器免 git / pnpm / PM2；操作口径见 [`10`](./10-launch-runbook.md) §4.0。包内 `config/` 仍是端口 / 连接串 / 密钥的唯一派生事实源，`start.mjs` 按其 `APPS` 清单驱动进程管理。
 
@@ -37,7 +37,7 @@
 ```mermaid
 flowchart TB
   subgraph Docker["Docker 编排（同一 docker network）"]
-    NG["cms-nginx :8080<br/>静态站点 + /static 反代"]
+    NG["cms-nginx :8080<br/>主域名薄块反代（ADR-045）"]
     AD["cms-admin :3000"]
     SV["cms-server :3001"]
     GE["cms-geo :3002（SSR 模式站点）"]
@@ -62,7 +62,7 @@ flowchart TB
 | ---------------- | -------- | -------- | ------------------------------ |
 | `cms-server`     | 3001     | 3001     | 需对 admin/geo 与 SSG 埋点可达 |
 | `cms-admin`      | 3000     | 3000     | 内网或 VPN，建议不公网开放     |
-| `cms-geo`（SSR） | 3002     | 3002     | 由 Nginx 反代（站点页 + 后台预览分流），不直接暴露 |
+| `cms-geo`（SSR） | 3002     | 3002     | 由 Nginx 反代（**站点页统一入口 + 后台预览**，ADR-045），不直接暴露 |
 | `cms-nginx`      | 80       | 8080     | 公网 80/443                    |
 | `cms-mysql`      | 3306     | 3306     | 仅内网，生产不要映射宿主       |
 
@@ -230,7 +230,7 @@ pnpm release --env production --skip-build server  # 沿用上次产物只重启
 | ---------------- | ------------------------------ | -------------- | ---------------- |
 | `mysql-data`     | `/var/lib/mysql`               | 全部业务数据   | **必须**（定期） |
 | `uploads-data`   | `/app/apps/server/uploads`     | 上传的物理文件 | **必须**         |
-| `site-artifacts` | `/app/sites`（nginx 只读挂载） | SSG 站点产物   | 可重建，建议留档 |
+| `site-artifacts` | `/app/sites`（cms-geo 只读挂载） | SSG 站点产物（GEO 磁盘缓存层，ADR-045） | 可重建，建议留档 |
 
 > SSG 产物可由内容重新构建，属"可再生产物"；但保留历史版本有助于快速回滚。
 
@@ -244,12 +244,13 @@ pnpm release --env production --skip-build server  # 沿用上次产物只重启
 
 compose 的 `server` 依赖 `mysql` 的 `service_healthy` 才启动，避免冷启动时连不上库。
 
-## 6. 静态站点托管约定
+## 6. 站点访问与静态托管约定（ADR-045，2026-11-02 修订）
 
-- SSG 产物落在共享卷 `site-artifacts`，nginx 只读挂载到 `/usr/share/nginx/sites`
-- 每个站点一个子目录，按 `server_name` 映射到对应目录（nginx.conf 内已给出示例）
+- **站点流量统一由 GEO 服务承接**：nginx 按主域名配置薄 server 块（`server_name` + 证书路径 + 共享反代片段），`location /` 全量反代 `cms-geo:3002` 并透传 `Host`；GEO 按域名解析站点、优先直出 `sites/<slug>/` 产物文件（磁盘读 ≈ 静态托管性能），未命中放行 SSR 兜底
+- **nginx 配置量随主域名数封顶、不随站点数增长**：加站点 = 后台建站 + 发布 + DNS 解析，服务器零操作；加主域名才需要登服务器（薄 server 块 + 证书，见 `nginx.conf.example` 的多域名形态与 acme.sh 泛域名证书说明）
 - `/static/**` 直接 alias 到 uploads 卷，避免静态资源穿越服务端进程
-- 生产建议：干净的 DNS/CDN → nginx；SSR 模式站点则由 nginx 反代 `cms-geo:3002`
+- 预览票据请求无需分流配置：与线上同一条反代通道，GEO 内部按 `?__preview=` 识别预览态
+- 免费泛域名证书仅 ACME 系支持（Let's Encrypt / ZeroSSL，DNS-01 验证 + acme.sh 自动续期）；多主域名用「两张独立证书 + 各自 server 块」或「一张多 SAN 证书」
 
 ## 7. 直装部署要点
 
@@ -312,7 +313,7 @@ pnpm release --env production                       # 4) 代码上线：构建 �
 | 历史目录 `sites/.<slug>.history/<pageId>/` | 单页归档（每页只保留上一版，会话目录最多 20 个） |
 | 新增环境变量 | 预览票据密钥、渲染引擎预览地址（供后台 iframe）、上一版保留数量、`BUILD_TIMEOUT_MS`；**先加 `env/.env.example` 与根 `config/index.mjs`，应用内不出现字面量** |
 | 磁盘提示 | `.blocks/` 与 `.old/` 会随发布累积，整站重建时清理 `_nuxt` 冗余 chunk |
-| 安全边界 | 预览服务**不直接对公网监听**，由 nginx 在对外 server 块内按 `?__preview=` 分流反代进入；线上站点仍由 nginx / CDN 托管静态产物，二者互不影响 |
+| 安全边界 | 预览服务**不直接对公网监听**，由 nginx 在对外 server 块内反代进入；**线上站点访问同样统一由 GEO 承接**（ADR-045：GEO 按域名直出产物文件，SSR 兜底），nginx 不再按站点 root 直出静态产物 |
 
 ---
 

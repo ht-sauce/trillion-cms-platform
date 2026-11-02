@@ -6,10 +6,10 @@
  * ⚠️ 目前未在任何页面挂载（根路径 2026-10-14 起改为空白占位页）：
  * 代码原样保留，需要恢复时在目标页面模板中写 <DashboardOverview /> 即可
  */
-import { BUILD_STATUS_META, RENDER_MODE_LABEL } from '~/config/menu'
+import { BUILD_STATUS_META } from '~/config/menu'
 import { publishApi, sitesApi, trackApi } from '~/config/api'
 
-const sites = ref<{ id: string; name: string; slug: string; renderMode: string }[]>([])
+const sites = ref<{ id: string; name: string; slug: string }[]>([])
 const currentSiteId = ref<string>()
 const pv = ref(0)
 const uv = ref(0)
@@ -45,11 +45,6 @@ onMounted(async () => {
   await loadSites()
   await loadStats()
 })
-
-const modeLabel = computed(() => {
-  const site = sites.value.find((item) => item.id === currentSiteId.value)
-  return site ? RENDER_MODE_LABEL[site.renderMode] || site.renderMode : ''
-})
 </script>
 
 <template>
@@ -59,7 +54,6 @@ const modeLabel = computed(() => {
       <el-select v-model="currentSiteId" size="small" placeholder="选择站点" style="width: 200px">
         <el-option v-for="site in sites" :key="site.id" :label="site.name" :value="site.id" />
       </el-select>
-      <span class="mode"><TermHint term="renderMode" />：{{ modeLabel }}</span>
     </div>
 
     <div class="grid4">
@@ -155,11 +149,6 @@ const modeLabel = computed(() => {
   display: flex;
   align-items: center;
   gap: $sp-1;
-
-  .mode {
-    font-size: $font-size-xs;
-    color: $c-text-mute;
-  }
 }
 
 .grid4 {

@@ -335,7 +335,6 @@ CREATE TABLE `Site` (
     `head_extra` TEXT NULL,
     `head_extra_mode` VARCHAR(16) NOT NULL DEFAULT 'auto_append',
     `robots_meta` JSON NOT NULL,
-    `render_mode` VARCHAR(8) NOT NULL DEFAULT 'ssg',
     `theme_config` JSON NOT NULL,
     `status` VARCHAR(8) NOT NULL DEFAULT 'active',
     `created_at` DATETIME(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
@@ -430,3 +429,4 @@ ALTER TABLE `RoleMenu` ADD CONSTRAINT `RoleMenu_menu_id_fkey` FOREIGN KEY (`menu
 
 -- AddForeignKey
 ALTER TABLE `SiteDomain` ADD CONSTRAINT `SiteDomain_site_id_fkey` FOREIGN KEY (`site_id`) REFERENCES `Site`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+

@@ -133,8 +133,6 @@ model Site {
   robotsMeta Json @default("{\"index\":true,\"follow\":true,\"maxSnippet\":-1,\"maxImagePreview\":\"large\",\"maxVideoPreview\":-1}") @map("robots_meta")
 
   // ---------- 平台配置 ----------
-  /// 渲染模式：ssg=静态构建 / ssr=服务端实时渲染，站点级开关（本期纯 SSG，后台不暴露切换）
-  renderMode String @default("ssg") @map("render_mode") @db.VarChar(8)
   /// 主题配置 JSON（平台级主色，兼容既有字段；站点外观以 themeTokens 为准）
   themeConfig Json @default("{\"primary\":\"#3B82F6\",\"accent\":\"#67E8F9\",\"background\":\"#0B1224\",\"text\":\"#E8EDFF\",\"radius\":8}") @map("theme_config")
   /// 站点状态：active=启用 / disabled=停用

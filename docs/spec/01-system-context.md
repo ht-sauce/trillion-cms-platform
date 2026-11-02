@@ -66,9 +66,9 @@ flowchart TB
     S4["发布调度 PublishService"]
   end
 
-  subgraph GeoApp["apps/geo（Nuxt 4 双模式）"]
+  subgraph GeoApp["apps/geo（Nuxt 4 · 统一入口）"]
     G1["SSG 产物<br/>apps/geo/sites/&lt;slug&gt;/"]
-    G2["SSR 服务 · 3002"]
+    G2["SSR 服务 · 3002（直出产物 + 兜底/预览渲染）"]
   end
 
   DB[("MySQL<br/>trillionCms")]
@@ -98,7 +98,7 @@ flowchart TB
 | ----------------- | --------------------------- | ---------------------------------------------------------------------- | -------------------------- |
 | `apps/admin`      | Nuxt 4 **SPA**（客户端渲染） | 站点/内容/会员/监控的可视化管理；登录态维持；请求鉴权透传              | 不直连数据库、不做 SSG、不做 SSR |
 | `apps/server`     | NestJS + Prisma             | 唯一的业务数据出入口；鉴权与授权；静态文件服务；发布任务调度；埋点摄取 | 不做 HTML 渲染             |
-| `apps/geo`        | Nuxt 4（SSG 或 SSR）        | 站点前台渲染；GEO 元数据注入；双模式共用同一套模板 + Block 管线        | 不含管理功能、不写业务数据 |
+| `apps/geo`        | Nuxt 4（统一入口：产物直出 + SSR 兜底） | 站点前台渲染；GEO 元数据注入；产物与 SSR 共用同一套模板 + Block 管线   | 不含管理功能、不写业务数据 |
 | `packages/shared` | TypeScript 类型包（编译型） | 前后端共享的数据契约                                                   | 不含任何运行时逻辑         |
 | MySQL             | 关系库                      | 持久化全部业务数据与埋点日志                                           | ——                         |
 | Nginx / CDN       | 静态托管                    | SSG 产物的对外宿主；把 `/static/**` 反向代理回服务端或直连 uploads     | 不做业务判断               |

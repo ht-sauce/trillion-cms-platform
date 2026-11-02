@@ -1,7 +1,7 @@
 /**
  * 站点模块常量：默认值集中在此，避免散落硬编码
  */
-import type { RenderMode, SiteStatus, RobotsPolicy, ThemeConfig } from '@trillion/shared'
+import type { SiteStatus, RobotsPolicy, ThemeConfig } from '@trillion/shared'
 
 /** AI 爬虫策略默认值：默认放行全部已知 AI 爬虫（GEO 关键，切忌默认屏蔽） */
 export const AI_CRAWLER_DEFAULTS: RobotsPolicy = {
@@ -13,7 +13,6 @@ export const AI_CRAWLER_DEFAULTS: RobotsPolicy = {
 /** 站点默认值 */
 export const SITE_DEFAULTS = {
   locale: 'zh-CN',
-  renderMode: 'ssg' as RenderMode,
   status: 'active' as SiteStatus,
   /** 深空控制台风格默认主题令牌 */
   theme: {
