@@ -9,6 +9,10 @@
  * 图片口径：`img` 只接受站内 `/assets/img/**` 静态路径或素材 publicUrl；
  *   留空时渲染占位块而不是外链占位图（外链图在国内网络下会成为首屏白块）。
  *
+ * 【类名隔离】一律带 `pd-` 前缀。`pcard` 这个名字早被 `path-cards` 块占用（theme-b.css），
+ *   两个块共用同一个类名会让样式互相污染：路径卡在深色主题下曾被产品卡的深色底
+ *   与自己的深色字叠成「深字深底」而不可读（ADR-048 类名隔离纪律）。
+ *
  * 链接写法：与 cert-grid 一致，用 v-if / v-else 两套 DOM ——
  *   不用 `<component :is="'NuxtLink'">`，字符串解析在非 Nuxt 环境（后台块预览）会失败。
  */
@@ -51,35 +55,35 @@ defineBlock({
 </script>
 
 <template>
-  <div class="pgrid" :class="data.columns === '3' ? 'cols-3' : 'cols-2'">
+  <div class="pd-grid" :class="data.columns === '3' ? 'pd-cols-3' : 'pd-cols-2'">
     <template v-for="item in data.items || []" :key="item.name">
-      <NuxtLink v-if="item.href" class="pcard" :to="item.href">
-        <div class="pic">
+      <NuxtLink v-if="item.href" class="pd-card" :to="item.href">
+        <div class="pd-pic">
           <img v-if="item.img" :src="item.img" :alt="`${item.name}${item.cnName ? ' ' + item.cnName : ''} 成品地面`" loading="lazy" />
-          <span v-else class="ph">成品实拍图待补</span>
+          <span v-else class="pd-ph">成品实拍图待补</span>
         </div>
-        <div class="body">
-          <span v-if="item.series" class="series">{{ item.series }}</span>
+        <div class="pd-body">
+          <span v-if="item.series" class="pd-series">{{ item.series }}</span>
           <h4>{{ item.name }}</h4>
-          <span v-if="item.cnName" class="cn">{{ item.cnName }}</span>
-          <span v-if="item.desc" class="p">{{ item.desc }}</span>
-          <div v-if="item.tags?.length" class="tags">
+          <span v-if="item.cnName" class="pd-cn">{{ item.cnName }}</span>
+          <span v-if="item.desc" class="pd-desc">{{ item.desc }}</span>
+          <div v-if="item.tags?.length" class="pd-tags">
             <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
           </div>
-          <span class="go">了解更多 →</span>
+          <span class="pd-go">了解更多 →</span>
         </div>
       </NuxtLink>
-      <div v-else class="pcard">
-        <div class="pic">
+      <div v-else class="pd-card">
+        <div class="pd-pic">
           <img v-if="item.img" :src="item.img" :alt="`${item.name}${item.cnName ? ' ' + item.cnName : ''} 成品地面`" loading="lazy" />
-          <span v-else class="ph">成品实拍图待补</span>
+          <span v-else class="pd-ph">成品实拍图待补</span>
         </div>
-        <div class="body">
-          <span v-if="item.series" class="series">{{ item.series }}</span>
+        <div class="pd-body">
+          <span v-if="item.series" class="pd-series">{{ item.series }}</span>
           <h4>{{ item.name }}</h4>
-          <span v-if="item.cnName" class="cn">{{ item.cnName }}</span>
-          <span v-if="item.desc" class="p">{{ item.desc }}</span>
-          <div v-if="item.tags?.length" class="tags">
+          <span v-if="item.cnName" class="pd-cn">{{ item.cnName }}</span>
+          <span v-if="item.desc" class="pd-desc">{{ item.desc }}</span>
+          <div v-if="item.tags?.length" class="pd-tags">
             <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
           </div>
         </div>

@@ -38,15 +38,15 @@ defineBlock({
 </script>
 
 <template>
-  <div class="palette">
-    <div v-if="data.title" class="stack-title">{{ data.title }}</div>
-    <div class="swatches">
-      <div v-for="sw in data.swatches || []" :key="sw.name" class="sw">
+  <div class="cp">
+    <div v-if="data.title" class="cp-title">{{ data.title }}</div>
+    <div class="cp-swatches">
+      <div v-for="sw in data.swatches || []" :key="sw.name" class="cp-sw">
         <span class="chip" :style="{ background: sw.hex }" :aria-label="`${sw.name} ${sw.code || ''}`"></span>
         <span class="nm">{{ sw.name }}</span>
         <span v-if="sw.code" class="cd">{{ sw.code }}</span>
       </div>
     </div>
-    <p v-if="data.note" class="stack-note">{{ data.note }}</p>
+    <p v-if="data.note" class="cp-note">{{ data.note }}</p>
   </div>
 </template>

@@ -47,11 +47,28 @@ export interface PageDetail {
   draftUpdatedAt?: string | null
 }
 
+/**
+ * 归一化页面路径：去掉尾部斜杠与重复斜杠
+ *
+ * 为什么必须有：`useState` 的 key 由路径拼出，而 `/about` 与 `/about/` 是**同一页的两种写法**。
+ * catch-all 路由（`[...slug]`）对 `/about/` 可能解析出 `['about','']`，于是
+ * SSR 与客户端各拿到一个 key（`geo-page-/about` 与 `geo-page-/about/`），
+ * payload 里缓存的那份取不到 → 客户端重新请求页面接口。
+ * 后果：纯静态产物在接口不可达时整站渲染成 500 错误页（而不是显示已生成的 HTML）。
+ */
+export function normalizePagePath(input: string): string {
+  const collapsed = String(input || '/')
+    .replace(/\/{2,}/g, '/')
+    .replace(/\/+$/, '')
+  if (!collapsed) return '/'
+  return collapsed.startsWith('/') ? collapsed : `/${collapsed}`
+}
+
 /** 当前路由路径（首页为 /） */
 export function usePagePath(): string {
   const route = useRoute()
   const raw = Array.isArray(route.params.slug) ? route.params.slug.join('/') : String(route.params.slug || '')
-  return raw ? `/${raw}` : '/'
+  return normalizePagePath(raw ? `/${raw}` : '/')
 }
 
 /**
@@ -62,7 +79,7 @@ export function usePage(path?: string) {
   const apiBase = useApiBase()
   const { context, resolve } = useSiteContext()
   const preview = usePreview()
-  const rawPath = path || usePagePath()
+  const rawPath = normalizePagePath(path || usePagePath())
 
   /**
    * state key 用**原始 URL 路径**：站点前缀要等 `resolve()`（异步）之后才知道，

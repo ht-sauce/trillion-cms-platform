@@ -285,14 +285,14 @@ header .navtoggle {
 }
 .casecard .meta span,
 .casecard .prod,
-.pcard .cn,
-.pcard .p,
 .casecard .go,
-.pcard .go {
+.pd-card .pd-cn,
+.pd-card .pd-desc,
+.pd-card .pd-go {
   color: var(--mute);
 }
 .casecard .ind,
-.pcard .series {
+.pd-card .pd-series {
   color: var(--brand);
   background: rgba(240, 165, 0, 0.12);
 }
@@ -631,5 +631,368 @@ footer .fqr {
 @media (max-width: 640px) {
   footer .fgrid {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* ==========================================================================
+   内页深色化（2026-11-02 二次巡检）
+   以下规则来自全站自动化审计（audit-visual.mjs）的输出：逐页扫描「自身背景亮度 > 0.86
+   且面积 > 4000px²」的元素，一次改掉散落在各页的白底残留。
+   ========================================================================== */
+
+/* ---------- 路径卡（path-cards）：.pcard 已与产品卡（.pd-card）分离 ---------- */
+.pcard {
+  background: var(--panel) !important;
+  border-color: var(--hair) !important;
+  border-radius: 4px !important;
+  padding: 26px 24px !important;
+}
+.pcard h4 {
+  color: #fff;
+}
+.pcard p {
+  color: var(--mute);
+}
+.pcard ul {
+  margin-top: 14px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.pcard ul li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 12.8px;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.74);
+}
+.pcard ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 5px;
+  height: 1px;
+  background: var(--brand);
+}
+.pcard .no {
+  color: var(--brand);
+  font-family: var(--mono);
+}
+.pcard .go {
+  color: var(--brand);
+}
+.pcard:hover {
+  border-color: rgba(240, 165, 0, 0.45) !important;
+}
+/* 浅色段内仍用暖白卡 */
+.site-section.alt .pcard,
+.site-section.alt-flush .pcard {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+}
+.site-section.alt .pcard h4,
+.site-section.alt-flush .pcard h4 {
+  color: var(--ink);
+}
+.site-section.alt .pcard p,
+.site-section.alt .pcard ul li {
+  color: var(--mute-2);
+}
+
+/* ---------- 合规声明条（article-body 的 disclaimer） ---------- */
+.cmpl {
+  background: var(--panel) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+  color: var(--mute) !important;
+}
+.cmpl b,
+.cmpl strong {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.site-section.alt .cmpl {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+  color: var(--mute-2) !important;
+}
+.site-section.alt .cmpl b,
+.site-section.alt .cmpl strong {
+  color: var(--ink) !important;
+}
+
+/* ---------- FAQ 问答卡 ---------- */
+.faq .q {
+  background: var(--panel) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+}
+.faq .q:hover {
+  border-color: rgba(240, 165, 0, 0.45) !important;
+  box-shadow: none !important;
+}
+.faq .q .t {
+  color: #fff;
+}
+.faq .q .t b {
+  color: var(--brand);
+}
+.faq .q .a {
+  color: var(--mute);
+}
+.site-section.alt .faq .q {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+}
+.site-section.alt .faq .q .t {
+  color: var(--ink);
+}
+.site-section.alt .faq .q .a {
+  color: var(--mute-2);
+}
+
+/* ---------- 站点地图索引 ---------- */
+.idxlist a {
+  background: var(--panel) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 3px !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+.idxlist a:hover {
+  border-color: rgba(240, 165, 0, 0.45) !important;
+  color: var(--brand) !important;
+}
+.idxlist a i {
+  color: var(--brand) !important;
+}
+
+/* ---------- 图库（gallery）与图片容器：占位底色转深，避免加载前闪白 ---------- */
+.gal figure {
+  background: var(--panel) !important;
+  border-color: var(--hair) !important;
+  border-radius: 4px !important;
+}
+.gal figure .im,
+.gal figure .ph-img,
+.gal figure > div {
+  background: #0e1116 !important;
+}
+.gal figcaption {
+  background: transparent !important;
+  color: var(--mute) !important;
+  border-top: 1px solid var(--hair-soft);
+}
+.pd-card .pd-pic,
+.casecard .pic,
+.envgrid .im {
+  background: #0e1116 !important;
+}
+.pd-card .pd-ph,
+.casecard .ph {
+  background: repeating-linear-gradient(45deg, #12151a, #12151a 10px, #191d24 10px, #191d24 20px) !important;
+  color: var(--mute-2) !important;
+}
+
+/* ---------- 色卡块（color-palette）标题与说明提亮 ---------- */
+.cp-title {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.cp-note {
+  color: var(--mute) !important;
+}
+.cp-sw .nm {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.cp-sw .cd {
+  color: var(--mute) !important;
+}
+.site-section.alt .cp-title {
+  color: var(--ink) !important;
+}
+.site-section.alt .cp-note,
+.site-section.alt .cp-sw .nm,
+.site-section.alt .cp-sw .cd {
+  color: var(--mute-2) !important;
+}
+
+/* ---------- 产品卡容器（.pd-card）：上一轮只改了子元素，容器仍是白底 ---------- */
+.pd-card {
+  background: var(--panel) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+}
+.pd-card h4 {
+  color: #fff;
+}
+.pd-card:hover {
+  border-color: rgba(240, 165, 0, 0.45) !important;
+  box-shadow: none !important;
+}
+.site-section.alt .pd-card,
+.site-section.alt-flush .pd-card {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+}
+.site-section.alt .pd-card h4,
+.site-section.alt-flush .pd-card h4 {
+  color: var(--ink);
+}
+.site-section.alt .pd-card .pd-cn,
+.site-section.alt .pd-card .pd-desc,
+.site-section.alt .pd-card .pd-go {
+  color: var(--mute-2);
+}
+
+/* ---------- 实景图库（env-grid）：案例页用的是这个块，不是 gallery ---------- */
+.envgrid figure {
+  background: var(--panel) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+}
+.envgrid figure .im,
+.envgrid figure > div {
+  background: #0e1116 !important;
+}
+.envgrid figcaption {
+  background: transparent !important;
+  color: var(--mute) !important;
+  border-top: 1px solid var(--hair-soft);
+}
+.site-section.alt .envgrid figure {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+}
+.site-section.alt .envgrid figcaption {
+  color: var(--mute-2) !important;
+}
+
+/* ---------- 正文（article-body 块的类名实际是 .artbody） ---------- */
+.artbody,
+.artbody p {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+.artbody h2,
+.artbody h3,
+.artbody h4 {
+  color: #fff !important;
+}
+.site-section.alt .artbody,
+.site-section.alt .artbody p {
+  color: var(--mute-2) !important;
+}
+.site-section.alt .artbody h2,
+.site-section.alt .artbody h3,
+.site-section.alt .artbody h4 {
+  color: var(--ink) !important;
+}
+
+/* ---------- FAQ 分类标签 ---------- */
+.faq-cats a {
+  background: var(--panel) !important;
+  border-color: var(--hair) !important;
+  color: var(--mute) !important;
+}
+.faq-cats a.on,
+.faq-cats a:hover {
+  background: rgba(240, 165, 0, 0.14) !important;
+  border-color: rgba(240, 165, 0, 0.5) !important;
+  color: var(--brand) !important;
+}
+
+/* ---------- 产品卡容器（.pd-card）：上一轮只改了子元素，容器仍是白底 ---------- */
+.pd-card {
+  background: var(--panel) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+}
+.pd-card h4 {
+  color: #fff;
+}
+.pd-card:hover {
+  border-color: rgba(240, 165, 0, 0.45) !important;
+  box-shadow: none !important;
+}
+.site-section.alt .pd-card,
+.site-section.alt-flush .pd-card {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+}
+.site-section.alt .pd-card h4,
+.site-section.alt-flush .pd-card h4 {
+  color: var(--ink);
+}
+.site-section.alt .pd-card .pd-cn,
+.site-section.alt .pd-card .pd-desc,
+.site-section.alt .pd-card .pd-go {
+  color: var(--mute-2);
+}
+
+/* ---------- 实景图库（env-grid）：案例页用的是这个块，不是 gallery ---------- */
+.envgrid figure {
+  background: var(--panel) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+}
+.envgrid figure .im,
+.envgrid figure > div {
+  background: #0e1116 !important;
+}
+.envgrid figcaption {
+  background: transparent !important;
+  color: var(--mute) !important;
+  border-top: 1px solid var(--hair-soft);
+}
+.site-section.alt .envgrid figure {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+}
+.site-section.alt .envgrid figcaption {
+  color: var(--mute-2) !important;
+}
+
+/* ---------- 正文（article-body 块的类名实际是 .artbody） ---------- */
+.artbody,
+.artbody p {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+.artbody h2,
+.artbody h3,
+.artbody h4 {
+  color: #fff !important;
+}
+.site-section.alt .artbody,
+.site-section.alt .artbody p {
+  color: var(--mute-2) !important;
+}
+.site-section.alt .artbody h2,
+.site-section.alt .artbody h3,
+.site-section.alt .artbody h4 {
+  color: var(--ink) !important;
+}
+
+/* ---------- FAQ 分类标签 ---------- */
+.faq-cats a {
+  background: var(--panel) !important;
+  border-color: var(--hair) !important;
+  color: var(--mute) !important;
+}
+.faq-cats a.on,
+.faq-cats a:hover {
+  background: rgba(240, 165, 0, 0.14) !important;
+  border-color: rgba(240, 165, 0, 0.5) !important;
+  color: var(--brand) !important;
+}
+
+/* ---------- 区块标题在窄屏改单列（块结构是 .sec-head > div 两列） ---------- */
+@media (max-width: 760px) {
+  .sec-head > div {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    align-items: start !important;
+  }
+  .sec-head > div > p {
+    padding-bottom: 0;
   }
 }

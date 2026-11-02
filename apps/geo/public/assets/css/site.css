@@ -317,23 +317,23 @@ a, button, summary, [onclick],
    ========================================================================== */
 
 /* ---------- 产品卡网格 ---------- */
-.pgrid{display:grid;gap:22px}
-.pgrid.cols-2{grid-template-columns:repeat(2,1fr)}
-.pgrid.cols-3{grid-template-columns:repeat(3,1fr)}
-.pcard{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;transition:.2s}
-a.pcard:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--brand)}
-.pcard .pic{display:block;aspect-ratio:16/10;background:var(--bg-2);overflow:hidden}
-.pcard .pic img{width:100%;height:100%;object-fit:cover;transition:.4s}
-a.pcard:hover .pic img{transform:scale(1.03)}
-.pcard .ph{display:grid;place-items:center;height:100%;font-size:12px;color:var(--ink-3);background:repeating-linear-gradient(45deg,var(--bg-2),var(--bg-2) 10px,var(--line-2) 10px,var(--line-2) 20px)}
-.pcard .body{display:flex;flex-direction:column;gap:6px;padding:18px 20px 20px;flex:1}
-.pcard .series{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-dk);font-family:ui-monospace,Menlo,Consolas,monospace}
-.pcard h4{font-size:16.5px;font-weight:800;letter-spacing:-.01em}
-.pcard .cn{font-size:12.5px;color:var(--ink-3);font-weight:600}
-.pcard .p{display:block;font-size:12.8px;color:var(--ink-2);line-height:1.8;margin-top:4px}
-.pcard .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.pcard .tags span{font-size:11.5px;font-weight:600;color:var(--brand-dk);background:var(--brand-lt);border-radius:99px;padding:3px 10px}
-.pcard .go{margin-top:auto;padding-top:14px;font-size:12.5px;font-weight:700;color:var(--brand-dk)}
+.pd-grid{display:grid;gap:22px}
+.pd-grid.pd-cols-2{grid-template-columns:repeat(2,1fr)}
+.pd-grid.pd-cols-3{grid-template-columns:repeat(3,1fr)}
+.pd-card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;transition:.2s}
+a.pd-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--brand)}
+.pd-card .pd-pic{display:block;aspect-ratio:16/10;background:var(--bg-2);overflow:hidden}
+.pd-card .pd-pic img{width:100%;height:100%;object-fit:cover;transition:.4s}
+a.pd-card:hover .pd-pic img{transform:scale(1.03)}
+.pd-card .pd-ph{display:grid;place-items:center;height:100%;font-size:12px;color:var(--ink-3);background:repeating-linear-gradient(45deg,var(--bg-2),var(--bg-2) 10px,var(--line-2) 10px,var(--line-2) 20px)}
+.pd-card .pd-body{display:flex;flex-direction:column;gap:6px;padding:18px 20px 20px;flex:1}
+.pd-card .pd-series{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-dk);font-family:ui-monospace,Menlo,Consolas,monospace}
+.pd-card h4{font-size:16.5px;font-weight:800;letter-spacing:-.01em}
+.pd-card .pd-cn{font-size:12.5px;color:var(--ink-3);font-weight:600}
+.pd-card .pd-desc{display:block;font-size:12.8px;color:var(--ink-2);line-height:1.8;margin-top:4px}
+.pd-card .pd-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pd-card .pd-tags span{font-size:11.5px;font-weight:600;color:var(--brand-dk);background:var(--brand-lt);border-radius:99px;padding:3px 10px}
+.pd-card .pd-go{margin-top:auto;padding-top:14px;font-size:12.5px;font-weight:700;color:var(--brand-dk)}
 
 /* ---------- 地坪构造分层 ---------- */
 .stackwrap{margin-top:6px}
@@ -353,11 +353,11 @@ a.pcard:hover .pic img{transform:scale(1.03)}
 .stack-note{margin-top:12px;font-size:12.2px;color:var(--ink-3);line-height:1.8}
 
 /* ---------- 色卡 ---------- */
-.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
-.sw{display:flex;flex-direction:column;gap:6px}
-.sw .chip{display:block;height:56px;border-radius:var(--r-sm);border:1px solid rgba(13,27,42,.12)}
-.sw .nm{font-size:12.4px;font-weight:700;color:var(--ink)}
-.sw .cd{font-size:11px;color:var(--ink-3);font-family:ui-monospace,Menlo,Consolas,monospace}
+.cp-swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+.cp-sw{display:flex;flex-direction:column;gap:6px}
+.cp-sw .chip{display:block;height:56px;border-radius:var(--r-sm);border:1px solid rgba(13,27,42,.12)}
+.cp-sw .nm{font-size:12.4px;font-weight:700;color:var(--ink)}
+.cp-sw .cd{font-size:11px;color:var(--ink-3);font-family:ui-monospace,Menlo,Consolas,monospace}
 
 /* ---------- 工程案例卡 ---------- */
 .cgrid{display:grid;gap:20px}

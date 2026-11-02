@@ -134,7 +134,11 @@ flowchart LR
 > ⚠️ **站点静态资源必须显式复制进产物**：`assets/img`、`assets/css`（含 `presets/*.css`）来自
 > `apps/geo/public/`，线上由中间件按 `sites/<slug>/` 直出，不会再回落到应用的 public 目录。
 > 以前依赖 Nuxt `publicDir` 自动复制，`--rebuild` 清缓存后整目录会丢（症状：HTML 正常、样式与图片全 404），
-> 现已由 `build-sites.mjs` 在合并阶段显式 `copyDir(public → tmpDir)`。
+> 现已由 `build-sites.mjs` 在合并阶段显式 `copyDir(public → tmpDir)`。>
+> ⚠️ **产物必须能在接口不可达时独立渲染**（ADR-049）：页面数据的 `useState` key 由路径拼出，
+> `/about` 与 `/about/` 必须归一化为同一个键（`normalizePagePath`），否则客户端取不到内联的 SSR 数据
+> 会重新请求页面接口，接口一挂整页就变成 `500` 错误页。验收方式：拦截全部 `:3001` 请求后逐页打开，
+> 不得出现 `div.antialiased`（Nuxt 错误页标志）。
 
 | 请求形态 | 行为 |
 | --- | --- |

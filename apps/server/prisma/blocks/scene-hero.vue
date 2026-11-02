@@ -352,13 +352,88 @@ h1 :deep(em) {
   color: #8a9099;
   letter-spacing: 0.04em;
 }
+/**
+ * 移动端（<=820px）
+ *
+ * 不再整块隐藏行业索引与数据条 —— 它们是这个首屏的两个核心信息：
+ *   「四类工况」回答「你懂我的场景吗」，「数据条」回答「你干过多少」。
+ * 手机上丢了这两块，首屏就只剩一句口号。
+ * 改为：索引横排成可点标签（横向滚动，不换行挤压），数据条转 2×2 网格。
+ */
 @media (max-width: 820px) {
-  .sh-scenes,
-  .sh-statsbar {
+  /**
+   * 改单列：横排的场景索引仍是 flex 子项，若保持 row 布局，它会把文字栏挤成
+   * 一条竖窄缝（实测标题变成一行 3~4 个字）。必须让文字占满整行，索引落到下方。
+   */
+  .sh-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding-bottom: 48px;
+  }
+  .sh-lead-col {
+    max-width: none;
+  }
+  h1 {
+    font-size: clamp(30px, 8.4vw, 44px);
+  }
+  .sh-acts {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .sh-btn {
+    width: 100%;
+    justify-content: center;
+    white-space: nowrap;
+  }
+  .sh-scenes {
+    width: 100%;
+    max-width: 100%;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    text-align: left;
+    overflow-x: auto;
+    margin-top: 26px;
+    padding-bottom: 4px;
+    /* 隐藏滚动条但仍可横向滑动 */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .sh-scenes::-webkit-scrollbar {
     display: none;
   }
-  .sh-inner {
-    padding-bottom: 64px;
+  .sh-scene {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 7px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 99px;
+    font-size: 12.5px;
+  }
+  .sh-scene.on {
+    border-color: var(--teal);
+    background: rgba(240, 165, 0, 0.12);
+  }
+  /* 横排时下划线指示条没有意义，改成边框高亮 */
+  .sh-scene .sh-bar {
+    display: none;
+  }
+  .sh-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .sh-stat {
+    padding: 16px 0;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .sh-stat:nth-child(odd) {
+    padding-right: 16px;
+  }
+  .sh-stat b {
+    font-size: 21px;
   }
 }
 </style>
