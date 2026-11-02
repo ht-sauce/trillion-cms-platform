@@ -17,8 +17,8 @@ export class PreviewController {
   @Post('ticket')
   @ApiBearerAuth()
   @UseGuards(AdminAuthGuard)
-  @ApiOperation({ summary: '生成预览票据（默认 30 分钟，仅能读单页草稿）' })
-  ticket(@CurrentUser() user: AuthUser, @Body() dto: { siteId: string; pageId: string }) {
+  @ApiOperation({ summary: '生成预览票据（默认 30 分钟；pageId 缺省取站点首页 = 整站预览）' })
+  ticket(@CurrentUser() user: AuthUser, @Body() dto: { siteId: string; pageId?: string }) {
     return this.service.createTicket(user, dto)
   }
 

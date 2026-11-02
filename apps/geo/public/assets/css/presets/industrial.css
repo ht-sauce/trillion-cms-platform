@@ -1,0 +1,635 @@
+/* ==========================================================================
+   forintech · 站点样式预设（ADR-048）
+   深碳黑工程底 + 品牌橙 + 暖白内容区
+
+   为什么需要这个文件：`themeTokens` 只能换颜色与圆角，换不了**版式**。
+   医疗站是白底、圆角卡片、居中标题；工业站要的是深色底、细线分隔、左对齐大标题。
+   两者的差异在结构层，只能靠一套独立样式表覆盖。加载顺序排在
+   theme-b.css → site.css → geo-site-bridge.css 之后，天然具备覆盖权。
+
+   约定：本文件只做「站点视觉」，不改任何块的 DOM 与语义；
+   交互块（scene-hero / industry-switch / layer-stack / material-compare）
+   自带 scoped 样式，不依赖这里。
+   ========================================================================== */
+
+:root {
+  /* 工业色板（品牌色 --teal 由站点令牌给出，这里只做补位与派生） */
+  --ink: #0b0d10;
+  --ink-2: #14171c;
+  --panel: #14171c;
+  --panel-2: #1b1f25;
+  --paper: #f4f3f0;
+  --paper-2: #eae8e3;
+  --mute: #8a9099;
+  --mute-2: #5f666f;
+  --hair: rgba(255, 255, 255, 0.1);
+  --hair-soft: rgba(255, 255, 255, 0.06);
+  --hair-dark: rgba(11, 13, 16, 0.12);
+  --brand: var(--teal);
+  --brand-2: #ffc24b;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+}
+
+/* ---------- 全局 ---------- */
+body {
+  background: var(--ink);
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.site-main {
+  background: var(--ink);
+}
+
+/* 顶部信息条：新视觉里没有它的位置，信息合并进页脚（医疗站不受影响，未加载本预设） */
+.top {
+  display: none;
+}
+
+/* ---------- 页头：深色实底、紧凑、下细线 ---------- */
+header {
+  background: rgba(11, 13, 16, 0.92);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--hair);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+header .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+  gap: 40px;
+}
+header .logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+}
+header .logo .mark {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: var(--brand);
+  color: #0b0d10;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+}
+header .logo .n {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #fff;
+  line-height: 1.2;
+}
+header .logo .s {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--mute);
+  font-weight: 600;
+  margin-top: 2px;
+}
+header .mainnav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-left: auto;
+}
+/* 旧样式把「当前页」做成橙色胶囊按钮，工业站不用按钮式导航：一律纯文字 + 下划线 */
+nav.mainnav > a {
+  padding: 4px 0;
+  border-radius: 0;
+  background: none;
+}
+nav.mainnav > a:hover,
+nav.mainnav > a.on {
+  background: none;
+  color: #fff;
+  font-weight: inherit;
+}
+header .mainnav a {
+  position: relative;
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.72);
+  text-decoration: none;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+header .mainnav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 1.5px;
+  background: var(--brand);
+  transition: width 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+header .mainnav a:hover,
+header .mainnav a.on {
+  color: #fff;
+}
+header .mainnav a:hover::after,
+header .mainnav a.on::after {
+  width: 100%;
+}
+header .navtoggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--hair);
+  color: #fff;
+  font-size: 18px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ---------- 区块节奏：深底与暖白底交替 ---------- */
+.site-section {
+  padding: clamp(64px, 8vw, 112px) 0;
+  background: transparent !important;
+}
+.site-section.flush-top {
+  padding-top: 0;
+}
+.site-section.alt,
+.site-section.alt-flush {
+  background: var(--paper) !important;
+  color: var(--ink);
+  border-top: 0;
+  border-bottom: 0;
+}
+
+/* 标题色随段落底色切换：深底白字、浅底近黑
+   只覆盖 h1~h3（区块级标题）；h4 大量出现在卡片内部，颜色归各自卡片规则管，
+   在这里统一刷白会让白底卡片上的标题直接消失。 */
+.site-section h1,
+.site-section h2,
+.site-section h3 {
+  color: #fff;
+}
+.site-section.alt h1,
+.site-section.alt h2,
+.site-section.alt h3,
+.site-section.alt-flush h1,
+.site-section.alt-flush h2,
+.site-section.alt-flush h3 {
+  color: var(--ink);
+}
+.site-section.alt .wrap,
+.site-section.alt-flush .wrap {
+  color: var(--ink);
+}
+
+/* 区块标题：左大标题 + 右说明（块的结构是 .sec-head > div > h2 + p，两列要在内层做） */
+.sec-head {
+  margin-bottom: clamp(32px, 4vw, 56px);
+}
+.sec-head > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(24px, 4vw, 56px);
+  align-items: end;
+  width: 100%;
+}
+/* 只有标题没有说明时，标题独占整行 */
+.sec-head > div > h2:only-child {
+  grid-column: 1 / -1;
+}
+.sec-head > div > p {
+  padding-bottom: 4px;
+}
+/* 标题里的 \n 直接换行，用来控制断行位置（比自动折行可控） */
+.sec-head h2 {
+  white-space: pre-line;
+  font-size: clamp(26px, 3.2vw, 40px);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+  max-width: 22ch;
+}
+.sec-head p,
+.sec-head .desc {
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--mute);
+  max-width: 38ch;
+  margin: 0;
+}
+.site-section.alt .sec-head p,
+.site-section.alt .sec-head .desc,
+.site-section.alt-flush .sec-head p {
+  color: var(--mute-2);
+}
+
+/* ---------- 通用卡片深色化（覆盖旧的白底卡片） ----------
+   旧块（tcard / itemcard / kitem / term / napcard / certcard…）底色写死在 site.css，
+   这里统一改成深色面板；alt 浅色段内仍保持白底，靠作用域选择器区分。 */
+.tcard,
+.itemcard,
+.kitem,
+.term,
+.napcard,
+.certcard,
+.post,
+.glass,
+.idxlist li,
+.doc,
+.dev-row,
+.casecard,
+.pcard {
+  background: var(--panel) !important;
+  border-color: var(--hair) !important;
+  color: #fff;
+}
+.site-section.alt .tcard,
+.site-section.alt .itemcard,
+.site-section.alt .kitem,
+.site-section.alt .term,
+.site-section.alt .napcard,
+.site-section.alt .certcard {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+  color: var(--ink);
+}
+.tcard h4,
+.itemcard h4,
+.kitem h4,
+.term b,
+.napcard h4,
+.certcard b,
+.dev-row h4 {
+  color: #fff;
+}
+.site-section.alt .tcard h4,
+.site-section.alt .itemcard h4,
+.site-section.alt .kitem h4,
+.site-section.alt .term b,
+.site-section.alt .napcard h4 {
+  color: var(--ink);
+}
+.tcard p,
+.itemcard p,
+.kitem p,
+.term p,
+.dev-row p,
+.casecard h4,
+.pcard h4 {
+  color: #fff;
+}
+.casecard .meta span,
+.casecard .prod,
+.pcard .cn,
+.pcard .p,
+.casecard .go,
+.pcard .go {
+  color: var(--mute);
+}
+.casecard .ind,
+.pcard .series {
+  color: var(--brand);
+  background: rgba(240, 165, 0, 0.12);
+}
+.tcard p,
+.itemcard p,
+.kitem p,
+.term p,
+.dev-row p {
+  color: var(--mute);
+}
+.site-section.alt .tcard p,
+.site-section.alt .itemcard p,
+.site-section.alt .kitem p,
+.site-section.alt .term p {
+  color: var(--mute-2);
+}
+.tcard .ico {
+  color: var(--brand);
+  background: rgba(240, 165, 0, 0.12);
+  border-radius: 4px;
+}
+
+/* 卡片去圆角、改细线，贴工程感 */
+.tcard,
+.itemcard,
+.term,
+.napcard,
+.certcard,
+.post,
+.dev-row,
+.pcard,
+.casecard {
+  border-radius: 4px !important;
+}
+.tcard:hover,
+.itemcard:hover,
+.kitem:hover,
+.post:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(240, 165, 0, 0.45) !important;
+}
+
+/* ---------- 数据条 ---------- */
+.stats,
+.stat-bar {
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+.stats .stat b,
+.stat .n {
+  font-family: var(--mono);
+  letter-spacing: -0.02em;
+}
+.stats .stat b,
+.stat .n {
+  color: #fff;
+}
+.stats .stat span,
+.stat .lbl {
+  color: var(--mute);
+}
+.section-source,
+.stat-source {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--mute-2);
+}
+
+/* ---------- FAQ ---------- */
+.qa {
+  border-bottom: 1px solid var(--hair);
+  background: transparent;
+}
+.qa .qt {
+  color: #fff;
+  font-weight: 700;
+}
+.qa .qa-link,
+.qa p {
+  color: var(--mute);
+}
+.faq-sec h3 {
+  color: #fff;
+}
+.faq-sec h3::before {
+  background: var(--brand);
+}
+
+/* ---------- 提示条 ---------- */
+.notice {
+  border-radius: 4px;
+  border: 1px solid var(--hair);
+  background: var(--panel);
+  color: var(--mute);
+}
+.notice.warning {
+  border-color: rgba(240, 165, 0, 0.4);
+  background: rgba(240, 165, 0, 0.07);
+  color: #e8c98a;
+}
+
+/* ---------- 页底咨询条 ---------- */
+.telbar {
+  background: var(--brand) !important;
+  border-radius: 4px;
+  color: #0b0d10;
+}
+.telbar h3 {
+  color: #0b0d10;
+}
+.telbar p {
+  color: rgba(11, 13, 16, 0.72);
+}
+.telbar::after {
+  display: none;
+}
+.telbar .btn-teal {
+  background: #0b0d10 !important;
+  color: #fff !important;
+}
+.telbar .btn-line {
+  border-color: rgba(11, 13, 16, 0.35) !important;
+  color: #0b0d10 !important;
+}
+
+/* ---------- 锚点条 ---------- */
+.anchor-bar a,
+.anchors a {
+  border-radius: 99px;
+  border: 1px solid var(--hair);
+  color: var(--mute);
+  background: transparent;
+}
+.anchor-bar a:hover,
+.anchors a:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* ---------- 面包屑：深底细字，去掉旧的白底条 ---------- */
+.crumb {
+  background: transparent !important;
+  border-bottom: 1px solid var(--hair) !important;
+  color: var(--mute-2) !important;
+  font-size: 12px !important;
+}
+.crumb .crumb-item,
+.crumb a {
+  color: var(--mute) !important;
+}
+.crumb .sep {
+  color: var(--mute-2) !important;
+}
+.crumb .crumb-item:last-child {
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+/* ---------- 陈述卡（vcard-grid）：深色面板 ---------- */
+.vcard {
+  background: var(--panel) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+  color: #fff;
+}
+.vcard .k {
+  color: var(--brand);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+}
+.vcard .v {
+  color: var(--mute);
+}
+.site-section.alt .vcard {
+  background: #fff !important;
+  border-color: var(--hair-dark) !important;
+  color: var(--ink);
+}
+.site-section.alt .vcard .v {
+  color: var(--mute-2);
+}
+
+/* ---------- 表格 ---------- */
+.data-table table {
+  border-color: var(--hair);
+}
+.data-table th {
+  background: var(--panel-2);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+}
+.data-table td {
+  border-color: var(--hair-soft);
+  color: var(--mute);
+}
+.data-table tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ---------- 流程 / 时间轴 ---------- */
+.step,
+.steps .step {
+  background: var(--panel) !important;
+  border-color: var(--hair) !important;
+  border-radius: 4px;
+}
+.step h4 {
+  color: #fff;
+}
+.step p {
+  color: var(--mute);
+}
+.step .no,
+.step .num {
+  color: var(--brand);
+  font-family: var(--mono);
+}
+
+/* ---------- 索引列表（站点地图） ---------- */
+.idxlist a {
+  color: var(--mute);
+  border-color: var(--hair-soft);
+}
+.idxlist a:hover {
+  color: var(--brand);
+}
+.idxlist h3 {
+  color: #fff;
+}
+
+/* ---------- 正文 ---------- */
+.article-body,
+.article-body p {
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.95;
+}
+.article-body h2,
+.article-body h3 {
+  color: #fff;
+}
+.article-body .disclaimer {
+  border-top: 1px solid var(--hair);
+  color: var(--mute-2);
+}
+
+/* ---------- 页脚 ---------- */
+footer {
+  background: var(--ink);
+  border-top: 1px solid var(--hair);
+  padding: 56px 0 32px;
+}
+footer .fgrid {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, 1fr);
+  gap: 40px;
+  padding-bottom: 44px;
+  border-bottom: 1px solid var(--hair);
+}
+footer .fgrid h4 {
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+footer .fgrid ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+}
+footer .fgrid a {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.64);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+footer .fgrid a:hover {
+  color: var(--brand);
+}
+footer .fgrid p {
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--mute-2);
+}
+footer .flegal {
+  padding-top: 24px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--mute-2);
+  line-height: 1.9;
+}
+footer .flegal strong {
+  color: var(--mute) !important;
+}
+footer .fqr {
+  display: none;
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+  header .navtoggle {
+    display: block;
+  }
+  header .mainnav {
+    display: none;
+  }
+  header .mainnav.open {
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 68px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    background: var(--ink-2);
+    border-bottom: 1px solid var(--hair);
+    padding: 8px 20px 16px;
+  }
+  header .mainnav.open a {
+    padding: 12px 0;
+    width: 100%;
+    border-bottom: 1px solid var(--hair-soft);
+  }
+  footer .fgrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  footer .fgrid {
+    grid-template-columns: 1fr;
+  }
+}

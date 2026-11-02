@@ -72,6 +72,8 @@ export class PublicService {
       name: site.name,
       slug: site.slug,
       domain: site.domain,
+      /** 行业类型：medical / industrial，驱动 GEO 实体与页面节点类型（ADR-046） */
+      businessType: site.businessType,
       defaultLocale: site.defaultLocale,
 
       // ---- 标识 ----
@@ -157,7 +159,7 @@ export class PublicService {
       /** 机构实体档案页路径（默认 /entity） */
       entityPath: entityPage?.path || '/entity',
       /** 档案中仍待补的资质字段（缺失时页面显式标注，不编造） */
-      pendingFields: detectPendingProfileFields(site),
+      pendingFields: detectPendingProfileFields(site, site.businessType),
 
       navigations,
       entities: entities.map((entity) => ({
@@ -557,6 +559,7 @@ export class PublicService {
       insuranceNote: string | null
       sameAs: unknown
       seoDescription: string | null
+      businessType: string
     },
     logoUrl: string | null,
     entityPath: string
@@ -592,7 +595,8 @@ export class PublicService {
       seoDescription: site.seoDescription,
       entityPath,
       logoUrl,
-      pendingFields: detectPendingProfileFields(site)
+      businessType: site.businessType,
+      pendingFields: detectPendingProfileFields(site, site.businessType)
     }
   }
 

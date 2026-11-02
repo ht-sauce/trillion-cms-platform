@@ -17,7 +17,8 @@ import { PrismaClient } from '@prisma/client'
 import { createHash } from 'node:crypto'
 
 const prisma = new PrismaClient()
-const PUBLIC_SITE_ID = 0
+/** 公共块站点标识：schema 中是字符串 '0'（见 blocks/constants.ts），用数字会命中 Prisma 类型校验错误 */
+const PUBLIC_SITE_ID = '0'
 
 /** 与 src/common/utils/content-hash.ts 的 computeCodeHash 保持同一口径 */
 function computeCodeHash(code) {

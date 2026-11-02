@@ -309,3 +309,95 @@ a, button, summary, [onclick],
   .post,.post.lead-post{grid-template-columns:1fr;gap:8px}
   .qa .qt{font-size:13.4px}
 }
+
+/* ==========================================================================
+   地坪 / 建材行业块（product-card · system-stack · color-palette · case-grid）
+   新增于 2026-11-02，服务于工业与工程类站点（业务类型 industrial）。
+   颜色只走令牌（--brand* 为品牌主色别名，见 app/utils/theme.ts），不写死色值。
+   ========================================================================== */
+
+/* ---------- 产品卡网格 ---------- */
+.pgrid{display:grid;gap:22px}
+.pgrid.cols-2{grid-template-columns:repeat(2,1fr)}
+.pgrid.cols-3{grid-template-columns:repeat(3,1fr)}
+.pcard{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;transition:.2s}
+a.pcard:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--brand)}
+.pcard .pic{display:block;aspect-ratio:16/10;background:var(--bg-2);overflow:hidden}
+.pcard .pic img{width:100%;height:100%;object-fit:cover;transition:.4s}
+a.pcard:hover .pic img{transform:scale(1.03)}
+.pcard .ph{display:grid;place-items:center;height:100%;font-size:12px;color:var(--ink-3);background:repeating-linear-gradient(45deg,var(--bg-2),var(--bg-2) 10px,var(--line-2) 10px,var(--line-2) 20px)}
+.pcard .body{display:flex;flex-direction:column;gap:6px;padding:18px 20px 20px;flex:1}
+.pcard .series{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-dk);font-family:ui-monospace,Menlo,Consolas,monospace}
+.pcard h4{font-size:16.5px;font-weight:800;letter-spacing:-.01em}
+.pcard .cn{font-size:12.5px;color:var(--ink-3);font-weight:600}
+.pcard .p{display:block;font-size:12.8px;color:var(--ink-2);line-height:1.8;margin-top:4px}
+.pcard .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pcard .tags span{font-size:11.5px;font-weight:600;color:var(--brand-dk);background:var(--brand-lt);border-radius:99px;padding:3px 10px}
+.pcard .go{margin-top:auto;padding-top:14px;font-size:12.5px;font-weight:700;color:var(--brand-dk)}
+
+/* ---------- 地坪构造分层 ---------- */
+.stackwrap{margin-top:6px}
+.stack-title{font-size:13px;font-weight:700;color:var(--ink-2);letter-spacing:.02em;margin-bottom:12px}
+.stack{display:grid;gap:8px}
+.layer{display:grid;grid-template-columns:44px 132px 1fr auto;align-items:center;gap:14px;padding:14px 18px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);position:relative}
+.layer .no{font-size:12px;font-weight:800;color:var(--brand-dk);font-family:ui-monospace,Menlo,Consolas,monospace}
+.layer .role{font-size:13.5px;font-weight:800}
+.layer .pd{font-size:13px;color:var(--ink-2);font-family:ui-monospace,Menlo,Consolas,monospace}
+.layer .th{font-size:12px;font-weight:700;color:var(--ink-3);white-space:nowrap}
+.layer .ds{grid-column:2/-1;font-size:12.4px;color:var(--ink-3);line-height:1.7;margin-top:-4px}
+/* 层厚用左侧色带表现：越靠面层越深，帮助读懂剖面顺序 */
+.layer.lv-1{border-left:5px solid var(--brand)}
+.layer.lv-2{border-left:5px solid var(--brand-dk)}
+.layer.lv-3{border-left:5px solid var(--line)}
+.layer.lv-4{border-left:5px solid var(--ink-3)}
+.stack-note{margin-top:12px;font-size:12.2px;color:var(--ink-3);line-height:1.8}
+
+/* ---------- 色卡 ---------- */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px}
+.sw{display:flex;flex-direction:column;gap:6px}
+.sw .chip{display:block;height:56px;border-radius:var(--r-sm);border:1px solid rgba(13,27,42,.12)}
+.sw .nm{font-size:12.4px;font-weight:700;color:var(--ink)}
+.sw .cd{font-size:11px;color:var(--ink-3);font-family:ui-monospace,Menlo,Consolas,monospace}
+
+/* ---------- 工程案例卡 ---------- */
+.cgrid{display:grid;gap:20px}
+.cgrid.cols-2{grid-template-columns:repeat(2,1fr)}
+.cgrid.cols-3{grid-template-columns:repeat(3,1fr)}
+.casecard{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;transition:.2s}
+a.casecard:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--brand)}
+.casecard .pic{display:block;aspect-ratio:4/3;background:var(--bg-2);overflow:hidden}
+.casecard .pic img{width:100%;height:100%;object-fit:cover;transition:.4s}
+a.casecard:hover .pic img{transform:scale(1.03)}
+.casecard .ph{display:grid;place-items:center;height:100%;font-size:12px;color:var(--ink-3);background:repeating-linear-gradient(45deg,var(--bg-2),var(--bg-2) 10px,var(--line-2) 10px,var(--line-2) 20px)}
+.casecard .body{display:flex;flex-direction:column;gap:7px;padding:16px 18px 18px;flex:1}
+.casecard .ind{align-self:flex-start;font-size:11px;font-weight:700;color:var(--brand-dk);background:var(--brand-lt);border-radius:99px;padding:3px 10px}
+.casecard h4{font-size:15.5px;font-weight:800;line-height:1.5}
+.casecard .meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11.8px;color:var(--ink-3)}
+.casecard .meta span{position:relative}
+.casecard .meta span+span::before{content:"·";position:absolute;left:-6px}
+.casecard .prod{font-size:11.8px;color:var(--ink-2);font-family:ui-monospace,Menlo,Consolas,monospace}
+.casecard .go{margin-top:auto;padding-top:12px;font-size:12.3px;font-weight:700;color:var(--brand-dk)}
+
+@media (max-width:1000px){
+  .pgrid.cols-2,.pgrid.cols-3,.cgrid.cols-2,.cgrid.cols-3{grid-template-columns:repeat(2,1fr)}
+  .layer{grid-template-columns:38px 1fr;row-gap:6px}
+  .layer .pd,.layer .th{grid-column:2}
+  .layer .ds{grid-column:2}
+}
+@media (max-width:640px){
+  .pgrid.cols-2,.pgrid.cols-3,.cgrid.cols-2,.cgrid.cols-3{grid-template-columns:1fr}
+  .swatches{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ---------- Hero 背景图（可选，2026-11-02） ---------- */
+/* 填了 bgImage 时用实景图替换渐变；叠两层遮罩保证白字在亮色地坪照片上仍可读 */
+.hero.has-bg{
+  background-image:
+    linear-gradient(180deg,rgba(12,16,22,.74) 0%,rgba(12,16,22,.52) 46%,rgba(12,16,22,.80) 100%),
+    var(--hero-bg);
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+}
+/* 网格纹理在实景图上会显得脏，遮罩已足够 */
+.hero.has-bg::after{display:none}

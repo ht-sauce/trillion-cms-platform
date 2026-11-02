@@ -2,15 +2,18 @@
 /**
  * 站点列表页：密集表格 + 搜索筛选 + 预览/新建/编辑/删除
  * 站点前缀列：站点标识 slug（同时作为 SSG 产物目录名），可点击「编辑」进入编辑页修改
- * 域名映射列：主域名（domain，规范地址）+ 别名域名（domains，多域名映射，见 ADR-022）
- * 预览：新标签页打开「主域名 + 站点前缀」——本地多站点共用 localhost:3002 时靠前缀区分站点
+ * 域名映射列：主域名（domain，规范地址）+ 别名域名（domains，多域名映射，见 ADR-022），
+ *             域名渲染为可点击外链（新标签页直达真实线上地址）——这是「看线上」的唯一入口
+ * 预览：签发预览票据（免页 = 整站首页预览）后新标签页打开 `预览基址 + /<slug>?__preview=<票据>`
+ *       （ADR-049）——预览的是「线上快照 + 草稿覆盖」，永不打开正式域名；
+ *       dev 基址为本地 GEO 端口（local 方式），线上为 GEO_BASE_URL 对外入口
  * 编辑：操作列进入深入编辑页 /sites/[id]
  * 下载：打开 SiteDownloadDialog 选择分包模式（完整包 / 纯静态包）下载产物 zip（09 §8.5）
  * GEO产物：打开 GeoArtifactsDialog 查看 robots.txt / sitemap.xml / llms.txt 内容（09 §8.4）
  */
-import { buildSiteUrl } from '@trillion/shared'
+import { isLoopbackUrl } from '@trillion/shared'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { sitesApi, type SiteItem } from '~/config/api'
+import { previewApi, sitesApi, type SiteItem } from '~/config/api'
 import { BUILD_STATUS_META } from '~/config/menu'
 import { PAGINATION_LAYOUT, PAGE_SIZE_DEFAULT, PAGE_SIZE_OPTIONS } from '~/config/pagination'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
@@ -135,23 +138,25 @@ function failReason(row: SiteItem): string {
 }
 
 /**
- * 预览地址：主域名 + 站点前缀（slug）
- * 只调 shared 的 `buildSiteUrl`——回环基址（本地多站点共用 localhost:3002）自动带前缀，
- * 域名基址不带前缀；拼装规则全平台一份，避免后台、预览票据各拼一套（见 ADR-031）
+ * 域名外链地址：自带协议按原样；否则回环域名补 http（本地 localhost:3002 形态）、
+ * 正式域名补 https——域名列承担「直接看真实线上地址」（ADR-049）
  */
-function buildPreviewUrl(row: SiteItem): string {
-  return buildSiteUrl(row.domain, row.slug)
+function domainHref(domain: string): string {
+  const value = String(domain || '').trim()
+  if (!value) return ''
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `http${isLoopbackUrl(value) ? '' : 's'}://${value}`
 }
 
-/** 预览站点：新标签页打开「主域名 + 站点前缀」 */
+/**
+ * 预览站点：签发预览票据（免页 = 整站首页预览）→ 新标签页打开返回的 url（ADR-049）。
+ * 地址 = `预览基址 + /<slug> + ?__preview=<票据>`，渲染引擎按票据读取「线上快照 + 草稿覆盖」；
+ * 不再依赖 row.domain——预览基址来自服务端 `GEO_BASE_URL`（dev 派生本地 3002，线上为对外入口）
+ */
 const onPreview = debounce(
   (row: SiteItem) =>
-    runKeyed(`preview:${row.id}`, () => {
-      if (!row.domain) {
-        ElMessage.warning('该站点未配置访问地址，请先在编辑页填写「主域名」')
-        return
-      }
-      window.open(buildPreviewUrl(row), '_blank', 'noopener,noreferrer')
+    runKeyed(`preview:${row.id}`, async () => {
+      const result = await previewApi.ticket(row.id)
+      window.open(result.url, '_blank', 'noopener,noreferrer')
     }),
   DEBOUNCE_WAIT
 )
@@ -206,11 +211,24 @@ watch([page, pageSize, statusFilter], () => load())
           <div class="domain-map">
             <div class="domain-main">
               <el-tag size="small" type="primary" effect="plain">主</el-tag>
-              <span class="mono">{{ row.domain || '-' }}</span>
+              <a
+                v-if="row.domain"
+                class="mono domain-link"
+                :href="domainHref(row.domain)"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="打开真实线上地址"
+              >{{ row.domain }}</a>
+              <span v-else class="mono">-</span>
             </div>
             <div v-if="row.domains?.length" class="domain-alias">
               <el-tag v-for="item in row.domains" :key="item" size="small" type="info" effect="plain">
-                <span class="mono">{{ item }}</span>
+                <a
+                  class="mono domain-link"
+                  :href="domainHref(item)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >{{ item }}</a>
               </el-tag>
             </div>
           </div>
@@ -258,7 +276,6 @@ watch([page, pageSize, statusFilter], () => load())
           <el-button
             link
             size="small"
-            :disabled="!row.domain"
             :loading="isLoading(`preview:${row.id}`)"
             @click="onPreview(row)"
           >
@@ -364,6 +381,16 @@ watch([page, pageSize, statusFilter], () => load())
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/** 域名外链：主色提示可点，悬停下划线（新标签页直达真实线上地址） */
+.domain-link {
+  color: $c-primary;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .domain-alias {

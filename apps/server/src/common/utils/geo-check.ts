@@ -251,8 +251,8 @@ export function checkPageGeo(
 export function checkSiteGeo(site: {
   /** 是否存在 /entity 页面且已发布 */
   hasEntityPage: boolean
-  /** 实体档案页是否输出了 MedicalClinic 声明 */
-  entityDeclaresClinic: boolean
+  /** 实体档案页是否输出了与行业匹配的实体声明（医疗 MedicalClinic / 工业 Organization） */
+  entityDeclared: boolean
   /** 是否输出 llms.txt */
   hasLlmsTxt: boolean
   /** robots.txt 是否包含 AI 爬虫策略说明 */
@@ -270,11 +270,11 @@ export function checkSiteGeo(site: {
   const issues: GeoIssue[] = []
   let score = MAX_SCORE
 
-  if (!site.hasEntityPage || !site.entityDeclaresClinic) {
+  if (!site.hasEntityPage || !site.entityDeclared) {
     issues.push({
       level: 'error',
       field: 'entity',
-      message: '缺少机构实体声明：需存在已发布的 /entity 页并输出 MedicalClinic JSON-LD'
+      message: '缺少机构实体声明：需存在已发布的 /entity 页并输出与行业匹配的实体 JSON-LD'
     })
     score -= 20
   }

@@ -113,6 +113,11 @@ export class CreateSiteDto {
   @IsString()
   seoTitle?: string
 
+  @ApiPropertyOptional({ description: '行业类型：medical=医疗 / industrial=工业与工程（驱动 GEO 实体类型）' })
+  @IsOptional()
+  @IsIn(['medical', 'industrial'])
+  businessType?: 'medical' | 'industrial'
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

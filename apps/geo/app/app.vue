@@ -20,6 +20,17 @@ await load()
 
 const preview = usePreview()
 
+/**
+ * 站点级样式预设（`themeTokens.stylePreset`，ADR-048）
+ *
+ * 令牌能换颜色，换不了版式。深色工程底与白底医疗风的差异在结构层（卡片有无描边、
+ * 标题居中还是左对齐、区块节奏），只能靠独立样式表覆盖；留空则完全沿用全局样式。
+ * 注入位置在所有全局样式之后，保证覆盖顺序正确。
+ */
+const sitePreset = computed(() =>
+  String((site.value?.themeTokens as Record<string, unknown> | undefined)?.stylePreset || '').trim()
+)
+
 /** 站点级 head 扩展（净化后的 meta / link，服务端已剔除脚本） */
 const headExtra = computed(() => toHeadGroups(parseHeadExtra(site.value?.headExtra)))
 
@@ -33,6 +44,7 @@ useHead({
     { rel: 'stylesheet', href: '/assets/css/theme-b.css' },
     { rel: 'stylesheet', href: '/assets/css/site.css' },
     { rel: 'stylesheet', href: '/assets/css/geo-site-bridge.css' },
+    ...(sitePreset.value ? [{ rel: 'stylesheet', href: `/assets/css/presets/${sitePreset.value}.css` }] : []),
     ...(site.value?.faviconUrl ? [{ rel: 'icon', href: site.value.faviconUrl }] : []),
     ...headExtra.value.link
   ],

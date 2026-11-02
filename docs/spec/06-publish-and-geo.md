@@ -126,6 +126,16 @@ flowchart LR
 
 **线上所有站点流量统一由 GEO 服务承接**（`server/middleware/site-entry.ts`）：nginx 只按主域名做薄 server 块反代（透传 `Host`），GEO 按域名解析站点后优先直出 `sites/<slug>/` 产物文件（磁盘读，等价静态托管性能），未命中放行 SSR 兜底——产物目录从「nginx 的 root」变为「GEO 的磁盘缓存层」，发布管线零改动。
 
+> ⚠️ **构建期必须关闭 HTML 直出**（`SITES_STATIC_DISABLED=1`，由 `build-sites.mjs` 注入渲染进程）：
+> 构建的爬取阶段带着站点 `Host` 请求刚编好的渲染服务，而 `sites/<slug>/` 里通常已有**上一版**同名 HTML，
+> 中间件会把它直出 —— 于是「重新构建」拿到的仍是上次的页面，构建日志一切正常但产物纹丝不动。
+> 该开关只挡 `.html`，`_nuxt` / `assets` 与 `_payload.json` 仍走直出；线上不设，行为不变。
+
+> ⚠️ **站点静态资源必须显式复制进产物**：`assets/img`、`assets/css`（含 `presets/*.css`）来自
+> `apps/geo/public/`，线上由中间件按 `sites/<slug>/` 直出，不会再回落到应用的 public 目录。
+> 以前依赖 Nuxt `publicDir` 自动复制，`--rebuild` 清缓存后整目录会丢（症状：HTML 正常、样式与图片全 404），
+> 现已由 `build-sites.mjs` 在合并阶段显式 `copyDir(public → tmpDir)`。
+
 | 请求形态 | 行为 |
 | --- | --- |
 | Host 非回环 + 产物命中 | 磁盘直出：HTML `no-cache`（发布即时生效）、`/_nuxt/**` `immutable` 长缓存、其余资产短缓存 |

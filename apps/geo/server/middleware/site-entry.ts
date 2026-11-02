@@ -151,7 +151,20 @@ export default defineEventHandler(async (event) => {
   access.site = slug
 
   const product = findProduct(slug, pathname)
-  if (!product) return
+
+  /**
+   * 构建期禁止 HTML 直出（SITES_STATIC_DISABLED=1，仅由 build-sites 的渲染进程注入）
+   *
+   * 为什么必须有这个开关：build-sites 按「站点 Host」向刚构建好的渲染服务请求页面，
+   * 而产物目录里通常已经躺着**上一版**的同名 HTML —— 中间件会把它直出，
+   * 于是「重新构建」拿到的仍是上次的页面，内容永远不更新（症状：改了块或页面数据、
+   * 构建日志一切正常，产物纹丝不动）。
+   * 只挡 HTML：`_nuxt` / `assets` 等静态资产与 `_payload.json` 仍走直出，
+   * 后者是 JSON 数据文件，由产物提供才正确。线上不设该变量，行为不变。
+   */
+  const skipHtmlDirect = process.env.SITES_STATIC_DISABLED === '1' && product?.abs.endsWith('.html')
+
+  if (!product || skipHtmlDirect) return
   access.cache = 'file'
 
   const ext = extname(product.abs).toLowerCase()

@@ -100,7 +100,9 @@ export class GeoService {
         robotsPolicy: true,
         robotsMeta: true,
         geoJsonLd: true,
-        geoJsonLdMode: true
+        geoJsonLdMode: true,
+        /** 行业类型决定实体声明与页面节点类型（ADR-046） */
+        businessType: true
       }
     })
     if (!site) throw new NotFoundException('站点不存在')
@@ -145,7 +147,10 @@ export class GeoService {
 
     return checkSiteGeo({
       hasEntityPage: Boolean(entityPage),
-      entityDeclaresClinic: entityJsonLd.includes('"@type": "MedicalClinic"'),
+      /** 实体声明按行业取类型：工业站输出 Organization，医疗站输出 MedicalClinic（ADR-046） */
+      entityDeclared: entityJsonLd.includes(
+        site.businessType === 'industrial' ? '"Organization"' : '"MedicalClinic"'
+      ),
       hasLlmsTxt: Boolean(documents.llms?.trim()),
       /** 两项同时成立才算：站点显式声明了策略，且产物里确实带可读说明 */
       robotsHasAiPolicy:
@@ -193,6 +198,7 @@ export class GeoService {
         logoMark: sitePayload.logoMark,
         domain: sitePayload.domain,
         slug: sitePayload.slug,
+        businessType: sitePayload.businessType,
         icpNumber: sitePayload.icpNumber,
         creditCode: sitePayload.creditCode,
         clinicRegNo: sitePayload.clinicRegNo,

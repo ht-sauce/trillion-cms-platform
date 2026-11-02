@@ -14,7 +14,7 @@ import { PrismaService } from '../../prisma/prisma.service'
 import type { AuthUser } from '../../common/decorators/current-user.decorator'
 import { assertSiteAccess } from '../../common/utils/site-scope'
 import { formatDateTime } from '../../common/utils/datetime'
-import { buildSiteUrl } from '@trillion/shared'
+import { buildPreviewUrl } from '@trillion/shared'
 import { PublicService } from '../public/public.service'
 import type { PageDraft } from '@trillion/shared'
 
@@ -44,18 +44,29 @@ export class PreviewService {
 
   /**
    * 生成预览票据
-   * @returns { url, ticket, expiresAt } —— url 已带票据参数，后台直接塞给 iframe
+   * @param dto.pageId 可选：缺省取站点首页（站点列表「预览」= 整站首页预览，ADR-049）
+   * @returns { url, ticket, expiresAt } —— url 已带票据参数，后台直接塞给 iframe / 新标签页
    */
-  async createTicket(user: AuthUser, dto: { siteId: string; pageId: string }) {
+  async createTicket(user: AuthUser, dto: { siteId: string; pageId?: string }) {
     const siteId = dto.siteId
     assertSiteAccess(user, siteId)
 
-    const page = await this.prisma.page.findUnique({ where: { id: dto.pageId } })
-    if (!page) throw new BadRequestException('页面不存在')
-    if (page.siteId !== siteId) throw new BadRequestException('页面不属于该站点')
-
     const site = await this.prisma.site.findUnique({ where: { id: siteId }, select: { slug: true } })
     if (!site) throw new BadRequestException('站点不存在')
+
+    /** 指定页 → 按页签发；未指定 → 站点首页（path='/'），首页缺失时兜底取站内任一页 */
+    let page = null as null | { id: string; path: string | null; slug: string }
+    if (dto.pageId) {
+      const found = await this.prisma.page.findUnique({ where: { id: dto.pageId } })
+      if (!found) throw new BadRequestException('页面不存在')
+      if (found.siteId !== siteId) throw new BadRequestException('页面不属于该站点')
+      page = found
+    } else {
+      page =
+        (await this.prisma.page.findFirst({ where: { siteId, path: '/' } })) ??
+        (await this.prisma.page.findFirst({ where: { siteId }, orderBy: { createdAt: 'asc' } }))
+      if (!page) throw new BadRequestException('站点暂无页面，无法预览')
+    }
 
     const ttl = this.config.get<number>('preview.ticketTtlMs') || 30 * 60 * 1000
     const expiresAt = Date.now() + ttl
@@ -64,10 +75,11 @@ export class PreviewService {
     const base = this.config.get<string>('preview.geoBaseUrl') || ''
     const path = page.path || (page.slug === 'home' ? '/' : `/${page.slug}`)
     /**
-     * 站点地址只在 shared 的 `buildSiteUrl` 里拼一次：回环基址（本地多站点共用端口）自动带
-     * `/<slug>` 前缀，域名基址不带前缀——与站点列表「预览」、渲染引擎的解析口径完全一致（见 ADR-031）
+     * 预览地址一律带站点前缀 `/<slug>`（shared 的 `buildPreviewUrl`，ADR-049）：
+     * dev 基址是回环（http://127.0.0.1:3002）→ 本地方式；线上基址是 GEO 对外入口 →
+     * 地址与正式域名彻底分离，且渲染引擎预览态以票据定位站点、不依赖 Host 解析
      */
-    const url = `${buildSiteUrl(base, site.slug, path)}?__preview=${encodeURIComponent(ticket)}`
+    const url = `${buildPreviewUrl(base, site.slug, path)}?__preview=${encodeURIComponent(ticket)}`
 
     return {
       url,
@@ -83,14 +95,18 @@ export class PreviewService {
    * 解析票据（渲染引擎中间件调用）
    *
    * 渲染引擎拿到的只有 URL 上的票据串，无法自行解出 pageId（HMAC 密钥只在服务端）。
-   * 因此中间件先问一次服务端「这张票是谁的」，再据此去取对应页面的草稿。
+   * 因此中间件先问一次服务端「这张票是谁的」，再据此去取对应页面的草稿；
+   * 返回的 `slug` 供预览态站点上下文使用（`key = prefix = slug`，ADR-049）。
    */
   async resolveTicket(ticket: string | undefined) {
     const payload = this.verifyTicket(ticket)
     if (!payload) throw new BadRequestException('预览票据无效或已过期')
+    const site = await this.prisma.site.findUnique({ where: { id: payload.s }, select: { slug: true } })
+    if (!site) throw new BadRequestException('预览票据指向的站点不存在')
     return {
       pageId: payload.p,
       siteId: payload.s,
+      slug: site.slug,
       expiresAt: new Date(payload.e).toISOString()
     }
   }

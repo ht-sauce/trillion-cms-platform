@@ -137,6 +137,9 @@ model Site {
   themeConfig Json @default("{\"primary\":\"#3B82F6\",\"accent\":\"#67E8F9\",\"background\":\"#0B1224\",\"text\":\"#E8EDFF\",\"radius\":8}") @map("theme_config")
   /// 站点状态：active=启用 / disabled=停用
   status String @default("active") @db.VarChar(8)
+  /// 行业类型：medical=医疗（输出 MedicalClinic / MedicalWebPage）/ industrial=工业与工程（输出 Organization+LocalBusiness / WebPage）
+  /// 驱动 GEO 实体类型、页面主节点类型与部分块的默认文案口径；新增行业时在此取值并同步 geo-docs.ts 的 ENTITY_PROFILE
+  businessType String @default("medical") @map("business_type") @db.VarChar(16)
 
   /// 创建时间（中国时区，精确到秒）
   createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)

@@ -1,7 +1,9 @@
 /**
  * 站点上下文解析：站点标识（key）+ URL 站点前缀（prefix）
  *
- * 一个 Host 可能同时托管多个站点，定位站点分三种运行形态：
+ * 一个 Host 可能同时托管多个站点，定位站点分四种运行形态：
+ *   0. 预览态（带有效票据）：站点由票据指定（ADR-049），key = prefix = 票据站点的 slug——
+ *      预览基址可能是线上对外入口（IP:端口），Host 解析不出站点，标识只能来自票据
  *   1. SSG 构建期（import.meta.prerender）：站点由 NUXT_PUBLIC_SITE_SLUG 指定，URL 路径即产物路径，不解析前缀
  *   2. SSR / 线上 / 局域网：以请求 Host（主域名与别名域名，见 ADR-022）作为站点标识，路径不含前缀
  *   3. 本地开发（回环地址）：多个站点共用同一端口（`config/ports.mjs` 的 geo 3002），
@@ -69,6 +71,16 @@ export function useSiteContext() {
 
   async function resolve(): Promise<SiteContext> {
     if (state.value.ready) return state.value
+
+    /** 0) 预览态：站点标识以票据为准（ADR-049）——预览基址可能是线上对外入口（IP:端口），
+     *     Host 解析不出站点，key 与 prefix 都取票据指向的站点 slug；key = prefix 与
+     *     本地回环形态一致，站内跳转由 site-prefix 统一补前缀并保留票据 */
+    const event = useRequestEvent()
+    const preview = (event?.context ?? {}).preview as { valid?: boolean; slug?: string | null } | undefined
+    if (preview?.valid && preview.slug) {
+      state.value = { key: preview.slug, prefix: preview.slug, ready: true }
+      return state.value
+    }
 
     /** 1) SSG 构建期：路径即产物路径，站点由环境变量指定 */
     if (import.meta.prerender) {

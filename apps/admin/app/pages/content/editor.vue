@@ -119,7 +119,8 @@ const isPage = computed(() => Boolean(currentPageNode.value))
 
 /**
  * 当前页面的访问地址（线上口径）：站点主域名 + 站点前缀 + 物化 path。
- * 与站点列表「预览」、预览票据共用 shared 的 `buildSiteUrl`，避免后台各处各拼一套（ADR-031）
+ * 走 shared 的 `buildSiteUrl`（正式地址口径，ADR-031）；预览地址另走票据
+ * （previewApi.ticket 返回的 url），两者口径分开（ADR-049）
  */
 const pageUrl = computed(() => {
   const node = currentPageNode.value

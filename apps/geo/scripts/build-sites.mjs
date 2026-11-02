@@ -429,7 +429,13 @@ async function crawlRender({ serverEntry, slug, targets, needShells }) {
           HOST: '127.0.0.1',
           NODE_ENV: 'production',
           NUXT_PUBLIC_API_BASE: apiBase,
-          NUXT_PUBLIC_SITE_SLUG: slug
+          NUXT_PUBLIC_SITE_SLUG: slug,
+          /**
+           * 禁止站点入口中间件直出 HTML（见 server/middleware/site-entry.ts）：
+           * 否则爬取阶段会拿到产物目录里的上一版页面，构建等于白跑。
+           * 静态资产与 _payload.json 仍走直出。
+           */
+          SITES_STATIC_DISABLED: '1'
         },
         stdio: ['ignore', 'pipe', 'pipe']
       })
@@ -709,6 +715,30 @@ if (fs.existsSync(finalDir)) {
 
 console.log('[build] 叠加本次生成的路由')
 copyDir(genDir, tmpDir)
+
+/**
+ * 站点静态资源（assets/img、assets/css、favicon）来自 `apps/geo/public/`，
+ * 必须与产物一起发布——线上由中间件按 `sites/<slug>/` 直出，不会再回落到应用的 public 目录。
+ *
+ * 以前这一步靠 Nuxt 的 `publicDir` 自动复制（publicDir 指向 `<slug>.gen`），
+ * 但它并不可靠：`--rebuild` 清缓存后 public 内容没有落进 gen，产物里的 `assets/`
+ * 整目录消失（症状：页面样式与图片全 404，HTML 却正常）。这里显式复制，不再依赖框架行为。
+ * 顺序放在 gen 之后：public 下只有静态资产，不存在与页面 HTML 同名的文件。
+ */
+console.log('[build] 复制站点静态资源（public/assets）')
+copyDir(path.join(root, 'public'), tmpDir)
+
+/**
+ * 站点静态资源（assets/img、assets/css、favicon）来自 `apps/geo/public/`，
+ * 必须与产物一起发布——线上由中间件按 `sites/<slug>/` 直出，不会再回落到应用的 public 目录。
+ *
+ * 以前这一步靠 Nuxt 的 `publicDir` 自动复制（publicDir 指向 `<slug>.gen`），
+ * 但它并不可靠：`--rebuild` 清缓存后 public 内容没有落进 gen，产物里的 `assets/`
+ * 整目录消失（症状：页面样式与图片全 404，HTML 却正常）。这里显式复制，不再依赖框架行为。
+ * 顺序放在 gen 之后：public 下只有静态资产，不存在与页面 HTML 同名的文件。
+ */
+console.log('[build] 复制站点静态资源（public/assets）')
+copyDir(path.join(root, 'public'), tmpDir)
 
 // ---------------- 6) 站点 robots / sitemap / llms（统一实现） ----------------
 

@@ -52,7 +52,11 @@ const openingHoursText = computed(() => {
       预览态提示不在此渲染：站点页面在 iframe 内，提示条会把站点外观顶下去，
       预览态提示统一由管理后台（内容编辑器）在画布头部展示（09 §7.5）
     -->
-    <FrameTopBar :opening-hours="site?.openingHours || []" :phone="site?.phone || null" />
+    <FrameTopBar
+      :opening-hours="site?.openingHours || []"
+      :phone="site?.phone || null"
+      :business-type="site?.businessType || 'medical'"
+    />
 
     <FrameSiteHeader
       :common-name="site?.commonName || site?.name || '站点'"
@@ -81,6 +85,7 @@ const openingHoursText = computed(() => {
       :icp-number="site?.icpNumber || null"
       :police-number="site?.policeNumber || null"
       :medical-insurance="site?.medicalInsurance || false"
+      :business-type="site?.businessType || 'medical'"
       :insurance-note="site?.insuranceNote || null"
       :groups="footerGroups"
     />

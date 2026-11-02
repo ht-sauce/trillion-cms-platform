@@ -48,6 +48,14 @@ export interface SiteThemeTokens {
   radiusMd: number
   radiusLg: number
   wrap: number
+  /**
+   * 站点级样式预设名（ADR-048）
+   *
+   * 值对应 `apps/geo/public/assets/css/presets/<name>.css`。留空 = 只用全局
+   * `theme-b.css` + `site.css`（医疗站现状）。令牌只能换颜色与圆角，
+   * 换不了版式；版式差异（深色工程底 vs 白底医患风）必须靠独立样式表。
+   */
+  stylePreset?: string
 }
 
 /** robots meta 摘要策略（完整摘要：max-snippet:-1 / max-image-preview:large） */
@@ -68,6 +76,8 @@ export interface SiteProfileEntity {
   slug: string
   /** 主域名 */
   domain: string
+  /** 行业类型：medical=医疗 / industrial=工业与工程；决定 GEO 实体与页面节点类型（ADR-046） */
+  businessType: 'medical' | 'industrial'
 
   // ---- 标识 ----
   /** 工商全称（营业执照口径） */
@@ -149,6 +159,8 @@ export interface SiteProfileEntity {
 /**
  * 机构实体档案的「待补」字段清单（缺失时在实体档案页显式标注，避免编造）
  * 返回缺失字段的中文名，供页面与后台提示使用
+ *
+ * 医疗口径：登记号 / 执业许可证 / 医保编号都是医疗机构特有的法定项
  */
 export const SITE_PROFILE_PENDING_LABELS: Record<string, string> = {
   legalName: '工商全称',
@@ -163,20 +175,40 @@ export const SITE_PROFILE_PENDING_LABELS: Record<string, string> = {
   insuranceNo: '医保定点编号'
 }
 
-/** 计算档案中仍待补的字段（值缺失或为占位符时视为待补） */
-export function detectPendingProfileFields(profile: {
-  legalName?: string | null
-  creditCode?: string | null
-  clinicRegNo?: string | null
-  licenseValidFrom?: string | null
-  licenseValidTo?: string | null
-  orgType?: string | null
-  level?: string | null
-  legalPerson?: string | null
-  foundDate?: string | null
-  insuranceNo?: string | null
-}): string[] {
-  return Object.entries(SITE_PROFILE_PENDING_LABELS)
+/**
+ * 工业与工程类企业的待补项（ADR-046）
+ *
+ * 与医疗口径的差别：没有执业许可证与医保，但**地址与电话是企业实体的强信号**——
+ * GEO 的实体一致性（NAP）靠这两项做跨平台比对，缺失时必须显式标注，不能静默省略。
+ */
+export const INDUSTRIAL_PROFILE_PENDING_LABELS: Record<string, string> = {
+  legalName: '工商全称',
+  creditCode: '统一社会信用代码',
+  legalPerson: '法定代表人',
+  foundDate: '成立日期',
+  addressFull: '企业地址',
+  phone: '对外电话'
+}
+
+/** 计算档案中仍待补的字段（值缺失或为占位符时视为待补）；businessType 缺省按医疗口径 */
+export function detectPendingProfileFields(
+  profile: {
+    legalName?: string | null
+    creditCode?: string | null
+    clinicRegNo?: string | null
+    licenseValidFrom?: string | null
+    licenseValidTo?: string | null
+    orgType?: string | null
+    level?: string | null
+    legalPerson?: string | null
+    foundDate?: string | null
+    insuranceNo?: string | null
+  },
+  businessType?: string | null
+): string[] {
+  const labels =
+    businessType === 'industrial' ? INDUSTRIAL_PROFILE_PENDING_LABELS : SITE_PROFILE_PENDING_LABELS
+  return Object.entries(labels)
     .filter(([key]) => {
       const value = (profile as Record<string, unknown>)[key]
       return value === null || value === undefined || value === ''

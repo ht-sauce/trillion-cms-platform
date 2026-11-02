@@ -220,7 +220,7 @@ apps/server/prisma/
 
 | 表 | 新增字段 | 口径 |
 | -- | -------- | ---- |
-| `Site` | `legalName` / `commonName` / `abbrName`、`clinicRegNo` / `licenseValidFrom` / `licenseValidTo` / `orgType` / `level` / `legalPerson` / `principal` / `foundDate` / `practiceScopes`、`addressFull` / `postalCode` / `lat` / `lng`、`phone` / `phoneServiceHours`、`openingHours`、`medicalInsurance` / `insuranceNo`、`sameAs`、`themeTokens`、`geoJsonLd` / `geoJsonLdMode`、`llmsTxt` / `llmsTxtMode`、`headExtra` / `headExtraMode`、`robotsMeta` | **NAP 唯一事实来源是机构实体档案页**；`Site` 只存值，页面只读引用 |
+| `Site` | **`businessType`（medical / industrial，决定 GEO 实体与页面节点类型，ADR-047）**、`legalName` / `commonName` / `abbrName`、`clinicRegNo` / `licenseValidFrom` / `licenseValidTo` / `orgType` / `level` / `legalPerson` / `principal` / `foundDate` / `practiceScopes`、`addressFull` / `postalCode` / `lat` / `lng`、`phone` / `phoneServiceHours`、`openingHours`、`medicalInsurance` / `insuranceNo`、`sameAs`、`themeTokens`、`geoJsonLd` / `geoJsonLdMode`、`llmsTxt` / `llmsTxtMode`、`headExtra` / `headExtraMode`、`robotsMeta` | **NAP 唯一事实来源是机构实体档案页**；`Site` 只存值，页面只读引用 |
 | `Channel` | `path`（`@@unique([siteId, path])`） | 物化路径，目录默认不超 5 层、仅校验不成环 |
 | `Page` | `path`（`@@unique([siteId, path])`）、`kind`（`static` / `list` / `detail`）、`draft`（整页草稿快照 JSON）、`contentHash` / `publishedHash`、`jsonLd` / `jsonLdMode`、`sort` | `path` 是「页面 ↔ 线上地址 ↔ 产物文件」的唯一锚点；`status = published` 后 `slug` / `channelId` 锁定（服务端 400） |
 | `StaticFile` | `caption` / `location` / `takenAt` / `imageNo` | 对应图集块"每张图必须有文字、可追溯" |

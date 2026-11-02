@@ -4,7 +4,7 @@
  * 分层归属：
  *   块  = 结构（语义化 HTML，由块代码负责）
  *   页面 = JSON-LD（按 kind 与内容特征：Article / WebPage / FAQPage / ItemList）+ canonical + title/description/keywords
- *   站点 = MedicalClinic 实体声明 + llms.txt + robots.txt + robots meta
+ *   站点 = 机构实体声明（按行业类型）+ llms.txt + robots.txt + robots meta
  *
  * 为什么生成放在服务端而不是渲染引擎：
  *   09 §10.3 要求后台「只读展示实际会输出的内容」。若生成逻辑只在渲染引擎里，
@@ -13,8 +13,46 @@
  *
  * 纪律：**只输出真实存在的字段**。缺失资质不编造，改为在页面上显式标注「待补」
  *      （pendingFields 由 `detectPendingProfileFields` 给出）。
+ *
+ * 行业适配（ADR-046）：平台原先只承接医疗机构，实体与页面类型硬编码为 MedicalClinic /
+ *   MedicalWebPage。工业与工程类站点（地坪、装饰、机电安装）必须声明为企业实体，
+ *   否则结构化数据与实际业务主体不符，属于「自相矛盾的实体声明」，对 GEO 是负信号。
+ *   因此按 `Site.businessType` 分派 ENTITY_PROFILE，医疗口径保持逐字节不变。
  */
 import type { OpeningHourRule, RobotsMeta, SameAsEntry } from '@trillion/shared'
+
+/** 行业类型：驱动实体类型、页面主节点类型与待补字段文案 */
+export type BusinessType = 'medical' | 'industrial'
+
+/**
+ * 行业 → 结构化数据口径
+ *
+ * `entityType` 为 schema.org 类型（可多类型，机器读时会展开成 @type 数组）；
+ * `entityIdSuffix` 进 @id 片段，**医疗必须保持 medicalclinic**，
+ * 否则已上线站点的实体引用会全部失效（其他页面的 `about` / `publisher` 指向它）。
+ */
+const ENTITY_PROFILE = {
+  medical: {
+    entityType: 'MedicalClinic' as string | string[],
+    entityIdSuffix: 'medicalclinic',
+    /** detail 页（项目/设备/医师等非文章详情）的主节点类型 */
+    detailPageType: 'MedicalWebPage',
+    pendingLabel: '以下资质字段待医疗机构补充核验'
+  },
+  industrial: {
+    /** 施工承包类企业：Organization 说明主体，GeneralContractor 说明业态（LocalBusiness 子类，可用地址/营业时间） */
+    entityType: ['Organization', 'GeneralContractor'] as string | string[],
+    entityIdSuffix: 'organization',
+    detailPageType: 'WebPage',
+    pendingLabel: '以下企业信息待补充核验'
+  }
+} satisfies Record<BusinessType, unknown>
+
+/** 取行业口径（未知值一律按医疗处理，保证历史数据不变） */
+function profileOf(businessType?: string | null) {
+  return businessType === 'industrial' ? ENTITY_PROFILE.industrial : ENTITY_PROFILE.medical
+}
+
 
 /** 生成上下文：站点 + 页面（页面为可选，站点级文档不需要） */
 export interface GeoContext {
@@ -50,6 +88,8 @@ export interface GeoContext {
     entityPath: string
     logoUrl?: string | null
     pendingFields?: string[]
+    /** 行业类型（medical / industrial），缺省 medical；见 ENTITY_PROFILE */
+    businessType?: string | null
   }
   page?: {
     id: string
@@ -80,9 +120,14 @@ export function siteUrl(domain: string, path = '/'): string {
   return `https://${clean}${p}`
 }
 
-/** 机构实体节点 @id（页面级 JSON-LD 用 @id 引用，避免重复声明实体） */
-export function entityId(domain: string, entityPath: string): string {
-  return `${siteUrl(domain, entityPath)}#medicalclinic`
+/**
+ * 机构实体节点 @id（页面级 JSON-LD 用 @id 引用，避免重复声明实体）
+ *
+ * 片段后缀随行业变化（medicalclinic / organization）：同一域名下若并存两种业态的站点，
+ * @id 必须是不同的节点，否则会互相覆盖成同一个实体。
+ */
+export function entityId(domain: string, entityPath: string, businessType?: string | null): string {
+  return `${siteUrl(domain, entityPath)}#${profileOf(businessType).entityIdSuffix}`
 }
 
 /**
@@ -169,8 +214,9 @@ function pageNodeType(context: GeoContext): string | string[] {
       /** 文章详情：Article 为主节点；含 FAQ 时叠加 FAQPage */
       return hasFaq ? ['Article', 'FAQPage'] : 'Article'
     }
-    /** 其余详情（医师 / 项目 / 设备等）按医疗网页处理；含 FAQ 时叠加 FAQPage */
-    return hasFaq ? ['MedicalWebPage', 'FAQPage'] : 'MedicalWebPage'
+    /** 其余详情（医疗：医师 / 项目 / 设备；工业：产品 / 案例）按行业口径处理；含 FAQ 时叠加 FAQPage */
+    const detailType = profileOf(context.site.businessType).detailPageType
+    return hasFaq ? [detailType, 'FAQPage'] : detailType
   }
   return hasFaq ? ['WebPage', 'FAQPage'] : 'WebPage'
 }
@@ -193,8 +239,8 @@ export function buildPageJsonLd(context: GeoContext): string {
     description: context.page.seoDescription || context.page.summary || context.site.seoDescription || '',
     inLanguage: 'zh-CN',
     isPartOf: { '@type': 'WebSite', '@id': `${siteUrl(domain, '/')}#website`, name: context.site.commonName },
-    about: { '@id': entityId(domain, context.site.entityPath) },
-    publisher: { '@id': entityId(domain, context.site.entityPath) }
+    about: { '@id': entityId(domain, context.site.entityPath, context.site.businessType) },
+    publisher: { '@id': entityId(domain, context.site.entityPath, context.site.businessType) }
   }
   if (context.page.publishedAt) mainNode.datePublished = String(context.page.publishedAt).slice(0, 10)
   if (context.page.updatedAt) mainNode.dateModified = String(context.page.updatedAt).slice(0, 10)
@@ -226,7 +272,7 @@ export function buildPageJsonLd(context: GeoContext): string {
       '@type': 'Physician',
       '@id': `${url}#physician`,
       name: ph.name,
-      worksFor: { '@id': entityId(domain, context.site.entityPath) }
+      worksFor: { '@id': entityId(domain, context.site.entityPath, context.site.businessType) }
     }
     if (ph.jobTitle) physician.jobTitle = ph.jobTitle
     if (ph.medicalSpecialty) physician.medicalSpecialty = ph.medicalSpecialty
@@ -244,7 +290,7 @@ export function buildPageJsonLd(context: GeoContext): string {
 
   /** 列表页输出 ItemList（集合语义） */
   if (context.page.kind === 'list') {
-    const listKeys = ['post-list', 'doctor-card', 'case-card', 'job-list', 'gallery']
+    const listKeys = ['post-list', 'doctor-card', 'case-card', 'job-list', 'gallery', 'product-card', 'case-grid', 'cert-grid']
     const listBlock = context.page.blocks.find((block) => listKeys.includes(block.key))
     const items = (listBlock?.data?.items || listBlock?.data?.list || []) as unknown[]
     if (Array.isArray(items) && items.length) {
@@ -276,17 +322,24 @@ export function buildPageJsonLd(context: GeoContext): string {
 }
 
 /**
- * 机构实体 JSON-LD（MedicalClinic）——只在实体档案页输出
- * 缺失字段直接省略（不编造），page 层会在页面上标注待补清单
+ * 机构实体 JSON-LD（医疗：MedicalClinic / 工业：Organization + GeneralContractor）
+ * 只在实体档案页输出。缺失字段直接省略（不编造），page 层会在页面上标注待补清单。
+ *
+ * 医疗与工业共用同一批站点字段，但**语义映射不同**：
+ *   - `practiceScopes`：医疗是「诊疗科目」→ medicalSpecialty；工业是「服务范围」→ knowsAbout
+ *   - `orgType`：医疗是「机构类型」→ additionalType；工业不放（避免把「有限责任公司」当业务类型）
+ *   - `clinicRegNo` / `insuranceNo`：仅医疗输出，工业站没有这两项，输出等于编造
  */
 export function buildEntityJsonLd(context: GeoContext): string {
   const site = context.site
   const url = siteUrl(site.domain, site.entityPath)
+  const profile = profileOf(site.businessType)
+  const isMedical = site.businessType !== 'industrial'
 
   const node: Record<string, unknown> = {
     '@context': 'https://schema.org',
-    '@type': 'MedicalClinic',
-    '@id': entityId(site.domain, site.entityPath),
+    '@type': profile.entityType,
+    '@id': entityId(site.domain, site.entityPath, site.businessType),
     url,
     name: site.commonName || site.name,
     /** 对外唯一名称口径；工商全称作为 legalName，避免与 name 冲突 */
@@ -324,7 +377,7 @@ export function buildEntityJsonLd(context: GeoContext): string {
     node.geo = { '@type': 'GeoCoordinates', latitude: site.lat, longitude: site.lng }
   }
 
-  /** 门诊时间：逐条转 openingHoursSpecification，不合并、不改写原始口径 */
+  /** 营业/门诊时间：逐条转 openingHoursSpecification，不合并、不改写原始口径 */
   const hours = (site.openingHours || []).filter((rule) => rule?.open && rule?.close)
   if (hours.length) {
     node.openingHoursSpecification = hours.map((rule) => ({
@@ -336,18 +389,23 @@ export function buildEntityJsonLd(context: GeoContext): string {
     }))
   }
 
-  if (site.practiceScopes.length) node.medicalSpecialty = site.practiceScopes
-  if (site.orgType) node.additionalType = site.orgType
+  if (isMedical) {
+    if (site.practiceScopes.length) node.medicalSpecialty = site.practiceScopes
+    if (site.orgType) node.additionalType = site.orgType
+    if (site.medicalInsurance) node.isAcceptingNewPatients = true
+  } else {
+    /** 工业/工程：服务范围即企业专业领域，用 knowsAbout 表达（schema.org Organization 属性） */
+    if (site.practiceScopes.length) node.knowsAbout = site.practiceScopes
+  }
   if (site.foundDate) node.foundingDate = site.foundDate
   if (site.legalPerson) node.employee = { '@type': 'Person', name: site.legalPerson, jobTitle: '法定代表人' }
-  if (site.medicalInsurance) node.isAcceptingNewPatients = true
 
   const sameAs = (site.sameAs || []).filter((item) => item?.url).map((item) => item.url)
   if (sameAs.length) node.sameAs = sameAs
 
   /** 待补字段显式标注：让「未提供」是可见状态，而不是被悄悄省略 */
   if (site.pendingFields?.length) {
-    node.disambiguatingDescription = `以下资质字段待医疗机构补充核验：${site.pendingFields.join('、')}`
+    node.disambiguatingDescription = `${profile.pendingLabel}：${site.pendingFields.join('、')}`
   }
 
   return JSON.stringify(node, null, 2)

@@ -54,7 +54,7 @@ function footerColumnTitle(group: NavigationGroup): string {
   return GENERIC_COLUMN_TITLES.has(group.title) ? (FOOTER_COLUMN_TITLES[group.key] ?? group.title) : group.title
 }
 
-defineProps<{
+const props = defineProps<{
   legalName: string
   commonName: string
   practiceScopes: string[]
@@ -71,7 +71,26 @@ defineProps<{
   /** 院内公示的医保口径说明（非定点时的补充说明） */
   insuranceNote: string | null
   groups: NavigationGroup[]
+  /** 行业类型：medical=医疗（诊疗科目/公众号）/ industrial=工业与工程（服务范围，无公众号位） */
+  businessType?: string
 }>()
+
+/** 工业口径下 `practiceScopes` 是「服务范围」而不是诊疗科目（ADR-047） */
+const scopeLabel = computed(() => (props.businessType === 'industrial' ? '服务范围' : '诊疗科目'))
+/** 公众号位只对医疗站有意义；工业站不渲染，避免页脚出现与业务无关的占位 */
+const showQrcode = computed(() => props.businessType !== 'industrial')
+
+/**
+ * 页脚合规声明：两套口径各自成立，不能混用。
+ *   医疗：不承诺疗效、不用患者对比图（《医疗广告管理办法》口径）。
+ *   工业：不承诺具体项目的性能与效果（方案须以现场勘测与书面文件为准）——
+ *         地坪的效果高度依赖基层条件与施工环境，写死承诺等同虚假宣传。
+ */
+const complianceText = computed(() =>
+  props.businessType === 'industrial'
+    ? '本网站内容用于产品性能与工程技术说明，不构成对具体项目的效果承诺；实际方案与性能以现场勘测结果、书面技术方案与合同约定为准。本站不使用绝对化用语，不贬低同行。'
+    : '本网站内容仅用于医学科普与信息参考，不构成任何诊疗建议；具体诊疗方案请以面诊执业医师意见为准。本机构不作出根治、保证治愈、永不复发等承诺，不使用患者对比图，不贬低同行。'
+)
 </script>
 
 <template>
@@ -82,7 +101,7 @@ defineProps<{
              去掉「白癜风专科医疗机构」描述行与来院路线/资质核验/常见问题快捷按钮 -->
         <div>
           <h4>{{ commonName }}</h4>
-          <p v-if="practiceScopes.length" style="line-height: 1.95">诊疗科目：{{ practiceScopes.join('／') }}</p>
+          <p v-if="practiceScopes.length" style="line-height: 1.95">{{ scopeLabel }}：{{ practiceScopes.join('／') }}</p>
         </div>
 
         <!-- 第 2~N 列：页脚导航（独立配置，ADR-029）；列标题写死为原型列名 -->
@@ -96,13 +115,13 @@ defineProps<{
         </nav>
 
         <!-- 官方公众号二维码位（原型 .fqr；约定资产探测，无图/加载失败回退虚线占位） -->
-        <div class="fqr">
+        <div v-if="showQrcode" class="fqr">
           <h4>官方公众号</h4>
           <div class="qr-box">
             <img
               v-if="qrOk"
               :src="QRCODE_SRC"
-              alt="西安新城仁爱皮肤病医院官方公众号二维码"
+              :alt="`${commonName}官方公众号二维码`"
               loading="lazy"
               @error="qrOk = false"
             />
@@ -116,8 +135,7 @@ defineProps<{
       <div class="flegal">
         <div>
           <strong style="color: #a9c2dc">合规声明：</strong
-          >本网站内容仅用于医学科普与信息参考，不构成任何诊疗建议；具体诊疗方案请以面诊执业医师意见为准。
-          本机构不作出根治、保证治愈、永不复发等承诺，不使用患者对比图，不贬低同行。
+          >{{ complianceText }}
         </div>
         <div style="margin-top: 8px">
           {{ commonName }}｜<template v-if="legalName && legalName !== commonName">{{ legalName }}（</template

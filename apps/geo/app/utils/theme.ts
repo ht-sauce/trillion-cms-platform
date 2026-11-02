@@ -71,7 +71,16 @@ export const DERIVED_THEME_CSS = [
   '--shadow:0 12px 34px rgba(13,27,42,.10)',
   '--r-sm:var(--radius-sm)',
   '--r-md:var(--radius-md)',
-  '--r-lg:var(--radius-lg)'
+  '--r-lg:var(--radius-lg)',
+  /**
+   * 品牌语义别名（ADR-047 配套）：`--teal` 是首站（医院青绿）的历史命名，
+   * 但它是**站点主色**的唯一受管令牌——工业站把主色配成橙色后，新块若继续引用
+   * `--teal` 就会把「青绿」写进语义。这里加一层别名，新块统一用 `--brand*`，
+   * 实际取值仍跟随受管令牌，站点换色时两套一起变。
+   */
+  '--brand:var(--teal)',
+  '--brand-dk:var(--teal-dk)',
+  '--brand-lt:var(--teal-lt)'
 ].join(';')
 
 /**

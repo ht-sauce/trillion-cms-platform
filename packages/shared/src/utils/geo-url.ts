@@ -9,6 +9,8 @@
  * 规则（三个入口一致）：
  *   - 基址是回环地址（localhost / 127.0.0.1 …）→ 前缀 `/<slug>`（多站点共用端口，必须显式区分）
  *   - 基址是真实域名                        → 无前缀（域名本身就是站点标识，见 ADR-022）
+ *
+ * 以上规则只约束**正式地址**（`buildSiteUrl`）；预览地址一律带前缀，走 `buildPreviewUrl`（ADR-049）。
  */
 
 /** 回环主机名：本地多站点共用端口时区分站点的识别清单（GEO 的 Host 解析与地址拼装共用同一份） */
@@ -56,6 +58,25 @@ export function buildSiteUrl(base: string, slug: string, path = '/'): string {
   const root = normalizeBaseUrl(base)
   if (!root) return ''
   const prefix = siteUrlPrefix(root, slug)
+  const raw = String(path || '/').trim()
+  const suffix = raw.startsWith('/') ? raw : `/${raw}`
+  return `${root}${prefix}${suffix === '/' ? '' : suffix}`
+}
+
+/**
+ * 拼装预览地址：`<base>/<slug><path>` —— **一律带站点前缀**（ADR-049）
+ *
+ * 与 `buildSiteUrl`（正式地址口径，ADR-031：回环带前缀、域名不带）刻意分开：
+ * 预览地址不与正式域名混用，无论基址是回环（本地 3002）还是线上对外入口（IP:端口），
+ * 都靠 `/<slug>` 前缀表达站点——预览请求由票据定位站点，前缀同时是「这不是正式地址」的显式标记。
+ */
+export function buildPreviewUrl(base: string, slug: string, path = '/'): string {
+  const root = normalizeBaseUrl(base)
+  if (!root) return ''
+  const key = String(slug || '')
+    .trim()
+    .replace(/^\/+|\/+$/g, '')
+  const prefix = key ? `/${key}` : ''
   const raw = String(path || '/').trim()
   const suffix = raw.startsWith('/') ? raw : `/${raw}`
   return `${root}${prefix}${suffix === '/' ? '' : suffix}`

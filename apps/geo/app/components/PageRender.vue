@@ -38,7 +38,12 @@ const context = computed(() =>
  * 若页面没有首屏块（纯列表 / 法务页），这里兜底渲染一次，避免出现无 H1 的页面。
  */
 function hasHeroBlock(blocks: BlockInstance[] | undefined): boolean {
-  return (blocks || []).some((block) => block.key === 'hero-dark' && block.enabled !== false)
+  /**
+   * 承载 H1 的首屏块清单：`hero-dark`（通用首屏）与 `scene-hero`（场景首屏，ADR-048）。
+   * 漏了后者会在首屏上方多渲染一条页面标题栏，且出现两个 H1（检查项 `h1-unique` 会直接失败）。
+   */
+  const HERO_BLOCKS = ['hero-dark', 'scene-hero']
+  return (blocks || []).some((block) => HERO_BLOCKS.includes(block.key) && block.enabled !== false)
 }
 
 /** 从服务端生成的 meta 标签串里取出 content（服务端给的是完整标签，useSeoMeta 需要值） */

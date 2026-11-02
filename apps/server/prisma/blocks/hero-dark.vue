@@ -7,6 +7,10 @@
  * 因此这里**不使用 scoped style**，只负责产出正确结构的 class。
  *
  * 承载**全页唯一 H1**（设计稿硬约束）——因此它出现时页面骨架不再渲染 H1。
+ *
+ * 【2026-11-02 扩展】新增可选 `bgImage`：工业/工程类站点的首屏是实景大图，
+ *   纯渐变撑不起「现场感」。填图时 section 挂 `has-bg` 与 `--hero-bg` 变量，
+ *   由 site.css 叠加深色遮罩；不填则完全沿用原渐变外观（医疗站行为不变）。
  * 导语必须自包含（60~120 字）：大模型摘取时往往只拿到这一段。
  *
  * 原型 DOM 对应 99-blocks.html `blk-hero / hero-in / pill-tag`：
@@ -88,13 +92,23 @@ defineBlock({
         ]
       }
     },
-    { key: 'note', label: '按钮旁小字', type: 'text' }
+    { key: 'note', label: '按钮旁小字', type: 'text' },
+    {
+      key: 'bgImage',
+      label: '背景图',
+      type: 'text',
+      hint: '站内路径 /assets/img/**；留空则为深色渐变（默认）。填图后自动加深色遮罩保证标题可读'
+    }
   ]
 })
 </script>
 
 <template>
-  <section class="hero">
+  <section
+    class="hero"
+    :class="{ 'has-bg': props.data.bgImage }"
+    :style="props.data.bgImage ? { '--hero-bg': `url(${props.data.bgImage})` } : undefined"
+  >
     <div class="wrap hero-in" :class="{ single: !props.data.panel }">
       <div>
         <div v-if="props.data.eyebrow" class="pill-tag"><i aria-hidden="true"></i>{{ props.data.eyebrow }}</div>

@@ -1,0 +1,4571 @@
+{
+ "slug": "forintech",
+ "name": "富林泛泰",
+ "domain": "www.forintech.com",
+ "profile": {
+  "businessType": "industrial",
+  "commonName": "富林泛泰",
+  "logoSubtitle": "FORINTECH · INDUSTRIAL FLOORING",
+  "logoMark": "富",
+  "companyName": "富林泛泰",
+  "contactPhone": "022-27320939",
+  "phone": "022-27320939",
+  "phoneServiceHours": "周一至周六 08:30-18:00",
+  "practiceScopes": [
+   "聚氨酯砂浆地坪",
+   "聚氨酯自流平地坪",
+   "环氧树脂地坪",
+   "防静电地坪",
+   "停车场与坡道地坪",
+   "旧地面翻新与修补"
+  ],
+  "openingHours": [
+   {
+    "weekday": "Monday,Tuesday,Wednesday,Thursday,Friday,Saturday",
+    "open": "08:30",
+    "close": "18:00",
+    "note": "周日及法定节假日请提前预约"
+   }
+  ],
+  "seoTitle": "富林泛泰 | 工业地坪材料与施工 · 聚氨酯砂浆地坪",
+  "seoDescription": "富林泛泰专注工业地坪材料研发与工程交付，提供聚氨酯砂浆、聚氨酯自流平、环氧树脂与防静电地坪系统，覆盖食品饮料、医药净化、电子制造与停车场场景。",
+  "seoKeywords": "聚氨酯砂浆地坪,聚氨酯自流平,环氧地坪,防静电地坪,工业地坪,地坪施工",
+  "defaultLocale": "zh-CN",
+  "themeTokens": {
+   "teal": "#F0A500",
+   "tealDk": "#C57F00",
+   "deep": "#1A1A1A",
+   "deep2": "#2B2B2B",
+   "blue": "#2F6FA8",
+   "ink": "#1A1A1A",
+   "ink2": "#454545",
+   "ink3": "#767676",
+   "line": "#E7E7E7",
+   "bg": "#FFFFFF",
+   "ok": "#2F7D5A",
+   "amber": "#C2410C",
+   "radiusSm": 4,
+   "radiusMd": 6,
+   "radiusLg": 8,
+   "wrap": 1200
+  }
+ },
+ "channels": [
+  {
+   "slug": "home",
+   "name": "首页"
+  },
+  {
+   "slug": "about",
+   "name": "关于我们"
+  },
+  {
+   "slug": "products",
+   "name": "产品体系"
+  },
+  {
+   "slug": "solutions",
+   "name": "解决方案"
+  },
+  {
+   "slug": "about-flooring",
+   "name": "关于地坪"
+  },
+  {
+   "slug": "cases",
+   "name": "成功案例"
+  },
+  {
+   "slug": "faq",
+   "name": "常见问题"
+  },
+  {
+   "slug": "news",
+   "name": "新闻中心"
+  },
+  {
+   "slug": "contact",
+   "name": "联络我们"
+  },
+  {
+   "slug": "entity",
+   "name": "实体档案"
+  },
+  {
+   "slug": "sitemap",
+   "name": "站点地图"
+  }
+ ],
+ "pages": [
+  {
+   "channelSlug": "home",
+   "slug": "home",
+   "title": "富林泛泰 · 工业地坪材料与施工",
+   "kind": "static",
+   "summary": "富林泛泰专注工业地坪材料与工程交付，提供聚氨酯砂浆、聚氨酯自流平、环氧与防静电地坪系统。",
+   "seoTitle": "富林泛泰 | 工业地坪材料与施工 · 聚氨酯砂浆地坪",
+   "seoDescription": "自 2001 年起专注工业地坪，提供聚氨酯砂浆、聚氨酯自流平、环氧树脂与防静电地坪系统，服务食品饮料、医药净化、电子制造与停车场场景。",
+   "seoKeywords": "工业地坪,聚氨酯砂浆地坪,聚氨酯自流平,环氧地坪,防静电地坪",
+   "blocks": [
+    {
+     "id": "home_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "工业地坪材料与工程交付",
+      "orgline": "聚氨酯砂浆 · 聚氨酯自流平 · 环氧树脂 · 防静电地坪",
+      "h1": "适用于各种恶劣环境的\n工业地坪系统",
+      "h1Grad": "恶劣环境",
+      "lead": "食品加工的冲洗与高温、医药车间的洁净与消毒、电子厂房的静电防护、停车场的重载与防滑——不同场景对地面的要求并不相同。富林泛泰自 2001 年起专注工业地坪，提供从材料到施工的一体化交付。",
+      "chips": [
+       "食品饮料",
+       "医药净化",
+       "电子制造",
+       "停车场与坡道"
+      ],
+      "actions": [
+       {
+        "label": "查看产品体系",
+        "href": "/products",
+        "primary": true
+       },
+       {
+        "label": "获取选型建议",
+        "href": "/contact"
+       }
+      ],
+      "note": "技术咨询 022-2732 0939",
+      "bgImage": "/assets/img/forintech/be719b-9e4e7ba6f8b143dab4d2d67f84c2a389m.jpg"
+     }
+    },
+    {
+     "id": "home_02",
+     "key": "hero-panel",
+     "enabled": true,
+     "data": {
+      "title": "企业关键信息",
+      "rows": [
+       {
+        "k": "起步",
+        "v": "2001 年进入工业地坪领域"
+       },
+       {
+        "k": "累计施工",
+        "v": "<big>550</big> 万㎡ 以上"
+       },
+       {
+        "k": "服务场景",
+        "v": "食品 / 医药 / 电子 / 停车"
+       },
+       {
+        "k": "材料认证",
+        "v": "FDA · USDA · CE · HACCP"
+       }
+      ],
+      "actions": [
+       {
+        "label": "了解我们",
+        "href": "/about",
+        "primary": true
+       },
+       {
+        "label": "联络我们",
+        "href": "/contact"
+       }
+      ]
+     }
+    },
+    {
+     "id": "home_03",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "我们提供什么",
+      "desc": "材料、方案与技术服务三条线，覆盖地坪从选型到交付的全过程。"
+     }
+    },
+    {
+     "id": "home_04",
+     "key": "feature-cards",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "icon": "01",
+        "title": "产品体系",
+        "desc": "从聚氨酯砂浆、聚氨酯自流平到环氧薄涂与防静电体系，按行业与工况匹配。",
+        "footerLabel": "查看",
+        "footerValue": "四大系列"
+       },
+       {
+        "icon": "02",
+        "title": "解决方案",
+        "desc": "从基面勘察、方案设计到施工交付与验收，一个责任主体跟到底。",
+        "footerLabel": "服务",
+        "footerValue": "一站式交付"
+       },
+       {
+        "icon": "03",
+        "title": "技术咨询",
+        "desc": "不确定该选哪种地坪？把车间工况与使用要求告诉我们，给出选型建议。",
+        "footerLabel": "咨询",
+        "footerValue": "022-2732 0939"
+       }
+      ]
+     }
+    },
+    {
+     "id": "home_05",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "材料认证",
+      "desc": "以下为所用材料取得的第三方检测与认证，用于说明材料性能，不等同于施工资质。"
+     }
+    },
+    {
+     "id": "home_06",
+     "key": "feature-cards",
+     "enabled": true,
+     "data": {
+      "columns": "4",
+      "items": [
+       {
+        "icon": "FDA",
+        "title": "美国食品药品监督管理局",
+        "desc": "食品接触面材料合规"
+       },
+       {
+        "icon": "USDA",
+        "title": "美国农业部",
+        "desc": "食品加工环境适用性"
+       },
+       {
+        "icon": "HACCP",
+        "title": "危害分析与关键控制点",
+        "desc": "食品生产卫生管理体系要求"
+       },
+       {
+        "icon": "CE",
+        "title": "欧盟合格评定",
+        "desc": "产品进入欧盟市场的基本要求"
+       }
+      ]
+     }
+    },
+    {
+     "id": "home_07",
+     "key": "stat-bar",
+     "enabled": true,
+     "data": {
+      "variant": "dark",
+      "columns": "4",
+      "source": "数据口径：企业自 2001 年进入工业地坪领域至今的累计交付面积与场景分布，统计截至 2025 年 12 月，随项目交付更新。",
+      "items": [
+       {
+        "n": 550,
+        "unit": "万㎡",
+        "label": "累计交付地坪面积"
+       },
+       {
+        "n": 4,
+        "unit": "大",
+        "label": "主要服务场景"
+       },
+       {
+        "n": 20,
+        "unit": "余年",
+        "label": "工业地坪经验"
+       },
+       {
+        "n": 30,
+        "unit": "余个",
+        "label": "可供货产品型号"
+       }
+      ]
+     }
+    },
+    {
+     "id": "home_08",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "成功案例",
+      "desc": "食品、医药、电子与汽车制造场景的部分交付项目。",
+      "moreLabel": "查看全部案例",
+      "moreHref": "/cases"
+     }
+    },
+    {
+     "id": "home_09",
+     "key": "case-grid",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "title": "海康威视 AGV 工厂",
+        "industry": "电子制造",
+        "location": "浙江杭州",
+        "area": "35,000 ㎡",
+        "product": "ForinCrete SL-ESD",
+        "img": "/assets/img/forintech/hik-headquarters.jpg",
+        "href": "/cases/hikvision"
+       },
+       {
+        "title": "双汇食品加工车间",
+        "industry": "食品加工",
+        "location": "河南漯河",
+        "product": "ForinCrete MF",
+        "img": "/assets/img/forintech/wh-sh-building-pic.jpg",
+        "href": "/cases/shuanghui"
+       },
+       {
+        "title": "吴太药业产业园一期",
+        "industry": "医药净化",
+        "location": "吉林",
+        "product": "ForinCrete MT",
+        "img": "/assets/img/forintech/wutai-pic.jpg",
+        "href": "/cases/wutai-pharma"
+       }
+      ]
+     }
+    },
+    {
+     "id": "home_10",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "需要针对车间工况的选型建议？",
+      "desc": "把使用场景、清洁方式与荷载要求告诉我们，我们会给出建议方案与材料清单。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "about",
+   "slug": "index",
+   "title": "关于我们",
+   "kind": "static",
+   "summary": "富林泛泰自 2001 年进入工业地坪领域，提供聚氨酯砂浆、聚氨酯自流平、环氧与防静电地坪的材料与工程交付。",
+   "seoTitle": "关于我们 — 富林泛泰",
+   "seoDescription": "富林泛泰自 2001 年进入工业地坪领域，从环氧施工起步，形成聚氨酯砂浆、聚氨酯自流平、环氧与防静电四条产品线。",
+   "seoKeywords": "",
+   "blocks": [
+    {
+     "id": "about_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "关于富林泛泰",
+      "orgline": "工业地坪材料研发 · 生产 · 施工",
+      "h1": "二十余年，只做工业地坪这一件事",
+      "h1Grad": "工业地坪",
+      "lead": "富林泛泰自 2001 年进入工业地坪领域，从环氧地坪施工起步，逐步建立聚氨酯砂浆、聚氨酯自流平、环氧与防静电四条产品线，为食品、医药、电子与停车场景提供材料与工程交付。",
+      "chips": [
+       "2001 年起步",
+       "材料自研",
+       "工程直营",
+       "全国交付"
+      ],
+      "actions": [
+       {
+        "label": "联络我们",
+        "href": "/contact",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/coffee-shop-meeting.jpg"
+     }
+    },
+    {
+     "id": "about_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "我们是谁",
+      "desc": "一个责任主体，材料与施工不分家。"
+     }
+    },
+    {
+     "id": "about_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "材料研发与生产",
+        "v": "围绕聚氨酯与环氧两条技术路线做配方与生产。产品线覆盖砂浆型、自流平型、薄涂型与防静电体系，按行业工况选型，而不是用一套材料打所有地面。"
+       },
+       {
+        "k": "工程交付",
+        "v": "基面处理是地坪寿命的起点，也是最容易被压缩的环节。我们把含水率、强度、平整度检测写进施工流程，基层不合格就先进场处理，不带着隐患铺面层。"
+       },
+       {
+        "k": "按场景选型",
+        "v": "食品车间怕的是冲洗水与高温消毒，医药车间怕的是积尘与清洁死角，电子厂房怕的是静电，停车场怕的是重载与打滑。同样是「地坪」，解决方案并不通用。"
+       },
+       {
+        "k": "售后与回访",
+        "v": "交付后按使用工况给出清洁与养护建议；出现破损按区域修补，不做整片重做——对在产车间来说，停产时间本身就是成本。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "about_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "发展历程",
+      "desc": "从承接施工，到解决具体工况难题，再到形成产品体系。"
+     }
+    },
+    {
+     "id": "about_05",
+     "key": "step-timeline",
+     "enabled": true,
+     "data": {
+      "title": "关键节点",
+      "variant": "timeline",
+      "steps": [
+       {
+        "title": "2001 · 起步",
+        "desc": "工业地坪概念进入中国，以环氧地坪施工商身份进入行业。"
+       },
+       {
+        "title": "2005 · 一个具体难题",
+        "desc": "为一家日资食品配料企业交付地坪时遇到瓶颈：频繁的化学清洗与蒸汽清洗让常规环氧体系反复失效，每年需多次维修，客户生产多次中断。"
+       },
+       {
+        "title": "2009 · 聚氨酯砂浆路线成型",
+        "desc": "与高校合作开发聚氨酯砂浆体系，用耐化学腐蚀与热稳定性的材料路线，替代反复修补的做法，解决了该客户长期存在的维修问题。"
+       },
+       {
+        "title": "至今 · 四条产品线",
+        "desc": "产品线扩展至聚氨酯砂浆、聚氨酯自流平、环氧体系与防静电体系，覆盖食品饮料加工、医药净化、电子制造与停车场等场景。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "about_06",
+     "key": "notice",
+     "enabled": true,
+     "data": {
+      "variant": "info",
+      "text": "关于企业主体的工商登记信息、统一社会信用代码与施工资质，请见「实体档案」页。资质材料以证件原件为准，本页不重复罗列。"
+     }
+    },
+    {
+     "id": "about_07",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "想了解某类工况的现成做法？",
+      "desc": "我们按行业整理了常见工况与对应体系，也可以直接电话沟通。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "index",
+   "title": "产品体系",
+   "kind": "list",
+   "summary": "聚氨酯砂浆、聚氨酯自流平、环氧与防静电四大系列，按食品饮料、医药净化、电子制造与停车场场景分组。",
+   "seoTitle": "产品体系 — 富林泛泰工业地坪",
+   "seoDescription": "按行业工况分组的工业地坪产品体系：聚氨酯砂浆、聚氨酯自流平、环氧薄涂与防静电体系，覆盖食品饮料、医药净化、电子制造与停车场场景。",
+   "seoKeywords": "聚氨酯砂浆,聚氨酯自流平,环氧地坪,防静电地坪,工业地坪产品",
+   "blocks": [
+    {
+     "id": "products_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "产品体系",
+      "orgline": "四大系列 · 按行业工况选型",
+      "h1": "从全套弹性树脂地坪材料中\n选择适合的那一套",
+      "h1Grad": "适合的那一套",
+      "lead": "聚氨酯砂浆、聚氨酯自流平、环氧薄涂与防静电体系，对应不同的荷载、化学暴露与洁净要求。先看场景，再定体系，最后才是颜色。",
+      "chips": [
+       "食品饮料",
+       "医药净化",
+       "电子制造",
+       "停车场"
+      ],
+      "actions": [
+       {
+        "label": "按行业看方案",
+        "href": "/products/food-beverage",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/beverage-floor-png.jpg"
+     }
+    },
+    {
+     "id": "products_02",
+     "key": "anchor-bar",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "label": "食品饮料",
+        "href": "/products/food-beverage"
+       },
+       {
+        "label": "医药净化",
+        "href": "/products/pharma"
+       },
+       {
+        "label": "电子制造",
+        "href": "/products/electronics"
+       },
+       {
+        "label": "停车场与坡道",
+        "href": "/products/parking"
+       }
+      ]
+     }
+    },
+    {
+     "id": "products_03",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "食品饮料",
+      "desc": "多水潮湿、温度波动、高荷载与化学清洗并存，需要耐冲洗、耐腐蚀且不易积垢的面层。",
+      "moreLabel": "查看行业方案",
+      "moreHref": "/products/food-beverage"
+     }
+    },
+    {
+     "id": "products_04",
+     "key": "product-card",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "name": "ForinCrete SL",
+        "cnName": "聚氨酯砂浆自流平",
+        "series": "ForinCrete",
+        "desc": "无缝、无溶剂，与混凝土形成整体结合，适合湿式与干式食品加工区。",
+        "img": "/assets/img/forintech/forincrete-sl-f-b.jpg",
+        "tags": [
+         "耐冲洗",
+         "耐腐蚀"
+        ],
+        "href": "/products/forincrete-sl"
+       },
+       {
+        "name": "ForinCrete MF",
+        "cnName": "聚氨酯砂浆（重载型）",
+        "series": "ForinCrete",
+        "desc": "针对频繁化学清洗与蒸汽清洗工况，耐热冲击与耐化学性更强。",
+        "img": "/assets/img/forintech/forincrete-mf-f-b.jpg",
+        "tags": [
+         "耐热冲击",
+         "重载"
+        ],
+        "href": "/products/forincrete-sl"
+       },
+       {
+        "name": "ForinCoat EP",
+        "cnName": "环氧薄涂/砂浆",
+        "series": "ForinCoat",
+        "desc": "用于非加工区、走廊与仓储等轻中载区域，造价与工期更友好。",
+        "img": "/assets/img/forintech/forincoat-ep-f-b.jpg",
+        "tags": [
+         "经济",
+         "易清洁"
+        ],
+        "href": "/products/forincoat-ep"
+       }
+      ]
+     }
+    },
+    {
+     "id": "products_05",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "医药净化",
+      "desc": "GMP 环境关注积尘、清洁死角与耐消毒剂，面层需整体无缝并易于验证清洁效果。",
+      "moreLabel": "查看行业方案",
+      "moreHref": "/products/pharma"
+     }
+    },
+    {
+     "id": "products_06",
+     "key": "product-card",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "name": "ForinCrete MT",
+        "cnName": "聚氨酯砂浆（洁净型）",
+        "series": "ForinCrete",
+        "desc": "适用于洁净车间、灌装线与研发实验室，表面致密、耐反复清洁。",
+        "img": "/assets/img/forintech/forincrete-mt-pharm-clean-room.jpg",
+        "tags": [
+         "洁净",
+         "无缝"
+        ],
+        "href": "/products/forincrete-mt"
+       },
+       {
+        "name": "ForinShield SL",
+        "cnName": "环氧自流平",
+        "series": "ForinShield",
+        "desc": "平整度高、观感好，适合对地面外观有要求的洁净与展示区域。",
+        "img": "/assets/img/forintech/forinshield-pharm-1.jpg",
+        "tags": [
+         "高平整",
+         "易清洁"
+        ],
+        "href": "/products/forinshield-sl"
+       },
+       {
+        "name": "ForinCrete SL-ESD",
+        "cnName": "聚氨酯砂浆（防静电）",
+        "series": "ForinCrete",
+        "desc": "在耐化学与耐冲洗的基础上叠加静电耗散能力，用于有防爆要求的区域。",
+        "img": "/assets/img/forintech/forincrete-sl-pharm-clean-room.jpg",
+        "tags": [
+         "防静电",
+         "耐腐蚀"
+        ],
+        "href": "/products/forincrete-sl"
+       }
+      ]
+     }
+    },
+    {
+     "id": "products_07",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "电子制造",
+      "desc": "静电跨步放电会损伤设备与产品，地坪需具备稳定的静电耗散或导静电能力。",
+      "moreLabel": "查看行业方案",
+      "moreHref": "/products/electronics"
+     }
+    },
+    {
+     "id": "products_08",
+     "key": "product-card",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "name": "ForinShield ESD",
+        "cnName": "环氧防静电自流平",
+        "series": "ForinShield",
+        "desc": "用于电子装配、半导体与精密仪器车间，表面电阻可控、观感平整。",
+        "img": "/assets/img/forintech/forinshield-esd-disspative-electron-semi.jpg",
+        "tags": [
+         "防静电",
+         "高平整"
+        ],
+        "href": "/products/forinshield-sl"
+       },
+       {
+        "name": "ForinCrete PU-ESD",
+        "cnName": "聚氨酯防静电（导电/耗散）",
+        "series": "ForinCrete",
+        "desc": "耐化学与防静电叠加，适用于化工、电池与有冲洗要求的电子车间。",
+        "img": "/assets/img/forintech/mma-floor.jpg",
+        "tags": [
+         "防静电",
+         "耐化学"
+        ],
+        "href": "/products/forincrete-sl"
+       }
+      ]
+     }
+    },
+    {
+     "id": "products_09",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "停车场与坡道",
+      "desc": "重载、打滑与轮胎印是停车场地坪的三个主要问题，坡道还需额外处理防滑。",
+      "moreLabel": "查看行业方案",
+      "moreHref": "/products/parking"
+     }
+    },
+    {
+     "id": "products_10",
+     "key": "product-card",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "name": "ForinDeck",
+        "cnName": "停车场与坡道体系",
+        "series": "ForinDeck",
+        "desc": "分层处理车行区、人行区与坡道，坡道采用防滑骨料罩面。",
+        "img": "/assets/img/forintech/beverage-floor-png.jpg",
+        "tags": [
+         "防滑",
+         "耐磨"
+        ],
+        "href": "/products/parking"
+       },
+       {
+        "name": "ForinCrete HA",
+        "cnName": "聚氨酯砂浆（重载耐磨）",
+        "series": "ForinCrete",
+        "desc": "用于装卸区、叉车通道等重载区域，抗冲击与耐磨性能更高。",
+        "img": "/assets/img/forintech/forincrete-ha-f-b.jpg",
+        "tags": [
+         "重载",
+         "耐磨"
+        ],
+        "href": "/products/forincrete-sl"
+       }
+      ]
+     }
+    },
+    {
+     "id": "products_11",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "不确定该选哪一套体系？",
+      "desc": "把车间用途、清洁方式与荷载情况告诉我们，我们按工况给建议，而不是按价格推产品。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "food-beverage",
+   "title": "食品饮料地坪",
+   "kind": "static",
+   "summary": "食品饮料车间地坪方案：耐冲洗、耐化学清洗与温度冲击的聚氨酯砂浆体系，覆盖加工区、清洗间与仓储区。",
+   "seoTitle": "食品饮料地坪 — 聚氨酯砂浆体系 | 富林泛泰",
+   "seoDescription": "针对食品饮料车间的冲洗、化学清洗与温度冲击工况，提供聚氨酯砂浆自流平与重载体系，整体无缝、耐酸碱，适配 HACCP 卫生审核要求。",
+   "seoKeywords": "食品厂地坪,食品车间地坪,聚氨酯砂浆,耐冲洗地坪,HACCP地坪",
+   "blocks": [
+    {
+     "id": "food-beverage_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "行业方案 · 食品饮料",
+      "orgline": "耐冲洗 · 耐化学 · 符合卫生审核要求",
+      "h1": "既要经得起冲洗，\n也要经得起审核",
+      "h1Grad": "经得起审核",
+      "lead": "食品与饮料车间普遍存在多水潮湿、温度波动、高荷载与化学清洗。地坪一旦起壳、开裂或积垢，影响的不仅是观感，还会直接构成卫生审核中的不符合项。",
+      "chips": [
+       "湿式加工",
+       "蒸汽清洗",
+       "HACCP",
+       "耐酸碱"
+      ],
+      "actions": [
+       {
+        "label": "查看推荐体系",
+        "href": "/products/forincrete-sl",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/beverage-floor-png.jpg"
+     }
+    },
+    {
+     "id": "food-beverage_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "这个场景难在哪",
+      "desc": "食品车间的难点不在「铺得平」，而在长期冲洗、温度冲击与卫生审核之下还能不能站得住。"
+     }
+    },
+    {
+     "id": "food-beverage_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "频繁冲洗与化学清洗",
+        "v": "日常冲洗、泡沫清洗与消毒剂交替使用，普通环氧在这种环境下容易出现起壳、脱层。面层需要同时耐水、耐碱、耐常见消毒剂。"
+       },
+       {
+        "k": "温度冲击",
+        "v": "热水冲洗、蒸汽消毒与冷库进出带来的温差，会让材料与基层的伸缩不一致。材料的热稳定性不足时，裂缝会从边角开始。"
+       },
+       {
+        "k": "卫生与积垢",
+        "v": "缝隙、阴角与排水沟周边是积垢重灾区。地面需要整体无缝，阴角做成圆弧过渡，才谈得上「可清洁」。"
+       },
+       {
+        "k": "荷载与作业",
+        "v": "叉车、托盘车与清洗设备反复碾压，要求面层抗冲击、不脱层。加工区与走廊、仓储区的荷载差异也应按区域区分选型。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "food-beverage_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "对应体系",
+      "desc": "同一场景内不同区域（加工区 / 走廊 / 仓储）选型可以不同。"
+     }
+    },
+    {
+     "id": "food-beverage_05",
+     "key": "product-card",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "name": "ForinCrete SL",
+        "cnName": "聚氨酯砂浆自流平",
+        "series": "ForinCrete",
+        "desc": "湿式与干式加工区的主力体系：无缝、无溶剂，与混凝土整体结合。",
+        "img": "/assets/img/forintech/forincrete-sl-f-b.jpg",
+        "tags": [
+         "耐冲洗",
+         "无缝"
+        ],
+        "href": "/products/forincrete-sl"
+       },
+       {
+        "name": "ForinCrete MF",
+        "cnName": "聚氨酯砂浆（耐热冲击型）",
+        "series": "ForinCrete",
+        "desc": "面向频繁化学清洗与蒸汽清洗的重载工况。",
+        "img": "/assets/img/forintech/forincrete-mf-f-b.jpg",
+        "tags": [
+         "耐热冲击",
+         "重载"
+        ],
+        "href": "/products/forincrete-sl"
+       },
+       {
+        "name": "ForinCoat EP",
+        "cnName": "环氧体系",
+        "series": "ForinCoat",
+        "desc": "用于走廊、仓储与办公等非加工区域的轻中载场景。",
+        "img": "/assets/img/forintech/forincoat-ep-f-b.jpg",
+        "tags": [
+         "经济",
+         "易维护"
+        ],
+        "href": "/products/forincoat-ep"
+       }
+      ]
+     }
+    },
+    {
+     "id": "food-beverage_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "desc": "这类场景里最常被问到的几个问题。"
+     }
+    },
+    {
+     "id": "food-beverage_07",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "items": [
+       {
+        "q": "食品车间可以只做环氧吗？",
+        "a": "干燥、无化学清洗的辅助区域可以用环氧；但湿式加工区、清洗间与排水沟周边，环氧在长期水浸与碱洗下容易起壳，通常建议用聚氨酯砂浆体系。"
+       },
+       {
+        "q": "地面需要多久养护才能投产？",
+        "a": "取决于体系与环境温度。聚氨酯砂浆体系通常可在较短时间内恢复轻载通行，具体时间以施工方案与现场温湿度为准，我们会在方案里写明可投产节点。"
+       },
+       {
+        "q": "旧地面可以不做拆除直接翻新吗？",
+        "a": "要看原面层的附着强度与破损范围。局部起壳、空鼓的区域必须剔除到坚实基层；整体附着良好时可以处理后加铺。是否可直接翻新需现场检测判定。"
+       },
+       {
+        "q": "排水沟与阴角怎么处理？",
+        "a": "沟槽与阴角按圆弧过渡处理，与面层同体系施工，避免形成清洁死角。沟盖板与沟边的接缝是重点，需要单独收口。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "food-beverage_08",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "把你的车间工况发给我们",
+      "desc": "使用场景、清洁方式、荷载与工期，四项信息就够我们给出初步建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "pharma",
+   "title": "医药净化地坪",
+   "kind": "static",
+   "summary": "医药与净化车间地坪方案：GMP 环境下的整体无缝聚氨酯砂浆与环氧自流平体系，耐消毒剂、可验证清洁。",
+   "seoTitle": "医药净化车间地坪 — GMP 无缝体系 | 富林泛泰",
+   "seoDescription": "面向制药与医疗器械洁净车间的 GMP 地坪方案：整体无缝、耐反复消毒、阴角圆弧收口，按洁净等级分区选型，可选防静电体系。",
+   "seoKeywords": "医药地坪,洁净车间地坪,GMP地坪,净化车间地面,环氧自流平",
+   "blocks": [
+    {
+     "id": "pharma_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "行业方案 · 医药与净化车间",
+      "orgline": "GMP 环境 · 无缝 · 可验证清洁",
+      "h1": "洁净车间的地面，\n要先做到没有死角",
+      "h1Grad": "没有死角",
+      "lead": "制药与医疗器械车间对地面的要求集中在三点：整体无缝不积尘、耐反复消毒不失效、清洁效果可验证。灌装区、洁净走廊与研发实验室的要求还各不相同。",
+      "chips": [
+       "GMP",
+       "洁净走廊",
+       "耐消毒剂",
+       "防静电可选"
+      ],
+      "actions": [
+       {
+        "label": "查看推荐体系",
+        "href": "/products/forincrete-mt",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/forincrete-mt-pharm-clean-room.jpg"
+     }
+    },
+    {
+     "id": "pharma_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "这个场景难在哪",
+      "desc": "洁净车间的难点是「没有死角」：积尘、缝隙与清洁不到位的边角，都会在审核时暴露。"
+     }
+    },
+    {
+     "id": "pharma_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "积尘与缝隙",
+        "v": "瓷砖与卷材的接缝是积尘与微生物残留的藏身处。洁净区地面通常要求整体无缝，阴角做圆弧，踢脚与地面连续过渡。"
+       },
+       {
+        "k": "消毒剂与清洁验证",
+        "v": "酒精、含氯与季铵盐类消毒剂长期作用，会让部分树脂失光、发白甚至粉化。材料需要在这些介质下保持稳定。"
+       },
+       {
+        "k": "静电与防爆",
+        "v": "部分原料称量区、溶剂存放区有防爆与防静电要求，需要在洁净基础上叠加静电耗散能力。"
+       },
+       {
+        "k": "分区差异",
+        "v": "A/B/C/D 级洁净区、灌装线、包装区与辅助走廊的洁净等级与荷载不同，一套材料铺全厂并不合适。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "pharma_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "对应体系",
+      "desc": "同一场景内不同区域（加工区 / 走廊 / 仓储）选型可以不同。"
+     }
+    },
+    {
+     "id": "pharma_05",
+     "key": "product-card",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "name": "ForinCrete MT",
+        "cnName": "聚氨酯砂浆（洁净型）",
+        "series": "ForinCrete",
+        "desc": "洁净车间、灌装线与实验室的主力体系，表面致密、耐反复清洁。",
+        "img": "/assets/img/forintech/forincrete-mt-pharm-clean-room.jpg",
+        "tags": [
+         "洁净",
+         "无缝"
+        ],
+        "href": "/products/forincrete-mt"
+       },
+       {
+        "name": "ForinShield SL",
+        "cnName": "环氧自流平",
+        "series": "ForinShield",
+        "desc": "平整度与观感更好，适合展示区、包装区与办公连廊。",
+        "img": "/assets/img/forintech/forinshield-pharm-1.jpg",
+        "tags": [
+         "高平整",
+         "易清洁"
+        ],
+        "href": "/products/forinshield-sl"
+       },
+       {
+        "name": "ForinCrete SL-ESD",
+        "cnName": "聚氨酯砂浆（防静电）",
+        "series": "ForinCrete",
+        "desc": "在耐化学基础上叠加静电耗散，用于有防爆要求的称量与溶剂区域。",
+        "img": "/assets/img/forintech/forincrete-sl-pharm-clean-room.jpg",
+        "tags": [
+         "防静电",
+         "耐化学"
+        ],
+        "href": "/products/forincrete-sl"
+       }
+      ]
+     }
+    },
+    {
+     "id": "pharma_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "desc": "这类场景里最常被问到的几个问题。"
+     }
+    },
+    {
+     "id": "pharma_07",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "items": [
+       {
+        "q": "洁净区地面一定要做聚氨酯吗？",
+        "a": "不一定。干燥、无强化学清洗的辅助区可以用环氧自流平；灌装、清洗与有消毒剂反复作用的区域，聚氨酯砂浆的耐化学与耐水性更合适。选型按区域分。"
+       },
+       {
+        "q": "阴阳角与踢脚怎么收口？",
+        "a": "墙地交接做圆弧过渡，与地面同体系施工，形成连续面层，避免直角积尘。设备基础、地漏与穿墙管周边需要单独收口处理。"
+       },
+       {
+        "q": "地面平整度能到什么程度？",
+        "a": "自流平体系在基层处理到位的前提下平整度较好，具体数值取决于基层状况与施工控制。若有 AGV 或高架库运行，建议在方案阶段单独提出平整度要求。"
+       },
+       {
+        "q": "施工会不会影响已有产线？",
+        "a": "可以按区域分段施工，先做非生产区、再做产线周边，配合临时隔离。具体分段与停产窗口在方案阶段一起排。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "pharma_08",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "把你的车间工况发给我们",
+      "desc": "使用场景、清洁方式、荷载与工期，四项信息就够我们给出初步建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "electronics",
+   "title": "电子制造防静电地坪",
+   "kind": "static",
+   "summary": "电子制造车间防静电地坪方案：环氧防静电自流平与聚氨酯防静电体系，覆盖静电耗散、低发尘与耐化学需求。",
+   "seoTitle": "电子制造防静电地坪 — 静电耗散体系 | 富林泛泰",
+   "seoDescription": "面向半导体与电子装配车间的防静电地坪：环氧防静电自流平与聚氨酯防静电体系，按静电防护标准选型，配套接地与铜箔网络。",
+   "seoKeywords": "防静电地坪,ESD地坪,电子车间地坪,环氧防静电,静电耗散",
+   "blocks": [
+    {
+     "id": "electronics_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "行业方案 · 电子制造",
+      "orgline": "静电耗散 · 低发尘 · 耐化学",
+      "h1": "静电看不见，\n但损失是实打实的",
+      "h1Grad": "损失是实打实的",
+      "lead": "半导体、电子装配与精密仪器车间里，人体走动与设备运转产生的静电如不能及时导走，会损伤元器件、干扰设备。地坪是静电泄放通道的一环，需要稳定的电阻区间。",
+      "chips": [
+       "静电耗散",
+       "导静电",
+       "低发尘",
+       "AGV 通行"
+      ],
+      "actions": [
+       {
+        "label": "查看推荐体系",
+        "href": "/products/forinshield-sl",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/forinshield-esd-disspative-electron-semi.jpg"
+     }
+    },
+    {
+     "id": "electronics_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "这个场景难在哪",
+      "desc": "静电看不见，但一次跨步放电就足以损坏设备或整批产品。"
+     }
+    },
+    {
+     "id": "electronics_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "静电耗散能力",
+        "v": "防静电地坪不是「电阻越低越好」。耗散型与导静电型的电阻区间不同，选错反而带来放电风险，需要按车间要求确定。"
+       },
+       {
+        "k": "长期稳定性",
+        "v": "防静电性能依赖导电材料在体系中的分布。施工厚度不均、基层含水率高，都会让电阻值随时间漂移。"
+       },
+       {
+        "k": "发尘与洁净",
+        "v": "电子车间对发尘敏感，面层需要致密、不易起粉，接缝越少越好。"
+       },
+       {
+        "k": "设备与通行",
+        "v": "AGV、货架与生产设备的集中荷载，对平整度与抗压强度有额外要求。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "electronics_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "对应体系",
+      "desc": "同一场景内不同区域（加工区 / 走廊 / 仓储）选型可以不同。"
+     }
+    },
+    {
+     "id": "electronics_05",
+     "key": "product-card",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "name": "ForinShield ESD",
+        "cnName": "环氧防静电自流平",
+        "series": "ForinShield",
+        "desc": "电子装配与精密仪器车间常用体系，表面平整、电阻可控。",
+        "img": "/assets/img/forintech/forinshield-esd-disspative-electron-semi.jpg",
+        "tags": [
+         "防静电",
+         "高平整"
+        ],
+        "href": "/products/forinshield-sl"
+       },
+       {
+        "name": "ForinCrete PU-ESD",
+        "cnName": "聚氨酯防静电体系",
+        "series": "ForinCrete",
+        "desc": "耐化学与防静电叠加，适用于电池、化工电子等有腐蚀介质的环境。",
+        "img": "/assets/img/forintech/mma-floor.jpg",
+        "tags": [
+         "防静电",
+         "耐化学"
+        ],
+        "href": "/products/forincrete-sl"
+       }
+      ]
+     }
+    },
+    {
+     "id": "electronics_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "desc": "这类场景里最常被问到的几个问题。"
+     }
+    },
+    {
+     "id": "electronics_07",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "items": [
+       {
+        "q": "防静电地坪的电阻要做到多少？",
+        "a": "按车间静电防护要求确定，常见区分是静电耗散型与导静电型两个区间。我们不能凭经验给一个「通用值」，需要在方案阶段确认你的防护标准与接地条件。"
+       },
+       {
+        "q": "防静电性能会衰减吗？",
+        "a": "会受使用与养护影响。接地系统失效、面层磨损或污染都会让实测值偏离。建议按周期复测表面电阻并保留记录。"
+       },
+       {
+        "q": "可以和普通区域一起施工吗？",
+        "a": "可以，但防静电区域需要独立的接地与铜箔网络，边界处理要单独设计，不能与普通区域的面层直接连做。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "electronics_08",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "把你的车间工况发给我们",
+      "desc": "使用场景、清洁方式、荷载与工期，四项信息就够我们给出初步建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "parking",
+   "title": "停车场与坡道地坪",
+   "kind": "static",
+   "summary": "停车场与坡道地坪方案：车行区、人行区与坡道分区处理，重载耐磨与坡道防滑，支持旧地面翻新。",
+   "seoTitle": "停车场与坡道地坪 — 分区防滑方案 | 富林泛泰",
+   "seoDescription": "地下车库与停车楼地坪：车行区、人行区与坡道分区选型，坡道防滑骨料罩面、装卸区重载处理，支持旧地面起砂与空鼓翻新。",
+   "seoKeywords": "停车场地面,车库地坪,坡道防滑,地下车库地坪,旧地面翻新",
+   "blocks": [
+    {
+     "id": "parking_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "行业方案 · 停车场与坡道",
+      "orgline": "重载 · 防滑 · 耐污 · 分区处理",
+      "h1": "车行、人行与坡道，\n不该用同一套做法",
+      "h1Grad": "不该用同一套做法",
+      "lead": "地下车库与多层停车楼的地面，车行区、人行区、坡道与装卸区承受的荷载和摩擦完全不同。分区处理既能把预算花在关键位置，也能避免坡道打滑这类安全问题。",
+      "chips": [
+       "地下车库",
+       "坡道防滑",
+       "重载耐磨",
+       "旧地面翻新"
+      ],
+      "actions": [
+       {
+        "label": "获取方案",
+        "href": "/contact",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/mma-floor.jpg"
+     }
+    },
+    {
+     "id": "parking_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "这个场景难在哪",
+      "desc": "停车场要同时满足重载、防滑、耐污与观感，坡道还要单独处理。"
+     }
+    },
+    {
+     "id": "parking_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "坡道防滑",
+        "v": "坡道是停车场事故高发位置，尤其在雨天与冬季。防滑骨料罩面与拉毛处理是常规做法，坡度与转弯半径也要一起看。"
+       },
+       {
+        "k": "重载与轮辙",
+        "v": "装卸区、货运通道承受重车碾压，普通薄涂容易被压出轮辙。这些区域要单独加厚或改用砂浆型体系。"
+       },
+       {
+        "k": "轮胎印与污渍",
+        "v": "深色轮胎印在浅色地面上一目了然。除了材料选择，表面致密度与清洁方式也决定长期观感。"
+       },
+       {
+        "k": "旧地面翻新",
+        "v": "老车库常见的起砂、空鼓与油污，需要先处理基层再谈面层，否则新做的面层会连片脱落。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "parking_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "对应体系",
+      "desc": "同一场景内不同区域（加工区 / 走廊 / 仓储）选型可以不同。"
+     }
+    },
+    {
+     "id": "parking_05",
+     "key": "product-card",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "name": "ForinDeck",
+        "cnName": "停车场与坡道体系",
+        "series": "ForinDeck",
+        "desc": "按车行区、人行区与坡道分区配置，坡道采用防滑骨料罩面。",
+        "img": "/assets/img/forintech/beverage-floor-png.jpg",
+        "tags": [
+         "防滑",
+         "分区"
+        ],
+        "href": "/contact"
+       },
+       {
+        "name": "ForinCrete HA",
+        "cnName": "聚氨酯砂浆（重载耐磨）",
+        "series": "ForinCrete",
+        "desc": "装卸区与货运通道的重载区域，抗冲击与耐磨要求更高。",
+        "img": "/assets/img/forintech/forincrete-ha-f-b.jpg",
+        "tags": [
+         "重载",
+         "耐磨"
+        ],
+        "href": "/products/forincrete-sl"
+       }
+      ]
+     }
+    },
+    {
+     "id": "parking_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "desc": "这类场景里最常被问到的几个问题。"
+     }
+    },
+    {
+     "id": "parking_07",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "items": [
+       {
+        "q": "坡道一定要做防滑处理吗？",
+        "a": "建议做。坡道在潮湿状态下摩擦系数下降明显，尤其是进出地库的坡段。具体做法按坡度、使用频次与环境决定。"
+       },
+       {
+        "q": "旧车库地面起砂怎么处理？",
+        "a": "起砂说明基层强度不足或表面已经粉化，需要打磨清除松散层、做强度检测后再决定是加固还是整体翻新。直接在上面刷涂层通常撑不久。"
+       },
+       {
+        "q": "施工期间车库还能用吗？",
+        "a": "可以分区分段施工，保留通行路线。具体分区与开放时间在方案阶段排定，避免影响业主出入。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "parking_08",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "把你的车间工况发给我们",
+      "desc": "使用场景、清洁方式、荷载与工期，四项信息就够我们给出初步建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "forincrete-sl",
+   "title": "ForinCrete SL 聚氨酯砂浆自流平",
+   "kind": "detail",
+   "summary": "ForinCrete SL 三组分聚氨酯砂浆自流平地坪：无缝、无溶剂、耐腐蚀，适用于食品饮料加工区、实验室与仓储等轻中载场景。",
+   "seoTitle": "ForinCrete SL 聚氨酯砂浆自流平 | 富林泛泰",
+   "seoDescription": "ForinCrete SL 是三组分聚氨酯砂浆地坪系统：无缝、无溶剂，与混凝土整体结合，耐腐蚀，适用于食品饮料加工、实验室与仓储等区域。",
+   "seoKeywords": "ForinCrete SL,聚氨酯砂浆自流平,食品级地坪,耐腐蚀地坪",
+   "blocks": [
+    {
+     "id": "forincrete-sl_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "产品 · ForinCrete",
+      "orgline": "聚氨酯砂浆自流平",
+      "h1": "ForinCrete SL\n聚氨酯砂浆自流平",
+      "h1Grad": "聚氨酯砂浆",
+      "lead": "三组分聚氨酯砂浆体系，无缝、无溶剂，与混凝土形成整体结合。适合轻到中等荷载、湿式或干式食品饮料加工环境，也用于实验室、走廊与仓储等区域。",
+      "chips": [
+       "三组分",
+       "无缝",
+       "耐腐蚀",
+       "食品级认证"
+      ],
+      "actions": [
+       {
+        "label": "获取选型建议",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "返回产品体系",
+        "href": "/products"
+       }
+      ],
+      "bgImage": "/assets/img/forintech/forincrete-sl-f-b.jpg"
+     }
+    },
+    {
+     "id": "forincrete-sl_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统说明",
+      "desc": "一句话概括这套系统是什么、用在哪。"
+     }
+    },
+    {
+     "id": "forincrete-sl_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "系统构成",
+        "v": "ForinCrete SL 是三组分聚氨酯砂浆地坪系统：无缝、无溶剂、表面平整，与混凝土形成三维交联。适用于轻至中等荷载、温度波动较小、存在湿式或干式清洗的食品饮料加工环境，也适用于实验室、走廊、仓库等非加工区域。"
+       },
+       {
+        "k": "适用场景",
+        "v": "配制车间、灌装线、生产流水线周边，以及实验室、走廊与仓储等需要耐腐蚀面层的区域。重载或高温冲洗工况可考虑 ForinCrete MT / MF 体系。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincrete-sl_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统构造",
+      "desc": "自上而下：使用面层到结构基层。"
+     }
+    },
+    {
+     "id": "forincrete-sl_05",
+     "key": "system-stack",
+     "enabled": true,
+     "data": {
+      "title": "构造层次（自上而下）",
+      "layers": [
+       {
+        "role": "面漆",
+        "product": "ForinShield SL",
+        "thickness": "—",
+        "desc": "提供致密耐磨的使用面层"
+       },
+       {
+        "role": "中涂",
+        "product": "ForinShield SL Mid",
+        "thickness": "—",
+        "desc": "找平并承载部分机械应力"
+       },
+       {
+        "role": "底漆",
+        "product": "ForinShield SL 底漆",
+        "thickness": "—",
+        "desc": "封闭基层毛细孔，提升层间附着"
+       },
+       {
+        "role": "基层",
+        "product": "混凝土",
+        "thickness": "—",
+        "desc": "需达到强度与含水率要求"
+       }
+      ],
+      "note": "厚度为常规做法，实际以现场勘测与设计选型为准；基层含水率与强度不达标时需先处理基层。"
+     }
+    },
+    {
+     "id": "forincrete-sl_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统特点",
+      "desc": "以下为材料本身的性能描述，不构成对具体项目的效果承诺。"
+     }
+    },
+    {
+     "id": "forincrete-sl_07",
+     "key": "feature-cards",
+     "enabled": true,
+     "data": {
+      "columns": "4",
+      "items": [
+       {
+        "icon": "FDA",
+        "title": "材料认证",
+        "desc": "HACCP、FDA、CE、USDA 等食品接触与出口相关认证"
+       },
+       {
+        "icon": "耐磨",
+        "title": "耐磨抗冲击",
+        "desc": "耐磨与抗冲击性能优于常规环氧体系"
+       },
+       {
+        "icon": "防腐",
+        "title": "耐化学腐蚀",
+        "desc": "对常见酸碱与清洗剂具备综合耐腐蚀能力"
+       },
+       {
+        "icon": "经济",
+        "title": "材料利用率高",
+        "desc": "单位面积材料消耗较低，适合大面积连续施工"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincrete-sl_08",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "标准色卡",
+      "desc": "常规供货色，特殊色号需单独确认。"
+     }
+    },
+    {
+     "id": "forincrete-sl_09",
+     "key": "color-palette",
+     "enabled": true,
+     "data": {
+      "title": "可选颜色",
+      "swatches": [
+       {
+        "name": "浅灰",
+        "hex": "#CED0CF"
+       },
+       {
+        "name": "深灰",
+        "hex": "#7E7E7E"
+       },
+       {
+        "name": "米色",
+        "hex": "#CCC0A3"
+       },
+       {
+        "name": "红色",
+        "hex": "#953338"
+       },
+       {
+        "name": "绿色",
+        "hex": "#1A7747"
+       },
+       {
+        "name": "蓝色",
+        "hex": "#1B7CBE"
+       }
+      ],
+      "note": "色值为屏幕近似显示，实际颜色受光线与基层影响存在色差；订货以供应商实物色卡为准。"
+     }
+    },
+    {
+     "id": "forincrete-sl_10",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "desc": "选型与施工中最常被问到的几个问题。"
+     }
+    },
+    {
+     "id": "forincrete-sl_11",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "items": [
+       {
+        "q": "ForinCrete SL 和环氧地坪有什么区别？",
+        "a": "主要差别在耐水与耐化学：聚氨酯砂浆在长期潮湿、频繁冲洗与化学清洗环境下更稳定；环氧在干燥环境里观感更好、造价更低。湿区优先聚氨酯，干区可以按预算选环氧。"
+       },
+       {
+        "q": "适合多大荷载？",
+        "a": "按原厂定位适合轻至中等荷载。叉车频繁通行的重载区、装卸区建议改用砂浆型重载体系，并在方案阶段提供荷载情况。"
+       },
+       {
+        "q": "能在旧地面上做吗？",
+        "a": "可以，前提是旧面层附着良好、无空鼓。起砂、空鼓或油污渗透的区域需要先剔除与处理，否则新面层会被带着一起脱落。"
+       },
+       {
+        "q": "颜色只能从标准色卡里选吗？",
+        "a": "标准色卡是常规供货色，交期与起订量更友好。特殊色号可以单独确认，但会影响起订量与交期。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincrete-sl_12",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "需要这套系统的报价或样板？",
+      "desc": "告诉我们面积、基层状况与投产时间，我们会给出方案与报价区间。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "forincrete-mt",
+   "title": "ForinCrete MT 聚氨酯砂浆（耐温防滑型）",
+   "kind": "detail",
+   "summary": "ForinCrete MT 聚氨酯砂浆地坪：无缝防滑纹理，可承受 -20℃~+120℃ 短期热冲击与 4.5MPa 高压冲洗，适用于食品高温烹饪与清洗区。",
+   "seoTitle": "ForinCrete MT 耐温防滑聚氨酯砂浆 | 富林泛泰",
+   "seoDescription": "ForinCrete MT 三组分聚氨酯砂浆地坪，带防滑纹理，可承受 -20℃ 至 +120℃ 短期热冲击与 4.5MPa 水蒸气冲洗，适用于食品高温与清洗区域。",
+   "seoKeywords": "ForinCrete MT,耐温地坪,防滑地坪,聚氨酯砂浆,食品厂地坪",
+   "blocks": [
+    {
+     "id": "forincrete-mt_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "产品 · ForinCrete",
+      "orgline": "聚氨酯砂浆（耐温防滑型）",
+      "h1": "ForinCrete MT\n耐温 · 防滑的重载砂浆",
+      "h1Grad": "耐温 · 防滑",
+      "lead": "三组分聚氨酯砂浆体系，无缝、无溶剂并带防滑纹理，可承受短期 -20℃ 至 +120℃ 的热冲击与高压水蒸气冲洗，适用于食品工业的高温烹饪与清洗区域。",
+      "chips": [
+       "耐热冲击",
+       "防滑纹理",
+       "耐高压冲洗",
+       "无缝"
+      ],
+      "actions": [
+       {
+        "label": "获取选型建议",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "返回产品体系",
+        "href": "/products"
+       }
+      ],
+      "bgImage": "/assets/img/forintech/forincrete-mt-pharm-clean-room.jpg"
+     }
+    },
+    {
+     "id": "forincrete-mt_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统说明",
+      "desc": "一句话概括这套系统是什么、用在哪。"
+     }
+    },
+    {
+     "id": "forincrete-mt_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "系统构成",
+        "v": "ForinCrete MT 是三组分聚氨酯砂浆地坪系统，无缝、无溶剂，表面带防滑纹理。有机与无机材料同聚氨酯、混凝土形成三维交联，抗冲击、耐磨，并具备耐热、耐湿与耐化学腐蚀性能。"
+       },
+       {
+        "k": "适用场景",
+        "v": "耐高温区、烹饪区、频繁蒸汽清洗与高压水冲洗的车间地面；对防滑有明确要求的湿滑作业区。"
+       },
+       {
+        "k": "耐温范围",
+        "v": "可承受 -20℃ 至 +120℃ 的短期热冲击；长期使用温度需按实际工况确认。"
+       },
+       {
+        "k": "耐冲洗",
+        "v": "可承受 4.5MPa 水蒸气吹扫、清洗与灭菌工况。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincrete-mt_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统构造",
+      "desc": "自上而下：使用面层到结构基层。"
+     }
+    },
+    {
+     "id": "forincrete-mt_05",
+     "key": "system-stack",
+     "enabled": true,
+     "data": {
+      "title": "构造层次（自上而下）",
+      "layers": [
+       {
+        "role": "面漆",
+        "product": "ForinCrete MT",
+        "thickness": "—",
+        "desc": "带防滑纹理的耐温耐磨面层"
+       },
+       {
+        "role": "底漆",
+        "product": "ForinCrete MF1",
+        "thickness": "—",
+        "desc": "封闭基层并过渡到砂浆层"
+       },
+       {
+        "role": "基层",
+        "product": "混凝土",
+        "thickness": "—",
+        "desc": "需达到强度与含水率要求"
+       }
+      ],
+      "note": "厚度为常规做法，实际以现场勘测与设计选型为准；基层含水率与强度不达标时需先处理基层。"
+     }
+    },
+    {
+     "id": "forincrete-mt_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统特点",
+      "desc": "以下为材料本身的性能描述，不构成对具体项目的效果承诺。"
+     }
+    },
+    {
+     "id": "forincrete-mt_07",
+     "key": "feature-cards",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "icon": "耐磨",
+        "title": "耐磨抗冲击",
+        "desc": "耐磨与抗冲击性能优于常规环氧体系"
+       },
+       {
+        "icon": "耐温",
+        "title": "耐热冲击",
+        "desc": "短期 -20℃ 至 +120℃ 温差下保持稳定"
+       },
+       {
+        "icon": "防腐",
+        "title": "耐化学腐蚀",
+        "desc": "对常见酸碱与清洗剂具备综合耐腐蚀能力"
+       },
+       {
+        "icon": "防水",
+        "title": "耐高压冲洗",
+        "desc": "可承受 4.5MPa 水蒸气吹扫、清洗与灭菌"
+       },
+       {
+        "icon": "防滑",
+        "title": "厚重防滑纹理",
+        "desc": "满足湿滑与极端环境下的防滑要求"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincrete-mt_08",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "标准色卡",
+      "desc": "常规供货色，特殊色号需单独确认。"
+     }
+    },
+    {
+     "id": "forincrete-mt_09",
+     "key": "color-palette",
+     "enabled": true,
+     "data": {
+      "title": "可选颜色",
+      "swatches": [
+       {
+        "name": "浅灰",
+        "hex": "#CED0CF"
+       },
+       {
+        "name": "深灰",
+        "hex": "#7E7E7E"
+       },
+       {
+        "name": "米色",
+        "hex": "#CCC0A3"
+       },
+       {
+        "name": "红色",
+        "hex": "#953338"
+       },
+       {
+        "name": "绿色",
+        "hex": "#1A7747"
+       },
+       {
+        "name": "蓝色",
+        "hex": "#1B7CBE"
+       }
+      ],
+      "note": "色值为屏幕近似显示，实际颜色受光线与基层影响存在色差；订货以供应商实物色卡为准。"
+     }
+    },
+    {
+     "id": "forincrete-mt_10",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "desc": "选型与施工中最常被问到的几个问题。"
+     }
+    },
+    {
+     "id": "forincrete-mt_11",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "items": [
+       {
+        "q": "MT 和 SL 怎么选？",
+        "a": "看两点：温度冲击与防滑要求。有蒸汽清洗、高温冲洗或明确防滑要求的区域用 MT；常规湿式加工、温度波动小的区域用 SL 即可，造价也更友好。"
+       },
+       {
+        "q": "防滑纹理会不会不好清洁？",
+        "a": "纹理深度与清洁方式需要平衡。纹理越粗防滑越好但越容易藏污，具体纹理按清洁方式与卫生等级确定，方案阶段会一起确认。"
+       },
+       {
+        "q": "-20℃ 到 +120℃ 是长期使用温度吗？",
+        "a": "这是短期热冲击的承受范围，不等于长期工作温度。冷库、蒸煮间这类持续高温或低温环境，需要按实际工况单独确认体系。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincrete-mt_12",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "需要这套系统的报价或样板？",
+      "desc": "告诉我们面积、基层状况与投产时间，我们会给出方案与报价区间。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "forinshield-sl",
+   "title": "ForinShield SL 环氧自流平",
+   "kind": "detail",
+   "summary": "ForinShield SL 无溶剂环氧自流平地坪：表面平整、低发尘、易清洁，适用于洁净室、包装区与展示区域。",
+   "seoTitle": "ForinShield SL 无溶剂环氧自流平 | 富林泛泰",
+   "seoDescription": "ForinShield SL 无溶剂高性能环氧自流平：平整度高、低颗粒释放、易清洁，适用于洁净室、净化走廊、包装区与展示区域。",
+   "seoKeywords": "ForinShield SL,环氧自流平,无溶剂环氧,洁净室地坪",
+   "blocks": [
+    {
+     "id": "forinshield-sl_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "产品 · ForinShield",
+      "orgline": "无溶剂环氧自流平",
+      "h1": "ForinShield SL\n无溶剂环氧自流平",
+      "h1Grad": "环氧自流平",
+      "lead": "无溶剂高性能环氧自流平体系，表面平整、观感好、易清洁，可满足手推车与橡胶轮胎叉车通行，适用于洁净室、包装区与展示区域。",
+      "chips": [
+       "无溶剂",
+       "高平整",
+       "低发尘",
+       "易清洁"
+      ],
+      "actions": [
+       {
+        "label": "获取选型建议",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "返回产品体系",
+        "href": "/products"
+       }
+      ],
+      "bgImage": "/assets/img/forintech/forinshield-pharm-1.jpg"
+     }
+    },
+    {
+     "id": "forinshield-sl_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统说明",
+      "desc": "一句话概括这套系统是什么、用在哪。"
+     }
+    },
+    {
+     "id": "forinshield-sl_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "系统构成",
+        "v": "ForinShield SL 是无溶剂高性能环氧树脂自流平地坪系统。自流平表面平整度高、装饰性好、易于清洁，可支持手推车与橡胶轮胎叉车通行。"
+       },
+       {
+        "k": "适用场景",
+        "v": "洁净室与净化走廊、包装区、展示厅、办公连廊等对平整度与观感有要求的区域；不适合长期潮湿或强化学冲洗环境。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forinshield-sl_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统构造",
+      "desc": "自上而下：使用面层到结构基层。"
+     }
+    },
+    {
+     "id": "forinshield-sl_05",
+     "key": "system-stack",
+     "enabled": true,
+     "data": {
+      "title": "构造层次（自上而下）",
+      "layers": [
+       {
+        "role": "面漆",
+        "product": "ForinShield SL",
+        "thickness": "—",
+        "desc": "自流平面层，平整且易清洁"
+       },
+       {
+        "role": "中涂",
+        "product": "ForinShield SL Mid",
+        "thickness": "—",
+        "desc": "找平并提升整体强度"
+       },
+       {
+        "role": "底漆",
+        "product": "ForinShield SL 底漆",
+        "thickness": "—",
+        "desc": "封闭基层，提升附着力"
+       },
+       {
+        "role": "基层",
+        "product": "混凝土",
+        "thickness": "—",
+        "desc": "需达到强度与含水率要求"
+       }
+      ],
+      "note": "厚度为常规做法，实际以现场勘测与设计选型为准；基层含水率与强度不达标时需先处理基层。"
+     }
+    },
+    {
+     "id": "forinshield-sl_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统特点",
+      "desc": "以下为材料本身的性能描述，不构成对具体项目的效果承诺。"
+     }
+    },
+    {
+     "id": "forinshield-sl_07",
+     "key": "feature-cards",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "icon": "洁净",
+        "title": "低释放",
+        "desc": "颗粒物与污染物释放量低，满足洁净环境要求"
+       },
+       {
+        "icon": "易洁",
+        "title": "表面无尘",
+        "desc": "致密表面便于清洁，利于维持环境卫生"
+       },
+       {
+        "icon": "耐磨",
+        "title": "高固含",
+        "desc": "树脂固含量高，耐磨性较好，使用寿命长"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forinshield-sl_08",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "标准色卡",
+      "desc": "常规供货色，特殊色号需单独确认。"
+     }
+    },
+    {
+     "id": "forinshield-sl_09",
+     "key": "color-palette",
+     "enabled": true,
+     "data": {
+      "title": "可选颜色",
+      "swatches": [
+       {
+        "name": "浅灰",
+        "hex": "#CED0CF"
+       },
+       {
+        "name": "深灰",
+        "hex": "#7E7E7E"
+       },
+       {
+        "name": "米色",
+        "hex": "#CCC0A3"
+       },
+       {
+        "name": "红色",
+        "hex": "#953338"
+       },
+       {
+        "name": "绿色",
+        "hex": "#1A7747"
+       },
+       {
+        "name": "蓝色",
+        "hex": "#1B7CBE"
+       }
+      ],
+      "note": "色值为屏幕近似显示，实际颜色受光线与基层影响存在色差；订货以供应商实物色卡为准。"
+     }
+    },
+    {
+     "id": "forinshield-sl_10",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "desc": "选型与施工中最常被问到的几个问题。"
+     }
+    },
+    {
+     "id": "forinshield-sl_11",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "items": [
+       {
+        "q": "环氧自流平能用在湿区吗？",
+        "a": "不建议用在长期积水或频繁冲洗的区域。环氧体系在长期水浸与碱洗下容易失光、起壳，这类区域应选聚氨酯砂浆体系。"
+       },
+       {
+        "q": "平整度能做到什么程度？",
+        "a": "在基层处理到位的前提下，自流平体系的平整度表现较好。若车间有 AGV 或高架库运行，需要在方案阶段明确平整度指标并单独控制。"
+       },
+       {
+        "q": "能做防静电版本吗？",
+        "a": "可以。防静电环氧体系需要配套接地与导电网络，电阻区间按车间静电防护标准确定，不能与普通区域直接连做。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forinshield-sl_12",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "需要这套系统的报价或样板？",
+      "desc": "告诉我们面积、基层状况与投产时间，我们会给出方案与报价区间。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "products",
+   "slug": "forincoat-ep",
+   "title": "ForinCoat EP 环氧薄涂",
+   "kind": "detail",
+   "summary": "ForinCoat EP 双组分环氧薄涂：经济、工期短、易清洁，适用于临时使用区与过渡区域等短期场景。",
+   "seoTitle": "ForinCoat EP 环氧薄涂 | 富林泛泰",
+   "seoDescription": "ForinCoat EP 双组分环氧树脂薄涂体系：无缝、易清洁、施工周期短、材料成本低，适用于厂区临时使用与过渡区域等短期场景。",
+   "seoKeywords": "ForinCoat EP,环氧薄涂,经济型地坪,厂房地坪",
+   "blocks": [
+    {
+     "id": "forincoat-ep_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "产品 · ForinCoat",
+      "orgline": "双组分环氧薄涂",
+      "h1": "ForinCoat EP\n经济型环氧薄涂",
+      "h1Grad": "经济型",
+      "lead": "双组分环氧树脂薄涂体系，形成易清洁的无缝地面，适合使用周期较短或预算敏感的场所，例如厂区临时使用区与过渡区域。",
+      "chips": [
+       "经济",
+       "工期短",
+       "无缝",
+       "易清洁"
+      ],
+      "actions": [
+       {
+        "label": "获取选型建议",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "返回产品体系",
+        "href": "/products"
+       }
+      ],
+      "bgImage": "/assets/img/forintech/forincoat-ep-f-b.jpg"
+     }
+    },
+    {
+     "id": "forincoat-ep_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统说明",
+      "desc": "一句话概括这套系统是什么、用在哪。"
+     }
+    },
+    {
+     "id": "forincoat-ep_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "系统构成",
+        "v": "ForinCoat EP 是双组分环氧树脂薄涂层系统，形成无缝、易清洁的表面，施工周期短、材料成本较低，适用于设计使用周期较短（约 0.5~1 年）的场景。"
+       },
+       {
+        "k": "适用场景",
+        "v": "厂区临时使用区、过渡区域、预算敏感的辅助空间；不建议用于重载、频繁冲洗或长期使用的主生产区。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincoat-ep_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统构造",
+      "desc": "自上而下：使用面层到结构基层。"
+     }
+    },
+    {
+     "id": "forincoat-ep_05",
+     "key": "system-stack",
+     "enabled": true,
+     "data": {
+      "title": "构造层次（自上而下）",
+      "layers": [
+       {
+        "role": "面漆",
+        "product": "ForinCoat EP",
+        "thickness": "—",
+        "desc": "环氧薄涂面层"
+       },
+       {
+        "role": "中涂",
+        "product": "ForinCoat EP Mid",
+        "thickness": "—",
+        "desc": "找平与过渡层"
+       },
+       {
+        "role": "底漆",
+        "product": "ForinCoat EP 底漆",
+        "thickness": "—",
+        "desc": "封闭基层，提升附着"
+       },
+       {
+        "role": "基层",
+        "product": "混凝土",
+        "thickness": "—",
+        "desc": "需达到强度与含水率要求"
+       }
+      ],
+      "note": "厚度为常规做法，实际以现场勘测与设计选型为准；基层含水率与强度不达标时需先处理基层。"
+     }
+    },
+    {
+     "id": "forincoat-ep_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "系统特点",
+      "desc": "以下为材料本身的性能描述，不构成对具体项目的效果承诺。"
+     }
+    },
+    {
+     "id": "forincoat-ep_07",
+     "key": "feature-cards",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "icon": "经济",
+        "title": "材料成本低",
+        "desc": "单位面积造价较低，施工效率高"
+       },
+       {
+        "icon": "易洁",
+        "title": "易于清洁",
+        "desc": "无缝表面，日常清洁维护简单"
+       },
+       {
+        "icon": "工期",
+        "title": "施工周期短",
+        "desc": "适合需要尽快恢复使用的过渡场景"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincoat-ep_08",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "标准色卡",
+      "desc": "常规供货色，特殊色号需单独确认。"
+     }
+    },
+    {
+     "id": "forincoat-ep_09",
+     "key": "color-palette",
+     "enabled": true,
+     "data": {
+      "title": "可选颜色",
+      "swatches": [
+       {
+        "name": "浅灰",
+        "hex": "#CED0CF"
+       },
+       {
+        "name": "深灰",
+        "hex": "#7E7E7E"
+       },
+       {
+        "name": "米色",
+        "hex": "#CCC0A3"
+       },
+       {
+        "name": "红色",
+        "hex": "#953338"
+       },
+       {
+        "name": "绿色",
+        "hex": "#1A7747"
+       },
+       {
+        "name": "蓝色",
+        "hex": "#1B7CBE"
+       }
+      ],
+      "note": "色值为屏幕近似显示，实际颜色受光线与基层影响存在色差；订货以供应商实物色卡为准。"
+     }
+    },
+    {
+     "id": "forincoat-ep_10",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "desc": "选型与施工中最常被问到的几个问题。"
+     }
+    },
+    {
+     "id": "forincoat-ep_11",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "常见问题",
+      "items": [
+       {
+        "q": "薄涂能用多久？",
+        "a": "按原厂定位适用于约 0.5~1 年的短期使用场景。长期主生产区建议选砂浆型或自流平体系，薄涂在重载与冲洗下磨损较快。"
+       },
+       {
+        "q": "薄涂和自流平分不清？",
+        "a": "主要差在厚度与平整度：薄涂是涂层，厚度小、造价低；自流平厚度更大、表面更平整，承载与观感都更好。"
+       },
+       {
+        "q": "可以只做局部吗？",
+        "a": "可以，但要处理好与既有面层的接缝，避免形成台阶或渗水缝。局部修补的色差通常难以完全消除。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "forincoat-ep_12",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "需要这套系统的报价或样板？",
+      "desc": "告诉我们面积、基层状况与投产时间，我们会给出方案与报价区间。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "solutions",
+   "slug": "index",
+   "title": "解决方案",
+   "kind": "static",
+   "summary": "地坪交付流程：设计咨询、工勘诊断、方案定制、施工交付四步，材料与施工可由同一责任主体承担。",
+   "seoTitle": "解决方案 — 地坪选型与施工交付 | 富林泛泰",
+   "seoDescription": "从设计咨询、工勘诊断到方案定制与施工交付的地坪服务流程，按区域分区选型，材料与施工同主体交付，支持与业主指定工程商配合。",
+   "seoKeywords": "",
+   "blocks": [
+    {
+     "id": "solutions_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "解决方案",
+      "orgline": "设计选型 · 基面诊断 · 施工交付",
+      "h1": "从设计选型到施工交付，\n一个责任主体跟到底",
+      "h1Grad": "一个责任主体",
+      "lead": "地坪出问题，往往不是材料单方面的问题：基层没处理干净、施工时含水率超标、工序赶工，都会让再好的材料提前失效。我们把勘测、选型、施工与验收放在同一条线上交付。",
+      "chips": [
+       "基面勘测",
+       "选型咨询",
+       "直营施工",
+       "分段交付"
+      ],
+      "actions": [
+       {
+        "label": "提交需求",
+        "href": "/contact",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/be719b-fe3b624182f143aa81c102b82a3f90f9m.jpg"
+     }
+    },
+    {
+     "id": "solutions_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "四步交付",
+      "desc": "每一步都有可交付物，避免「口头承诺、事后扯皮」。"
+     }
+    },
+    {
+     "id": "solutions_03",
+     "key": "path-cards",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "no": "01",
+        "title": "设计咨询",
+        "desc": "先明确基材条件与使用要求，再判断哪一类地坪适合你。",
+        "bullets": [
+         "使用场景与荷载",
+         "清洁与化学暴露",
+         "洁净或防静电要求"
+        ]
+       },
+       {
+        "no": "02",
+        "title": "工勘诊断",
+        "desc": "现场量化地面状况，把「看起来还行」变成可判断的数据。",
+        "bullets": [
+         "基层强度与含水率",
+         "空鼓与裂缝范围",
+         "旧面层附着情况"
+        ]
+       },
+       {
+        "no": "03",
+        "title": "方案定制",
+        "desc": "按区域给出体系配置与工序安排，控制预算与停产时间。",
+        "bullets": [
+         "分区选型",
+         "工序与工期",
+         "材料清单与报价"
+        ]
+       },
+       {
+        "no": "04",
+        "title": "施工交付",
+        "desc": "按方案施工与验收，交付后给出养护与清洁建议。",
+        "bullets": [
+         "分段施工",
+         "过程验收",
+         "养护与回访"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "id": "solutions_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "我们能承担的部分",
+      "desc": "材料、施工、或两者一起。"
+     }
+    },
+    {
+     "id": "solutions_05",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "材料生产与供应",
+        "v": "聚氨酯砂浆、聚氨酯自流平、环氧与防静电体系由自有产线供货，可按项目进度分批到场，减少现场堆放与受潮。"
+       },
+       {
+        "k": "工程直营交付",
+        "v": "由自有施工团队完成基面处理、面层施工与收口，关键工序有过程记录，避免转包后质量不可控。"
+       },
+       {
+        "k": "与工程商配合",
+        "v": "也接受由业主指定的工程商施工，我们提供材料、技术交底与现场指导，按需派驻技术人员。"
+       },
+       {
+        "k": "售后与修补",
+        "v": "交付后按工况给出清洁与养护建议；局部破损按区域修补，尽量缩短对在产车间的影响。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "solutions_06",
+     "key": "notice",
+     "enabled": true,
+     "data": {
+      "variant": "warning",
+      "text": "工期与造价受基层状况、面积、分区与季节影响较大。我们在勘测后给出书面方案与报价，不做「一口价」承诺；方案中的工期为施工窗口，不含业主侧的停产安排与验收时间。"
+     }
+    },
+    {
+     "id": "solutions_07",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "先做一次基面勘测，再谈方案",
+      "desc": "勘测是判断旧地面能不能直接翻新的唯一依据，也是报价准确的前提。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "about-flooring",
+   "slug": "index",
+   "title": "关于地坪",
+   "kind": "static",
+   "summary": "工业地坪选型知识：耐久性、耐化学、卫生要求与功能指标，以及聚氨酯砂浆与自流平、防静电等概念的对照。",
+   "seoTitle": "关于地坪 — 工业地坪选型基础知识 | 富林泛泰",
+   "seoDescription": "工业地坪为什么重要：耐久性与机械性能、耐化学性、卫生与洁净、安全与功能四个维度，附聚氨酯砂浆、自流平、防静电等概念对照与选型自查清单。",
+   "seoKeywords": "",
+   "blocks": [
+    {
+     "id": "about-flooring_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "关于地坪",
+      "orgline": "选型前需要搞清楚的几件事",
+      "h1": "工业地坪的价值，\n不在铺好那天",
+      "h1Grad": "不在铺好那天",
+      "lead": "地坪是厂房里面积最大、也最容易被忽视的一项投入。它真正的成本不在施工报价，而在使用三五年之后：是否起壳、是否要停产修补、是否影响卫生审核。",
+      "chips": [
+       "耐久性",
+       "机械性能",
+       "耐化学",
+       "卫生要求"
+      ],
+      "actions": [
+       {
+        "label": "看行业方案",
+        "href": "/products",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/be719b-1cc35cdbd15f4a84a479ec3b4e22225bm.jpg"
+     }
+    },
+    {
+     "id": "about-flooring_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "为什么工业地坪重要",
+      "desc": "四个维度决定了地面能不能长期用下去。"
+     }
+    },
+    {
+     "id": "about-flooring_03",
+     "key": "vcard-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "k": "耐久性与机械性能",
+        "v": "工业环境里有重型设备、叉车与人流。地坪要承受与之对应的磨损、冲击与点荷载，才谈得上「耐用」。抗压强度、抗冲击与耐磨是三个不同的指标。"
+       },
+       {
+        "k": "耐化学性",
+        "v": "食品的酸碱、清洗剂、消毒剂、油品与溶剂，会持续侵蚀面层。耐化学性不是「能不能扛住一次泼洒」，而是长期接触后的稳定性。"
+       },
+       {
+        "k": "卫生与洁净",
+        "v": "缝隙、阴角、破损处是积垢与微生物的藏身处。地面是否整体无缝、是否耐反复清洁，直接关系到卫生审核结果。"
+       },
+       {
+        "k": "安全与功能",
+        "v": "防滑、防静电、耐温与低发尘，属于功能性要求。这些指标要在选型阶段提出，事后很难通过表面处理补救。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "about-flooring_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "常见概念对照",
+      "desc": "选型时最容易被混为一谈的几组词。"
+     }
+    },
+    {
+     "id": "about-flooring_05",
+     "key": "term-cards",
+     "enabled": true,
+     "data": {
+      "cols": "2",
+      "items": [
+       {
+        "term": "聚氨酯砂浆 vs 聚氨酯自流平",
+        "plain": "两者都是聚氨酯体系。砂浆型含骨料，厚度更大、抗冲击与耐温更好，适合重载与热冲击；自流平型流平性好、表面更平整，适合中轻载与观感要求高的区域。",
+        "aiPhrase": "砂浆看承载与耐温，自流平看平整与观感"
+       },
+       {
+        "term": "静电耗散 vs 导静电",
+        "plain": "两者都是防静电，区别在表面电阻区间。耗散型泄放速度较慢但更安全，导静电型泄放更快、用于特定危险场所。选哪一种取决于车间的静电防护标准，不是「越低越好」。",
+        "aiPhrase": "电阻区间不同，按防护标准选，不是越低越好"
+       },
+       {
+        "term": "薄涂 vs 自流平",
+        "plain": "薄涂是涂层，厚度小、造价低、工期短；自流平厚度更大、平整度更好、承载更强。薄涂适合过渡与临时区域，主生产区一般选自流平或砂浆型。",
+        "aiPhrase": "薄涂看预算，自流平看承载与平整"
+       },
+       {
+        "term": "基层处理",
+        "plain": "打磨、修补、除尘、测含水率与强度。基层处理占工期的相当比例，也是最容易被压缩的环节——但它决定了面层能附着多久。",
+        "aiPhrase": "基层决定面层寿命，不能压缩"
+       }
+      ]
+     }
+    },
+    {
+     "id": "about-flooring_06",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "选型自查清单",
+      "desc": "把这几项写清楚，方案沟通会快很多。"
+     }
+    },
+    {
+     "id": "about-flooring_07",
+     "key": "feature-cards",
+     "enabled": true,
+     "data": {
+      "columns": "3",
+      "items": [
+       {
+        "icon": "01",
+        "title": "使用场景",
+        "desc": "加工区、洁净区、仓储还是停车？是否有湿式冲洗？"
+       },
+       {
+        "icon": "02",
+        "title": "荷载情况",
+        "desc": "叉车类型与频次、是否有重物跌落、设备集中荷载多大？"
+       },
+       {
+        "icon": "03",
+        "title": "化学暴露",
+        "desc": "接触哪些酸碱、油品、溶剂与消毒剂？浓度与频次？"
+       },
+       {
+        "icon": "04",
+        "title": "温度条件",
+        "desc": "是否有蒸汽清洗、冷库进出或高温烘烤区域？"
+       },
+       {
+        "icon": "05",
+        "title": "卫生等级",
+        "desc": "是否有 GMP、HACCP 等审核要求？洁净等级是多少？"
+       },
+       {
+        "icon": "06",
+        "title": "停产窗口",
+        "desc": "能停多久？能否分区施工？什么时段可以施工？"
+       }
+      ]
+     }
+    },
+    {
+     "id": "about-flooring_08",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "不确定自己属于哪种工况？",
+      "desc": "把上面六项大致说一下，我们帮你判断该看哪一类体系。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "faq",
+   "slug": "index",
+   "title": "常见问题",
+   "kind": "static",
+   "summary": "工业地坪常见问题：聚氨酯与环氧如何选型、厚度与颜色、防静电电阻、施工工期与旧地面翻新、日常清洁与修补。",
+   "seoTitle": "常见问题 — 工业地坪选型与施工 | 富林泛泰",
+   "seoDescription": "工业地坪常见问题解答：聚氨酯与环氧的区别与选型、地坪厚度、颜色定制、防静电电阻区间、施工停产时间、旧地面能否直接翻新、日常清洁与破损修补。",
+   "seoKeywords": "地坪选型,聚氨酯和环氧区别,地坪厚度,地坪施工工期,地坪维护",
+   "blocks": [
+    {
+     "id": "faq_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "常见问题",
+      "orgline": "选型 · 施工 · 使用与维护",
+      "h1": "关于工业地坪，\n客户最常问的几件事",
+      "h1Grad": "最常问",
+      "lead": "下面这些问题来自实际项目沟通。如果你的情况不在其中，直接打电话或提交需求，我们会针对具体工况回答，而不是套模板。",
+      "chips": [
+       "选型",
+       "施工",
+       "维护"
+      ],
+      "actions": [
+       {
+        "label": "直接咨询",
+        "href": "/contact",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/be719b-0927d20ddb4a4c29b761cd72d37d1106m.jpg"
+     }
+    },
+    {
+     "id": "faq_02",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "选型与材料",
+      "category": "选型",
+      "columns": "2",
+      "items": [
+       {
+        "q": "聚氨酯和环氧到底怎么选？",
+        "a": "看环境。长期潮湿、频繁冲洗或有化学清洗的区域，聚氨酯砂浆更稳定；干燥、无强化学作用的区域，环氧造价更低、观感更好。同一厂房里不同区域可以分开选。"
+       },
+       {
+        "q": "地坪厚度一般多少？",
+        "a": "薄涂通常在 0.3~0.5mm，自流平在 2~3mm，砂浆型在 3~6mm，具体按荷载与体系确定。厚度不是越厚越好，基层强度不够时加厚反而容易开裂。"
+       },
+       {
+        "q": "颜色可以定制吗？",
+        "a": "标准色卡是常规供货色，交期与起订量更友好；特殊色号可以确认，但会影响起订量与交期，深色在强光下也更容易看出磨损。"
+       },
+       {
+        "q": "防静电地坪的电阻值怎么定？",
+        "a": "按车间的静电防护标准确定，常见区分是耗散型与导静电型两个区间。我们没有「通用值」可给，需要结合你的防护要求与接地条件判断。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "faq_03",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "施工与工期",
+      "category": "施工",
+      "columns": "2",
+      "items": [
+       {
+        "q": "施工需要停产多久？",
+        "a": "取决于面积、体系与分区。可以分段施工，先做非生产区再逐步推进；面层施工后需要养护才能上人上车，具体节点在方案里写明。"
+       },
+       {
+        "q": "旧地面能直接翻新吗？",
+        "a": "要看基层。附着良好、无空鼓的区域处理后可以加铺；起砂、空鼓或油污渗透的区域必须先剔除到坚实基层，否则新面层会连同旧层一起脱落。"
+       },
+       {
+        "q": "对基层有什么要求？",
+        "a": "强度、含水率与平整度是三项硬指标。含水率过高会导致面层起泡脱层，通常需要先做防潮处理或延长养护期。"
+       },
+       {
+        "q": "冬天能施工吗？",
+        "a": "可以，但低温会延长固化时间，需要控制现场温度或调整材料配方。具体能否施工以现场温度与材料施工窗口为准。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "faq_04",
+     "key": "faq-list",
+     "enabled": true,
+     "data": {
+      "title": "使用与维护",
+      "category": "维护",
+      "columns": "2",
+      "items": [
+       {
+        "q": "日常怎么清洁？",
+        "a": "常规清扫加中性清洁剂拖洗即可。避免使用强酸强碱长时间浸泡，也不要使用尖锐器械刮擦。"
+       },
+       {
+        "q": "出现破损怎么办？",
+        "a": "按区域局部修补，不需要整片重做。修补要注意与既有面层的接缝处理和色差，具体做法按破损范围确定。"
+       },
+       {
+        "q": "地坪能用多少年？",
+        "a": "没有统一答案，取决于体系、荷载、清洁方式与基层状况。我们不在宣传里承诺年限，实际使用中按周期检查与维护，寿命会更接近设计预期。"
+       }
+      ]
+     }
+    },
+    {
+     "id": "faq_05",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "问题没被覆盖到？",
+      "desc": "把你的具体工况说清楚，我们会针对场景回答。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "contact",
+   "slug": "index",
+   "title": "联络我们",
+   "kind": "static",
+   "summary": "联络富林泛泰：工业地坪技术咨询、现场勘测与方案报价，电话 022-2732 0939，周一至周六 08:30-18:00。",
+   "seoTitle": "联络我们 — 工业地坪咨询与勘测 | 富林泛泰",
+   "seoDescription": "联系富林泛泰获取工业地坪选型建议、现场勘测与报价。电话 022-2732 0939，服务时间周一至周六 08:30-18:00。",
+   "seoKeywords": "",
+   "blocks": [
+    {
+     "id": "contact_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "联络我们",
+      "orgline": "技术咨询 · 现场勘测 · 报价",
+      "h1": "把工况说清楚，\n我们给具体建议",
+      "h1Grad": "具体建议",
+      "lead": "咨询时如果能提供使用场景、面积、基层状况与期望投产时间，我们可以直接进入选型讨论，减少来回确认的次数。",
+      "chips": [
+       "电话 022-2732 0939",
+       "现场勘测",
+       "书面方案"
+      ],
+      "actions": [
+       {
+        "label": "电话咨询 022-2732 0939",
+        "href": "/contact",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/11062b-51cedaee803145618025f985ac3d84c5m.jpg"
+     }
+    },
+    {
+     "id": "contact_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "联系方式",
+      "desc": "对外联系方式全站统一，以本页为准。"
+     }
+    },
+    {
+     "id": "contact_03",
+     "key": "nap-grid",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "label": "机构名称",
+        "value": "富林泛泰",
+        "note": "对外统一名称"
+       },
+       {
+        "label": "业务范围",
+        "value": "工业地坪材料供应与工程交付"
+       },
+       {
+        "label": "联系电话",
+        "value": "022-27320939",
+        "note": "全站唯一对外电话"
+       },
+       {
+        "label": "服务时间",
+        "value": "周一至周六 08:30-18:00",
+        "note": "法定节假日请提前预约"
+       },
+       {
+        "label": "企业地址",
+        "value": "待补充",
+        "note": "以营业执照登记地址为准"
+       },
+       {
+        "label": "电子邮箱",
+        "value": "待补充",
+        "note": "确认后公示"
+       }
+      ]
+     }
+    },
+    {
+     "id": "contact_04",
+     "key": "notice",
+     "enabled": true,
+     "data": {
+      "variant": "info",
+      "text": "企业工商登记信息、统一社会信用代码、施工资质与备案号正在补充核验，补充完成后将统一公示于「实体档案」页。在此之前，本页不提供未经核验的证书编号。"
+     }
+    },
+    {
+     "id": "contact_05",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "咨询前可以先准备",
+      "desc": "这四项信息能显著缩短方案沟通时间。"
+     }
+    },
+    {
+     "id": "contact_06",
+     "key": "feature-cards",
+     "enabled": true,
+     "data": {
+      "columns": "4",
+      "items": [
+       {
+        "icon": "01",
+        "title": "使用场景",
+        "desc": "车间用途、是否湿式冲洗、有无洁净或防静电要求"
+       },
+       {
+        "icon": "02",
+        "title": "面积与分区",
+        "desc": "总面积，以及加工区、走廊、仓储等分区面积"
+       },
+       {
+        "icon": "03",
+        "title": "基层状况",
+        "desc": "新建或旧地面、是否起砂空鼓、原面层类型"
+       },
+       {
+        "icon": "04",
+        "title": "时间窗口",
+        "desc": "期望开工时间与可接受的停产时长"
+       }
+      ]
+     }
+    },
+    {
+     "id": "contact_07",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "需要现场勘测？",
+      "desc": "留下项目地址与联系方式，我们安排技术人员上门做基面检测。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "cases",
+   "slug": "index",
+   "title": "成功案例",
+   "kind": "list",
+   "summary": "食品加工、医药净化、电子制造与汽车制造场景的工业地坪交付案例，含项目面积与所用体系。",
+   "seoTitle": "成功案例 — 工业地坪交付项目 | 富林泛泰",
+   "seoDescription": "北京冬奥中央厨房、海康威视 AGV 工厂、吴太药业产业园、双汇食品工厂、解放 J7 智能汽车厂等工业地坪交付案例，含面积与所用体系。",
+   "seoKeywords": "工业地坪案例,地坪施工案例,食品厂地坪案例,医药车间地坪案例",
+   "blocks": [
+    {
+     "id": "cases_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "成功案例",
+      "orgline": "食品加工 · 医药净化 · 电子制造 · 汽车制造",
+      "h1": "地面好不好用，\n交付三年后才知道",
+      "h1Grad": "三年后",
+      "lead": "以下项目来自食品加工、医药净化、电子制造与汽车制造场景。每个案例都写清楚用了什么体系、多大面积、解决了什么问题——而不是只放一张漂亮的完工照。",
+      "chips": [
+       "北京冬奥",
+       "海康威视",
+       "双汇",
+       "解放汽车",
+       "吴太药业"
+      ],
+      "actions": [
+       {
+        "label": "提交相似需求",
+        "href": "/contact",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/be719b-d13b873749ff476cb06bcc4c098951f1m.jpg"
+     }
+    },
+    {
+     "id": "cases_02",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "项目列表",
+      "desc": "按行业归类，可点进详情看施工范围与所用体系。"
+     }
+    },
+    {
+     "id": "cases_03",
+     "key": "case-grid",
+     "enabled": true,
+     "data": {
+      "columns": "2",
+      "items": [
+       {
+        "title": "2022 年北京冬奥会中央厨房",
+        "industry": "食品加工",
+        "location": "北京",
+        "area": "8,000 ㎡",
+        "product": "聚氨酯砂浆体系",
+        "year": "2022",
+        "img": "/assets/img/forintech/ecd1b0-e9420078a98d443ea5144f7415821f36m.jpg",
+        "href": "/cases/beijing-olympics-2022"
+       },
+       {
+        "title": "海康威视 AGV 工厂",
+        "industry": "电子制造",
+        "location": "浙江杭州",
+        "area": "35,000 ㎡",
+        "product": "ForinCrete SL-ESD",
+        "img": "/assets/img/forintech/hik-headquarters.jpg",
+        "href": "/cases/hikvision"
+       },
+       {
+        "title": "吴太药业产业园一期",
+        "industry": "医药净化",
+        "location": "吉林",
+        "area": "22,000 ㎡",
+        "product": "ForinCrete SL（半亚光高洁净）",
+        "year": "2020",
+        "img": "/assets/img/forintech/wutai-pic.jpg",
+        "href": "/cases/wutai-pharma"
+       },
+       {
+        "title": "万洲国际双汇工厂",
+        "industry": "食品加工",
+        "location": "河南漯河",
+        "product": "ForinCrete MF",
+        "img": "/assets/img/forintech/wh-sh-building-pic.jpg",
+        "href": "/cases/shuanghui"
+       },
+       {
+        "title": "解放 J7 智能汽车厂",
+        "industry": "汽车制造",
+        "location": "吉林长春",
+        "area": "22,000 ㎡",
+        "product": "ForinCrete MF 4mm",
+        "year": "2021",
+        "img": "/assets/img/forintech/jfcar-pic.jpg",
+        "href": "/cases/jiefang-car"
+       }
+      ]
+     }
+    },
+    {
+     "id": "cases_04",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "你的场景和这些项目类似？",
+      "desc": "说说你的行业、面积与地面问题，我们可以对照类似项目给建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "cases",
+   "slug": "beijing-olympics-2022",
+   "title": "2022 年北京冬奥会中央厨房",
+   "kind": "detail",
+   "summary": "2022 年北京冬奥会中央厨房项目：与碧桂园千玺机器人集团合作，交付防水层 + 混凝土基层 + 聚氨酯砂浆的端到端地坪方案，面积 8,000 平方米。",
+   "seoTitle": "2022 年北京冬奥会中央厨房地坪案例 | 富林泛泰",
+   "seoDescription": "北京冬奥会中央厨房地坪项目：为千玺机器人集团交付防水层、基层处理与聚氨酯砂浆面层的整体方案，总面积 8,000 平方米。",
+   "seoKeywords": "冬奥会中央厨房,食品厂地坪案例,聚氨酯砂浆案例",
+   "blocks": [
+    {
+     "id": "beijing-olympics-2022_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "案例 · 食品加工",
+      "orgline": "北京 · 8,000 ㎡ · 聚氨酯砂浆体系",
+      "h1": "2022 年北京冬奥会\n中央厨房地坪",
+      "h1Grad": "中央厨房",
+      "lead": "与碧桂园旗下千玺机器人集团合作，为冬奥会期间服务运动员与工作人员的机器人餐厅中央厨房，交付从防水层、混凝土基层到聚氨酯砂浆面层的整体地坪方案，总面积 8,000 平方米。",
+      "chips": [
+       "整体方案",
+       "防水 + 砂浆",
+       "8,000 ㎡"
+      ],
+      "actions": [
+       {
+        "label": "看同类方案",
+        "href": "/products/food-beverage",
+        "primary": true
+       },
+       {
+        "label": "返回案例列表",
+        "href": "/cases"
+       }
+      ]
+     }
+    },
+    {
+     "id": "beijing-olympics-2022_02",
+     "key": "glass-card",
+     "enabled": true,
+     "data": {
+      "title": "项目信息",
+      "badge": "2022",
+      "rows": [
+       {
+        "k": "业主",
+        "v": "千玺机器人集团（碧桂园旗下）"
+       },
+       {
+        "k": "行业",
+        "v": "食品加工"
+       },
+       {
+        "k": "地点",
+        "v": "北京"
+       },
+       {
+        "k": "地坪面积",
+        "v": "8,000 ㎡"
+       },
+       {
+        "k": "使用体系",
+        "v": "聚氨酯砂浆体系",
+        "sub": "含防水层与混凝土基层处理"
+       },
+       {
+        "k": "交付年份",
+        "v": "2022"
+       }
+      ]
+     }
+    },
+    {
+     "id": "beijing-olympics-2022_03",
+     "key": "article-body",
+     "enabled": true,
+     "data": {
+      "blocks": [
+       {
+        "kind": "paragraph",
+        "text": "千玺机器人集团成立于 2019 年，为食品行业提供智能机器人解决方案。2022 年北京冬奥会期间，该集团为运动员和工作人员建设了机器人餐厅与配套中央厨房。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "中央厨房的地面要同时面对三件事：大量冲洗水、油脂与清洁剂，以及连续高强度运转带来的设备与人流荷载。单一涂层方案在这种条件下容易出现渗水与脱层。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "本次交付为端到端地坪系统：先做防水层阻断水汽上行，再处理混凝土基层，最后施工聚氨酯砂浆面层。三层各司其职，避免了「只在表面刷一层」的常见做法。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "项目总面积 8,000 平方米，在冬奥会开幕前的有限窗口内完成交付与养护。"
+       }
+      ],
+      "disclaimer": "本页项目信息用于说明交付范围与所用体系；面积与年份以项目记录为准。具体效果受基层条件、使用方式与维护情况影响，不构成对其他项目的效果承诺。"
+     }
+    },
+    {
+     "id": "beijing-olympics-2022_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "项目画面",
+      "desc": "施工与完工现场记录。"
+     }
+    },
+    {
+     "id": "beijing-olympics-2022_05",
+     "key": "env-grid",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "img": "/assets/img/forintech/ecd1b0-e9420078a98d443ea5144f7415821f36m.jpg",
+        "alt": "冬奥中央厨房地坪施工完成现场",
+        "caption": "中央厨房加工区，聚氨酯砂浆面层完工后",
+        "note": "项目现场"
+       },
+       {
+        "img": "/assets/img/forintech/be719b-025a0f17f810430ba86bc344e02cb2dem.jpg",
+        "alt": "食品加工车间地坪",
+        "caption": "加工区地面与排水沟收口细节",
+        "note": "项目现场"
+       }
+      ]
+     }
+    },
+    {
+     "id": "beijing-olympics-2022_06",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "有类似工况的项目？",
+      "desc": "把面积、基层状况与使用要求发给我们，可以对照上面这类项目给建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "cases",
+   "slug": "hikvision",
+   "title": "海康威视 AGV 工厂地坪",
+   "kind": "detail",
+   "summary": "海康威视 AGV 工厂地坪：ForinCrete SL-ESD 聚氨酯砂浆防静电体系，总面积约 35,000 平方米，施工周期 5 个多月。",
+   "seoTitle": "海康威视 AGV 工厂防静电地坪案例 | 富林泛泰",
+   "seoDescription": "海康威视 AGV 工厂地坪项目：交付 ForinCrete SL-ESD 聚氨酯砂浆防静电体系，总面积约 35,000 平方米，满足 AGV 运行与静电防护要求。",
+   "seoKeywords": "海康威视地坪,防静电地坪案例,AGV工厂地坪",
+   "blocks": [
+    {
+     "id": "hikvision_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "案例 · 电子制造",
+      "orgline": "浙江杭州 · 35,000 ㎡ · ForinCrete SL-ESD",
+      "h1": "海康威视 AGV 工厂\n多系统组合的地坪",
+      "h1Grad": "多系统组合",
+      "lead": "为海康威视 AGV 工厂提供 ForinCrete SL-ESD 聚氨酯砂浆防静电地坪，总面积约 35,000 平方米，施工周期 5 个多月，满足 AGV 运行与静电防护的双重要求。",
+      "chips": [
+       "35,000 ㎡",
+       "防静电",
+       "AGV 通行"
+      ],
+      "actions": [
+       {
+        "label": "看同类方案",
+        "href": "/products/electronics",
+        "primary": true
+       },
+       {
+        "label": "返回案例列表",
+        "href": "/cases"
+       }
+      ]
+     }
+    },
+    {
+     "id": "hikvision_02",
+     "key": "glass-card",
+     "enabled": true,
+     "data": {
+      "title": "项目信息",
+      "badge": "电子制造",
+      "rows": [
+       {
+        "k": "业主",
+        "v": "海康威视"
+       },
+       {
+        "k": "行业",
+        "v": "电子制造"
+       },
+       {
+        "k": "地点",
+        "v": "浙江杭州"
+       },
+       {
+        "k": "地坪面积",
+        "v": "35,000 ㎡"
+       },
+       {
+        "k": "使用体系",
+        "v": "ForinCrete SL-ESD",
+        "sub": "聚氨酯砂浆防静电体系"
+       }
+      ]
+     }
+    },
+    {
+     "id": "hikvision_03",
+     "key": "article-body",
+     "enabled": true,
+     "data": {
+      "blocks": [
+       {
+        "kind": "paragraph",
+        "text": "海康威视是全球领先的以视频为核心的智能物联网解决方案提供商。其 AGV 工厂承担自动化搬运设备的研发与生产，车间内 AGV 长期运行，对地面的平整度、耐磨性与静电防护都有要求。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "项目交付 ForinCrete SL-ESD 聚氨酯砂浆防静电体系：在耐化学与耐冲洗的基础上叠加静电耗散能力，兼顾车间可能的清洁作业与静电防护需求。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "施工总面积约 35,000 平方米，分区域推进，历时 5 个多月完成，尽量减少对厂区既有生产的影响。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "防静电性能不是一次验收就结束的指标。交付后建议按周期复测表面电阻，并保持接地系统有效。"
+       }
+      ],
+      "disclaimer": "本页项目信息用于说明交付范围与所用体系；面积与年份以项目记录为准。具体效果受基层条件、使用方式与维护情况影响，不构成对其他项目的效果承诺。"
+     }
+    },
+    {
+     "id": "hikvision_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "项目画面",
+      "desc": "施工与完工现场记录。"
+     }
+    },
+    {
+     "id": "hikvision_05",
+     "key": "env-grid",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "img": "/assets/img/forintech/hik-headquarters.jpg",
+        "alt": "海康威视总部大楼",
+        "caption": "海康威视杭州园区",
+        "note": "项目现场"
+       },
+       {
+        "img": "/assets/img/forintech/forinshield-esd-disspative-electron-semi.jpg",
+        "alt": "电子车间防静电地坪",
+        "caption": "防静电地坪完工区域",
+        "note": "项目现场"
+       }
+      ]
+     }
+    },
+    {
+     "id": "hikvision_06",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "有类似工况的项目？",
+      "desc": "把面积、基层状况与使用要求发给我们，可以对照上面这类项目给建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "cases",
+   "slug": "wutai-pharma",
+   "title": "吴太药业产业园一期",
+   "kind": "detail",
+   "summary": "吴太药业产业园一期：为固体车间、萃取车间与 ISO 洁净车间交付 ForinCrete SL 半亚光高洁净聚氨酯地坪，总面积 22,000 平方米。",
+   "seoTitle": "吴太药业产业园洁净车间地坪案例 | 富林泛泰",
+   "seoDescription": "吴太药业产业园一期地坪项目：固体车间、萃取车间与 ISO 洁净车间采用 ForinCrete SL 半亚光高洁净聚氨酯体系，总面积 22,000 平方米。",
+   "seoKeywords": "医药车间地坪案例,洁净车间地坪,GMP地坪案例",
+   "blocks": [
+    {
+     "id": "wutai-pharma_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "案例 · 医药净化",
+      "orgline": "吉林 · 22,000 ㎡ · ForinCrete SL（半亚光高洁净）",
+      "h1": "吴太药业产业园\n洁净车间地坪",
+      "h1Grad": "洁净车间",
+      "lead": "2020 年吴太医药产业园启动建设，一期包含综合制剂车间、能源动力中心、智慧物流仓储、污水处理站等功能区。富林泛泰为固体车间、萃取车间与 ISO 洁净车间交付 ForinCrete SL 半亚光高洁净聚氨酯地坪，总面积 22,000 平方米。",
+      "chips": [
+       "22,000 ㎡",
+       "ISO 洁净车间",
+       "GMP 环境"
+      ],
+      "actions": [
+       {
+        "label": "看同类方案",
+        "href": "/products/pharma",
+        "primary": true
+       },
+       {
+        "label": "返回案例列表",
+        "href": "/cases"
+       }
+      ]
+     }
+    },
+    {
+     "id": "wutai-pharma_02",
+     "key": "glass-card",
+     "enabled": true,
+     "data": {
+      "title": "项目信息",
+      "badge": "2020",
+      "rows": [
+       {
+        "k": "业主",
+        "v": "吴太药业"
+       },
+       {
+        "k": "行业",
+        "v": "医药净化"
+       },
+       {
+        "k": "地点",
+        "v": "吉林"
+       },
+       {
+        "k": "地坪面积",
+        "v": "22,000 ㎡"
+       },
+       {
+        "k": "使用体系",
+        "v": "ForinCrete SL（半亚光高洁净）",
+        "sub": ""
+       },
+       {
+        "k": "交付年份",
+        "v": "2020"
+       }
+      ]
+     }
+    },
+    {
+     "id": "wutai-pharma_03",
+     "key": "article-body",
+     "enabled": true,
+     "data": {
+      "blocks": [
+       {
+        "kind": "paragraph",
+        "text": "吴太医药产业园一期设有现代化综合制剂车间、专用能源动力中心、智慧物流仓储中心、污水处理站、质检办公楼与休闲服务中心六大功能中心。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "不同功能区对地面的要求差别很大：固体车间关注粉尘与清洁，萃取车间关注溶剂与化学腐蚀，ISO 洁净车间关注积尘与清洁死角。项目按区域分别确定体系与收口做法。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "本次交付采用 ForinCrete SL 半亚光高洁净聚氨酯地坪系统，覆盖固体车间、萃取车间与 ISO 洁净车间，总面积 22,000 平方米。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "半亚光表面在洁净环境下比高光更耐看：强光反射弱，细微划痕不显眼，长期使用观感更稳定。"
+       }
+      ],
+      "disclaimer": "本页项目信息用于说明交付范围与所用体系；面积与年份以项目记录为准。具体效果受基层条件、使用方式与维护情况影响，不构成对其他项目的效果承诺。"
+     }
+    },
+    {
+     "id": "wutai-pharma_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "项目画面",
+      "desc": "施工与完工现场记录。"
+     }
+    },
+    {
+     "id": "wutai-pharma_05",
+     "key": "env-grid",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "img": "/assets/img/forintech/wutai-pic.jpg",
+        "alt": "吴太药业产业园厂区",
+        "caption": "吴太医药产业园一期",
+        "note": "项目现场"
+       },
+       {
+        "img": "/assets/img/forintech/forincrete-mt-pharm-clean-room.jpg",
+        "alt": "医药洁净车间地坪",
+        "caption": "ISO 洁净车间地面",
+        "note": "项目现场"
+       }
+      ]
+     }
+    },
+    {
+     "id": "wutai-pharma_06",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "有类似工况的项目？",
+      "desc": "把面积、基层状况与使用要求发给我们，可以对照上面这类项目给建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "cases",
+   "slug": "shuanghui",
+   "title": "万洲国际双汇工厂",
+   "kind": "detail",
+   "summary": "万洲国际双汇工厂地坪：ForinCrete MF 聚氨酯砂浆体系，解决肉制品车间多油多水环境下地面不耐用的问题。",
+   "seoTitle": "双汇食品工厂聚氨酯砂浆地坪案例 | 富林泛泰",
+   "seoDescription": "双汇肉食品工厂地坪项目：交付 ForinCrete MF 聚氨酯砂浆地坪，解决多油多水环境下地面起壳、反复维修的问题。",
+   "seoKeywords": "双汇地坪,肉制品车间地坪,聚氨酯砂浆案例",
+   "blocks": [
+    {
+     "id": "shuanghui_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "案例 · 食品加工",
+      "orgline": "河南漯河 · ForinCrete MF",
+      "h1": "双汇肉食品工厂\n多油多水环境地坪",
+      "h1Grad": "多油多水",
+      "lead": "为双汇肉食品工厂交付 ForinCrete MF 聚氨酯砂浆地坪，解决多油多水环境下原地面不耐用、反复维修的问题。",
+      "chips": [
+       "多油多水",
+       "耐热冲击",
+       "食品加工"
+      ],
+      "actions": [
+       {
+        "label": "看同类方案",
+        "href": "/products/food-beverage",
+        "primary": true
+       },
+       {
+        "label": "返回案例列表",
+        "href": "/cases"
+       }
+      ]
+     }
+    },
+    {
+     "id": "shuanghui_02",
+     "key": "glass-card",
+     "enabled": true,
+     "data": {
+      "title": "项目信息",
+      "badge": "食品加工",
+      "rows": [
+       {
+        "k": "业主",
+        "v": "双汇集团（万洲国际）"
+       },
+       {
+        "k": "行业",
+        "v": "食品加工"
+       },
+       {
+        "k": "地点",
+        "v": "河南漯河"
+       },
+       {
+        "k": "使用体系",
+        "v": "ForinCrete MF",
+        "sub": "聚氨酯砂浆（耐热冲击型）"
+       }
+      ]
+     }
+    },
+    {
+     "id": "shuanghui_03",
+     "key": "article-body",
+     "enabled": true,
+     "data": {
+      "blocks": [
+       {
+        "kind": "paragraph",
+        "text": "双汇集团（万洲国际）成立于 1958 年，专注香肠与加工肉类，是国内外市场的主要肉类加工企业之一，对食品安全与生产环境的清洁标准要求严格。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "肉制品车间的典型工况是「多油多水」：冲洗频繁，油脂与清洗剂长期作用，同时还有热水与蒸汽带来的温度冲击。常规环氧体系在这种条件下容易出现起壳与脱层。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "本次交付 ForinCrete MF 聚氨酯砂浆地坪，用耐化学与耐热冲击的材料路线替代反复修补的做法。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "项目未公开地坪面积数据，本页不填估算值。"
+       }
+      ],
+      "disclaimer": "本页项目信息用于说明交付范围与所用体系；面积与年份以项目记录为准。具体效果受基层条件、使用方式与维护情况影响，不构成对其他项目的效果承诺。"
+     }
+    },
+    {
+     "id": "shuanghui_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "项目画面",
+      "desc": "施工与完工现场记录。"
+     }
+    },
+    {
+     "id": "shuanghui_05",
+     "key": "env-grid",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "img": "/assets/img/forintech/wh-sh-building-pic.jpg",
+        "alt": "双汇工厂建筑外观",
+        "caption": "双汇漯河厂区",
+        "note": "项目现场"
+       },
+       {
+        "img": "/assets/img/forintech/forincrete-mf-f-b.jpg",
+        "alt": "聚氨酯砂浆地坪成品地面",
+        "caption": "聚氨酯砂浆面层完工区域",
+        "note": "项目现场"
+       }
+      ]
+     }
+    },
+    {
+     "id": "shuanghui_06",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "有类似工况的项目？",
+      "desc": "把面积、基层状况与使用要求发给我们，可以对照上面这类项目给建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "cases",
+   "slug": "jiefang-car",
+   "title": "解放 J7 智能汽车厂",
+   "kind": "detail",
+   "summary": "解放 J7 智能汽车厂地坪：为总装线重载 AGV 区域交付 ForinCrete MF 4mm 聚氨酯砂浆，总面积 22,000 平方米。",
+   "seoTitle": "解放 J7 智能汽车厂重载 AGV 地坪案例 | 富林泛泰",
+   "seoDescription": "一汽解放 J7 智能汽车工厂地坪项目：总装线重载 AGV 区域采用 ForinCrete MF 4mm 聚氨酯砂浆体系，满足平整度、防滑与耐磨要求，总面积 22,000 平方米。",
+   "seoKeywords": "汽车厂地坪,AGV地坪,重载地坪案例",
+   "blocks": [
+    {
+     "id": "jiefang-car_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "案例 · 汽车制造",
+      "orgline": "吉林长春 · 22,000 ㎡ · ForinCrete MF 4mm",
+      "h1": "解放 J7 智能汽车厂\n重载 AGV 地面",
+      "h1Grad": "重载 AGV",
+      "lead": "2021 年，一汽解放 J7 智能汽车工厂在总装线采用机器人与 AGV 协同作业。为重载 AGV 运行区域交付 ForinCrete MF 4mm 聚氨酯砂浆地坪，总面积 22,000 平方米，满足平整度、防滑与耐磨要求。",
+      "chips": [
+       "22,000 ㎡",
+       "重载 AGV",
+       "4mm 砂浆"
+      ],
+      "actions": [
+       {
+        "label": "看同类方案",
+        "href": "/products",
+        "primary": true
+       },
+       {
+        "label": "返回案例列表",
+        "href": "/cases"
+       }
+      ]
+     }
+    },
+    {
+     "id": "jiefang-car_02",
+     "key": "glass-card",
+     "enabled": true,
+     "data": {
+      "title": "项目信息",
+      "badge": "2021",
+      "rows": [
+       {
+        "k": "业主",
+        "v": "一汽解放"
+       },
+       {
+        "k": "行业",
+        "v": "汽车制造"
+       },
+       {
+        "k": "地点",
+        "v": "吉林长春"
+       },
+       {
+        "k": "地坪面积",
+        "v": "22,000 ㎡"
+       },
+       {
+        "k": "使用体系",
+        "v": "ForinCrete MF 4mm",
+        "sub": ""
+       },
+       {
+        "k": "交付年份",
+        "v": "2021"
+       }
+      ]
+     }
+    },
+    {
+     "id": "jiefang-car_03",
+     "key": "article-body",
+     "enabled": true,
+     "data": {
+      "blocks": [
+       {
+        "kind": "paragraph",
+        "text": "一汽解放 J7 智能汽车工厂在 2021 年投产，采用机器人与 AGV 协同导航、智能轮胎装配等技术，总装线对地面的平整度与承载能力有明确要求。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "重载 AGV 长期沿固定路径运行，地面不平会放大车体振动与轮组磨损；地面耐磨不足则会快速出现轮辙与起砂，进而影响导航精度。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "项目交付 ForinCrete MF 4mm 聚氨酯砂浆体系，兼顾平整度、防滑性与耐磨性，覆盖总装线 AGV 运行区域，总面积 22,000 平方米。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "重载场景的厚度不是越厚越好，关键是基层强度与厚度匹配。厚面层铺在强度不足的基层上，同样会开裂。"
+       }
+      ],
+      "disclaimer": "本页项目信息用于说明交付范围与所用体系；面积与年份以项目记录为准。具体效果受基层条件、使用方式与维护情况影响，不构成对其他项目的效果承诺。"
+     }
+    },
+    {
+     "id": "jiefang-car_04",
+     "key": "section-head",
+     "enabled": true,
+     "data": {
+      "title": "项目画面",
+      "desc": "施工与完工现场记录。"
+     }
+    },
+    {
+     "id": "jiefang-car_05",
+     "key": "env-grid",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "img": "/assets/img/forintech/jfcar-pic.jpg",
+        "alt": "解放 J7 智能汽车工厂",
+        "caption": "一汽解放 J7 智能工厂",
+        "note": "项目现场"
+       },
+       {
+        "img": "/assets/img/forintech/forincrete-ha-f-b.jpg",
+        "alt": "重载耐磨地坪",
+        "caption": "总装线 AGV 运行区域地面",
+        "note": "项目现场"
+       }
+      ]
+     }
+    },
+    {
+     "id": "jiefang-car_06",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "有类似工况的项目？",
+      "desc": "把面积、基层状况与使用要求发给我们，可以对照上面这类项目给建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "news",
+   "slug": "index",
+   "title": "新闻中心",
+   "kind": "list",
+   "summary": "工业地坪技术文章：聚氨酯与环氧的材料对比、施工工艺与常见误区。",
+   "seoTitle": "新闻中心 — 工业地坪技术文章 | 富林泛泰",
+   "seoDescription": "工业地坪技术文章：聚氨酯与环氧地坪的材料对比、施工工艺要点与常见误区。",
+   "seoKeywords": "",
+   "blocks": [
+    {
+     "id": "news_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "新闻中心",
+      "orgline": "技术文章 · 项目动态",
+      "h1": "关于地坪材料与施工的\n一些技术文章",
+      "h1Grad": "技术文章",
+      "lead": "这里放与选型、材料、施工相关的内容，不追热点。原站的海外展会与区域项目动态不在国内站保留。",
+      "chips": [
+       "材料对比",
+       "施工工艺",
+       "常见误区"
+      ],
+      "actions": [
+       {
+        "label": "返回首页",
+        "href": "/"
+       }
+      ],
+      "bgImage": "/assets/img/forintech/ecd1b0-4893959448a64839b0eb7cb044b305a2m.jpg"
+     }
+    },
+    {
+     "id": "news_02",
+     "key": "post-list",
+     "enabled": true,
+     "data": {
+      "pageSize": 12,
+      "items": [
+       {
+        "title": "聚氨酯地坪为什么在工业空间里替代环氧",
+        "summary": "聚氨酯与环氧的分界不在「哪个更好」，而在环境：水、温度冲击与化学清洗决定了材料能不能长期站得住。",
+        "publishDate": "2026-10-20",
+        "href": "/news/pu-vs-epoxy"
+       }
+      ]
+     }
+    },
+    {
+     "id": "news_03",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "想了解某个具体工艺？",
+      "desc": "可以把问题发给我们，值得写的会整理成技术文章。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "news",
+   "slug": "pu-vs-epoxy",
+   "title": "聚氨酯地坪为什么在工业空间里替代环氧",
+   "kind": "detail",
+   "summary": "聚氨酯与环氧地坪的分界不在材料优劣，而在工况：水、温度冲击与化学清洗决定了哪种体系能长期使用。",
+   "seoTitle": "聚氨酯地坪与环氧地坪的区别与选型 | 富林泛泰",
+   "seoDescription": "聚氨酯地坪与环氧地坪的区别：从耐水性、耐化学清洗与温度冲击三个维度分析适用场景，说明同一厂房不同区域应分区选型。",
+   "seoKeywords": "聚氨酯地坪,环氧地坪,地坪材料对比,地坪选型",
+   "blocks": [
+    {
+     "id": "news-pu-epoxy_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "技术文章 · 材料对比",
+      "orgline": "2026-10-20 · 选型",
+      "h1": "聚氨酯地坪\n为什么在工业空间里替代环氧",
+      "h1Grad": "替代环氧",
+      "lead": "不是聚氨酯比环氧「高级」，而是工业现场的环境变了：更多冲洗、更多化学清洗、更大的温差。材料的选择应该跟着工况走。",
+      "chips": [
+       "聚氨酯",
+       "环氧",
+       "选型"
+      ],
+      "actions": [
+       {
+        "label": "看产品体系",
+        "href": "/products",
+        "primary": true
+       }
+      ]
+     }
+    },
+    {
+     "id": "news-pu-epoxy_02",
+     "key": "article-meta",
+     "enabled": true,
+     "data": {
+      "date": "2026-10-20"
+     }
+    },
+    {
+     "id": "news-pu-epoxy_03",
+     "key": "article-body",
+     "enabled": true,
+     "data": {
+      "blocks": [
+       {
+        "kind": "paragraph",
+        "text": "环氧地坪进入中国工业厂房的年代，主要解决的是「水泥地起砂」这个问题：一层致密的树脂涂层把粉尘封住，车间干净了，也容易打扫。在那个阶段，环氧是性价比很高的答案。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "变化发生在食品、饮料与医药行业的标准提高之后。车间开始频繁冲洗，清洗剂从清水变成碱液、泡沫清洗剂与消毒剂，蒸煮与清洗带来的温差也越来越大。这些条件叠加在一起，环氧体系的短板就暴露了：长期水浸后附着力下降，碱洗后表面失光、发白，温差反复作用下从边角开始起壳。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "聚氨酯砂浆的差异在于结构。它把有机的聚氨酯与无机的骨料、混凝土结合起来，形成整体性更强的面层：耐水、耐碱、耐温差，和基层的变形更接近。代价是造价更高、表面质感不如环氧细腻，施工窗口也更敏感。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "所以正确的问法不是「哪个材料更好」，而是「我这个区域会遇到什么」。干燥、无化学清洗的仓储与办公区，环氧依然是合理选择；湿式加工区、清洗间与有温度冲击的区域，聚氨酯砂浆更合适。同一个厂房里，不同区域本来就应该用不同体系。"
+       },
+       {
+        "kind": "paragraph",
+        "text": "还有一点常被忽略：无论选哪种材料，基层处理都决定了它能用多久。含水率超标、基层强度不足、油污没有清除干净，任何一项都能让好材料提前失效。选型是第一步，基层是地基。"
+       }
+      ],
+      "disclaimer": "本文为材料与选型的技术讨论，不构成对具体项目的性能承诺。实际选型需结合现场工况、基层状况与相关标准确定。"
+     }
+    },
+    {
+     "id": "news-pu-epoxy_04",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "你的区域该用哪一种？",
+      "desc": "把使用场景与清洁方式说一下，我们给具体建议。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "entity",
+   "slug": "index",
+   "title": "实体档案",
+   "kind": "static",
+   "summary": "富林泛泰企业实体信息：对外名称、业务类型、服务范围、联系方式，以及尚未核验的待补项说明。",
+   "seoTitle": "实体档案 — 富林泛泰企业信息",
+   "seoDescription": "富林泛泰企业实体档案：对外名称、业务类型、服务范围与联系方式，未核验的地址、备案号与资质编号明示为待补充。",
+   "seoKeywords": "",
+   "blocks": [
+    {
+     "id": "entity_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "实体档案",
+      "orgline": "企业主体信息 · 对外统一口径",
+      "h1": "富林泛泰\n企业实体信息",
+      "h1Grad": "实体信息",
+      "lead": "本页集中声明企业主体信息与对外联系方式，供搜索引擎与 AI 模型核对。同一主体在不同平台上的名称、地址与电话应保持一致。",
+      "chips": [
+       "统一口径",
+       "待补项公示"
+      ],
+      "actions": [
+       {
+        "label": "联络我们",
+        "href": "/contact",
+        "primary": true
+       }
+      ],
+      "bgImage": "/assets/img/forintech/be719b-9e4e7ba6f8b143dab4d2d67f84c2a389m.jpg"
+     }
+    },
+    {
+     "id": "entity_02",
+     "key": "glass-card",
+     "enabled": true,
+     "data": {
+      "title": "主体信息",
+      "badge": "待补项见下方说明",
+      "rows": [
+       {
+        "k": "对外名称",
+        "v": "富林泛泰"
+       },
+       {
+        "k": "英文名称",
+        "v": "Forintech",
+        "sub": "海外主体使用同一品牌名"
+       },
+       {
+        "k": "业务类型",
+        "v": "工业地坪材料供应与工程交付"
+       },
+       {
+        "k": "服务范围",
+        "v": "聚氨酯砂浆、聚氨酯自流平、环氧、防静电、停车场与坡道、旧地面翻新"
+       },
+       {
+        "k": "起步年份",
+        "v": "2001 年"
+       },
+       {
+        "k": "对外电话",
+        "v": "022-2732 0939"
+       }
+      ]
+     }
+    },
+    {
+     "id": "entity_03",
+     "key": "nap-grid",
+     "enabled": true,
+     "data": {
+      "items": [
+       {
+        "label": "机构名称",
+        "value": "富林泛泰",
+        "note": "对外统一名称"
+       },
+       {
+        "label": "联系电话",
+        "value": "022-2732 0939",
+        "note": "周一至周六 08:30-18:00"
+       },
+       {
+        "label": "企业地址",
+        "value": "待补充",
+        "note": "以营业执照登记地址为准，核验后公示"
+       },
+       {
+        "label": "电子邮箱",
+        "value": "待补充",
+        "note": "统一对外邮箱确认后公示"
+       },
+       {
+        "label": "ICP 备案号",
+        "value": "待补充",
+        "note": "备案通过后公示，不展示未核准编号"
+       },
+       {
+        "label": "施工资质",
+        "value": "待补充",
+        "note": "资质证书编号以原件为准"
+       }
+      ]
+     }
+    },
+    {
+     "id": "entity_04",
+     "key": "notice",
+     "enabled": true,
+     "data": {
+      "variant": "warning",
+      "text": "本页标注为「待补充」的项目，是尚未完成核验的企业信息。我们选择留空并在页面上明示，而不是填一个看起来完整的占位值——未经核验的资质编号对读者没有价值，也会误导机器判断。"
+     }
+    },
+    {
+     "id": "entity_05",
+     "key": "telbar",
+     "enabled": true,
+     "data": {
+      "title": "需要核验某项资质？",
+      "desc": "可以来电索取营业执照与资质证书的复印件。",
+      "actions": [
+       {
+        "label": "电话咨询",
+        "href": "/contact",
+        "primary": true
+       },
+       {
+        "label": "提交需求",
+        "href": "/contact"
+       }
+      ]
+     },
+     "section": "plain-flush"
+    }
+   ]
+  },
+  {
+   "channelSlug": "sitemap",
+   "slug": "index",
+   "title": "站点地图",
+   "kind": "static",
+   "summary": "富林泛泰站点地图：产品体系、解决方案、成功案例、新闻与关于我们各栏目页面索引。",
+   "seoTitle": "站点地图 — 富林泛泰",
+   "seoDescription": "富林泛泰官网全部页面索引，按产品体系、解决方案、案例与公司信息分组。",
+   "seoKeywords": "",
+   "blocks": [
+    {
+     "id": "sitemap_01",
+     "key": "hero-dark",
+     "enabled": true,
+     "data": {
+      "eyebrow": "站点地图",
+      "orgline": "全部页面索引",
+      "h1": "站点地图",
+      "lead": "本站全部页面的索引，按栏目分组。",
+      "actions": [
+       {
+        "label": "返回首页",
+        "href": "/"
+       }
+      ]
+     }
+    },
+    {
+     "id": "sitemap_02",
+     "key": "index-list",
+     "enabled": true,
+     "data": {
+      "groups": [
+       {
+        "title": "产品体系",
+        "items": [
+         {
+          "text": "产品体系总览",
+          "href": "/products"
+         },
+         {
+          "text": "食品饮料地坪",
+          "href": "/products/food-beverage"
+         },
+         {
+          "text": "医药净化地坪",
+          "href": "/products/pharma"
+         },
+         {
+          "text": "电子制造防静电地坪",
+          "href": "/products/electronics"
+         },
+         {
+          "text": "停车场与坡道",
+          "href": "/products/parking"
+         },
+         {
+          "text": "ForinCrete SL 聚氨酯砂浆自流平",
+          "href": "/products/forincrete-sl"
+         },
+         {
+          "text": "ForinCrete MT 耐温防滑砂浆",
+          "href": "/products/forincrete-mt"
+         },
+         {
+          "text": "ForinShield SL 环氧自流平",
+          "href": "/products/forinshield-sl"
+         },
+         {
+          "text": "ForinCoat EP 环氧薄涂",
+          "href": "/products/forincoat-ep"
+         }
+        ]
+       },
+       {
+        "title": "解决方案与知识",
+        "items": [
+         {
+          "text": "解决方案",
+          "href": "/solutions"
+         },
+         {
+          "text": "关于地坪",
+          "href": "/about-flooring"
+         },
+         {
+          "text": "常见问题",
+          "href": "/faq"
+         }
+        ]
+       },
+       {
+        "title": "案例与动态",
+        "items": [
+         {
+          "text": "成功案例",
+          "href": "/cases"
+         },
+         {
+          "text": "2022 年北京冬奥会中央厨房",
+          "href": "/cases/beijing-olympics-2022"
+         },
+         {
+          "text": "海康威视 AGV 工厂",
+          "href": "/cases/hikvision"
+         },
+         {
+          "text": "吴太药业产业园一期",
+          "href": "/cases/wutai-pharma"
+         },
+         {
+          "text": "万洲国际双汇工厂",
+          "href": "/cases/shuanghui"
+         },
+         {
+          "text": "解放 J7 智能汽车厂",
+          "href": "/cases/jiefang-car"
+         },
+         {
+          "text": "新闻中心",
+          "href": "/news"
+         },
+         {
+          "text": "聚氨酯地坪为什么在工业空间里替代环氧",
+          "href": "/news/pu-vs-epoxy"
+         }
+        ]
+       },
+       {
+        "title": "关于我们",
+        "items": [
+         {
+          "text": "关于我们",
+          "href": "/about"
+         },
+         {
+          "text": "实体档案",
+          "href": "/entity"
+         },
+         {
+          "text": "联络我们",
+          "href": "/contact"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ],
+ "navigations": [
+  {
+   "key": "header",
+   "items": [
+    {
+     "label": "首页",
+     "pageSlug": "/"
+    },
+    {
+     "label": "产品体系",
+     "pageSlug": "/products"
+    },
+    {
+     "label": "解决方案",
+     "pageSlug": "/solutions"
+    },
+    {
+     "label": "关于地坪",
+     "pageSlug": "/about-flooring"
+    },
+    {
+     "label": "成功案例",
+     "pageSlug": "/cases"
+    },
+    {
+     "label": "新闻中心",
+     "pageSlug": "/news"
+    },
+    {
+     "label": "关于我们",
+     "pageSlug": "/about"
+    },
+    {
+     "label": "联络我们",
+     "pageSlug": "/contact"
+    }
+   ]
+  },
+  {
+   "key": "footer-1",
+   "items": [
+    {
+     "label": "产品体系",
+     "pageSlug": "/products"
+    },
+    {
+     "label": "食品饮料地坪",
+     "pageSlug": "/products/food-beverage"
+    },
+    {
+     "label": "医药净化地坪",
+     "pageSlug": "/products/pharma"
+    },
+    {
+     "label": "电子制造防静电地坪",
+     "pageSlug": "/products/electronics"
+    },
+    {
+     "label": "停车场与坡道",
+     "pageSlug": "/products/parking"
+    }
+   ]
+  },
+  {
+   "key": "footer-2",
+   "items": [
+    {
+     "label": "解决方案",
+     "pageSlug": "/solutions"
+    },
+    {
+     "label": "关于地坪",
+     "pageSlug": "/about-flooring"
+    },
+    {
+     "label": "常见问题",
+     "pageSlug": "/faq"
+    }
+   ]
+  },
+  {
+   "key": "footer-3",
+   "items": [
+    {
+     "label": "成功案例",
+     "pageSlug": "/cases"
+    },
+    {
+     "label": "新闻中心",
+     "pageSlug": "/news"
+    }
+   ]
+  },
+  {
+   "key": "footer-4",
+   "items": [
+    {
+     "label": "关于我们",
+     "pageSlug": "/about"
+    },
+    {
+     "label": "实体档案",
+     "pageSlug": "/entity"
+    },
+    {
+     "label": "联络我们",
+     "pageSlug": "/contact"
+    },
+    {
+     "label": "站点地图",
+     "pageSlug": "/sitemap"
+    }
+   ]
+  }
+ ],
+ "publish": false
+}

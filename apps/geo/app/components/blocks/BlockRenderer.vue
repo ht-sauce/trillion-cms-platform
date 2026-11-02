@@ -79,7 +79,17 @@ const SECTION_OF: Record<string, 'none' | 'plain' | 'alt' | 'head' | 'plain-flus
   'visit-cards': 'plain',
   'vcard-grid': 'plain',
   tagline: 'plain',
-  'side-news': 'plain'
+  'side-news': 'plain',
+  /** 工业与工程类块（ADR-047 配套）：均承载同类内容，默认白底带 */
+  'product-card': 'plain',
+  'case-grid': 'plain',
+  'system-stack': 'plain',
+  'color-palette': 'plain',
+  /** 工业站交互块（ADR-048）：首屏自带全屏布局，其余承载同类内容 */
+  'scene-hero': 'none',
+  'service-rows': 'plain',
+  'layer-stack': 'plain',
+  'material-compare': 'plain'
 }
 
 type SectionVariant = 'none' | 'plain' | 'alt' | 'head' | 'plain-flush' | 'alt-flush'
