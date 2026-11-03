@@ -212,7 +212,7 @@ defineBlock({
   font-family: ui-monospace, Consolas, monospace;
   font-size: 11px;
   letter-spacing: 0.24em;
-  color: var(--teal);
+  color: var(--hero-accent, var(--teal));
   text-transform: uppercase;
   margin-bottom: 24px;
 }
@@ -220,7 +220,7 @@ defineBlock({
   content: "";
   width: 26px;
   height: 1px;
-  background: var(--teal);
+  background: var(--hero-accent, var(--teal));
 }
 h1 {
   font-size: clamp(36px, 5.2vw, 72px);
@@ -232,7 +232,7 @@ h1 {
 }
 h1 :deep(em) {
   font-style: normal;
-  color: var(--teal);
+  color: var(--hero-accent, var(--teal));
 }
 .sh-lead {
   margin-top: 24px;
@@ -260,10 +260,10 @@ h1 :deep(em) {
 }
 .sh-btn.primary {
   background: var(--teal);
-  color: #0b0d10;
+  color: var(--on-brand, #0b0d10);
 }
 .sh-btn.primary:hover {
-  background: #ffc24b;
+  background: var(--teal-dk, #ffc24b);
   transform: translateY(-2px);
 }
 .sh-btn.ghost {
@@ -305,7 +305,7 @@ h1 :deep(em) {
   flex: 0 0 auto;
   width: 0;
   height: 1.5px;
-  background: var(--teal);
+  background: var(--hero-accent, var(--teal));
   transition: width 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .sh-scene.on {
@@ -328,8 +328,11 @@ h1 :deep(em) {
   grid-template-columns: repeat(4, 1fr);
 }
 .sh-stat {
-  padding: 22px 0;
+  padding: 22px 28px;
   border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sh-stat:first-child {
+  padding-left: 0;
 }
 .sh-stat:last-child {
   border-right: 0;
@@ -344,7 +347,7 @@ h1 :deep(em) {
 }
 .sh-stat b small {
   font-size: 12px;
-  color: var(--teal);
+  color: var(--hero-accent, var(--teal));
   margin-left: 3px;
 }
 .sh-stat span {
@@ -414,8 +417,8 @@ h1 :deep(em) {
     font-size: 12.5px;
   }
   .sh-scene.on {
-    border-color: var(--teal);
-    background: rgba(240, 165, 0, 0.12);
+    border-color: var(--hero-accent, var(--teal));
+    background: var(--hero-accent-tint, rgba(240, 165, 0, 0.12));
   }
   /* 横排时下划线指示条没有意义，改成边框高亮 */
   .sh-scene .sh-bar {
@@ -425,7 +428,7 @@ h1 :deep(em) {
     grid-template-columns: repeat(2, 1fr);
   }
   .sh-stat {
-    padding: 16px 0;
+    padding: 16px 12px;
     border-right: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }

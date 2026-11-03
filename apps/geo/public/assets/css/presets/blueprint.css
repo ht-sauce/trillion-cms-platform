@@ -33,6 +33,8 @@
   --brand-tint: rgba(24, 95, 165, 0.08);
   --grid-line: rgba(24, 95, 165, 0.06);
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+  /* 覆盖 theme-b.css 的医院站派生常量：浅蓝品牌淡底（.btn-out:hover 用）、深墨按钮字 */
+  --teal-lt: #eaf2fa;
   /* 交互块对接变量：钢蓝底上用白字；深色实景首屏上的品牌强调色用亮蓝 */
   --on-brand: #ffffff;
   --hero-accent: #7fb3e8;
@@ -268,6 +270,53 @@ header .navtoggle {
   border-color: var(--hair-dark) !important;
   color: var(--ink) !important;
 }
+/* 照片背景分支：文字必须保持白色（实景图上深墨字不可读，2026-11-03 巡检修复） */
+.hero.has-bg {
+  color: #fff;
+}
+.hero.has-bg::after {
+  display: block;
+  background: linear-gradient(180deg, rgba(10, 14, 20, 0.32), rgba(10, 14, 20, 0.12) 40%, rgba(10, 14, 20, 0.4));
+  background-size: 100% 100%;
+}
+.hero.has-bg h1 {
+  color: #fff;
+}
+.hero.has-bg .lead {
+  color: rgba(255, 255, 255, 0.82);
+}
+.hero.has-bg .orgline {
+  color: rgba(255, 255, 255, 0.72);
+}
+.hero.has-bg .orgline b {
+  color: #ffc24b;
+}
+.hero.has-bg .hero-note {
+  color: rgba(255, 255, 255, 0.6);
+}
+.hero.has-bg .pill-tag {
+  color: #ffc24b;
+  background: rgba(255, 194, 75, 0.12);
+  border-color: rgba(255, 194, 75, 0.4);
+}
+.hero.has-bg .pill-tag i {
+  background: #ffc24b;
+}
+.hero.has-bg .chip {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.hero.has-bg .hero-actions .btn-teal {
+  background: var(--teal) !important;
+  color: var(--on-brand) !important;
+}
+.hero.has-bg .hero-actions .btn-line,
+.hero.has-bg .hero-panel .acts span.btn.btn-line {
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
 
 /* ---------- 区块节奏：纸白与浅灰蓝交替 ---------- */
 .site-section {
@@ -419,6 +468,13 @@ header .navtoggle {
   transform: none;
   box-shadow: none;
   border-color: rgba(24, 95, 165, 0.45) !important;
+}
+/* 认证缩写图标底：theme-b 写死 38×38 方块（单字设计），放 FDA/USDA 这类多字母溢出。
+   改为背景包裹文字 + 左右 padding（图标 .ico 本身 display:grid 居中不变） */
+.tcard .ico {
+  width: fit-content;
+  min-width: 38px;
+  padding: 0 14px;
 }
 
 /* ---------- 数据条 ---------- */
@@ -733,6 +789,42 @@ header .navtoggle {
   color: var(--mute) !important;
 }
 
+/* ---------- 认证卡 5 列档（feature-cards columns=5，ADR-051 国际认证 5 项） ----------
+   theme-b.css 只有 grid-3/grid-4；grid-5 与 grid-4 同口径（gap 16px，窄屏 2 列） */
+.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .grid-5 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* 认证卡内容与卡框保持内距，文字不贴边 */
+.grid-5 .tcard {
+  padding: 20px 22px;
+}
+
+/* ---------- 页底咨询条：文案居左、按钮成组靠右、真链接有小手 ---------- */
+.telbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+.telbar > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.telbar .btn + .btn {
+  margin-left: 0;
+}
+.telbar a.btn {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* ---------- 页脚：白底细线 + 等宽版权行 ---------- */
 footer {
   background: var(--paper-2);
@@ -788,6 +880,11 @@ footer .flegal strong {
 }
 footer .fqr {
   display: none;
+}
+/* 页脚版权条 / NAP 行居中（FrameSiteFooter 的 .foot-row 默认左对齐） */
+footer .foot-row {
+  justify-content: center;
+  text-align: center;
 }
 
 /* ---------- 响应式 ---------- */

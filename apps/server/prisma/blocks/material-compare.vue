@@ -147,7 +147,7 @@ defineBlock({
 .tab.on {
   background: var(--teal);
   border-color: var(--teal);
-  color: #0b0d10;
+  color: var(--on-brand, #0b0d10);
 }
 .rows {
   display: flex;

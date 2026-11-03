@@ -250,11 +250,11 @@ defineBlock({
 }
 .ls-stratum.on {
   transform: translateX(6px);
-  box-shadow: -4px 0 0 #0b0d10;
+  box-shadow: -4px 0 0 var(--ink, #0b0d10);
 }
 .ls-stratum.tone-0 {
   background: var(--teal);
-  color: #3a2a00;
+  color: var(--on-brand, #3a2a00);
 }
 .ls-stratum.tone-1 {
   background: #c57f00;

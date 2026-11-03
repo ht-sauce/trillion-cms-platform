@@ -490,6 +490,9 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 - `public/assets/css/theme-b.css` —— 设计稿原型基础样式（**原样复制，不得改选择器**，09 §7.4.1）
 - `public/assets/css/site.css` —— 设计稿站点级布局样式（同上）
+- `public/assets/css/presets/` —— 站点级样式预设（ADR-048），由 `themeTokens.stylePreset` 按文件名加载：
+  - `industrial.css` —— 工业站暗色工程预设（forintech 初版视觉，ADR-051 后退役不再被引用，保留文件备查）
+  - `blueprint.css` —— 「图纸白」亮色预设（forintech 改版视觉，钢蓝 #185FA5 + 安全橙 #E8590C + 等宽规格数字 + 工程网格底，ADR-051；定义 `--on-brand` / `--hero-accent` 变量与交互块对接）
 - `public/assets/img/cert/**` —— 资质证件图（18 个；含 `business-license.pdf`）
 - `public/assets/img/device/**` —— 设备实拍图（20 个）
 - `public/assets/img/doctor/**` —— 医师形象照（4 个）

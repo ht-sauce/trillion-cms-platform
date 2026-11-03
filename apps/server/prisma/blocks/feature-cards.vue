@@ -8,7 +8,8 @@
  *   .grid-4|.grid-3 > .tcard > .ico + h4 + p + .v(卡脚，可含 span)
  *
  * 设计稿硬约束：
- * 1. columns 只允许 3 / 4，默认 3；4 列仅用于短文本（如初诊清单、更正机制）；
+ * 1. columns 只允许 3 / 4 / 5，默认 3；4 / 5 列仅用于短文本（认证卡、初诊清单等一行卡）；
+ *    5 列样式由站点预设提供（theme-b.css 只有 grid-3/grid-4，ADR-051 认证卡 5 项所需）
  * 2. footerLabel + footerValue 是卡脚的「可核验落点」（如「检查明细 共7项」），不是 CTA；
  * 3. icon 为单字/编号图标，纯装饰需 aria-hidden。
  */
@@ -40,16 +41,16 @@ defineBlock({
       key: 'columns',
       label: '列数',
       type: 'select',
-      options: ['3', '4'],
+      options: ['3', '4', '5'],
       default: '3',
-      hint: '4 列仅用于短文本'
+      hint: '4 / 5 列仅用于短文本'
     }
   ]
 })
 </script>
 
 <template>
-  <div class="grid" :class="data.columns === '4' ? 'grid-4' : 'grid-3'">
+  <div class="grid" :class="data.columns === '5' ? 'grid-5' : data.columns === '4' ? 'grid-4' : 'grid-3'">
     <div v-for="(item, index) in data.items || []" :key="index" class="tcard">
       <div v-if="item.icon" class="ico" aria-hidden="true">{{ item.icon }}</div>
       <h4>{{ item.title }}</h4>
