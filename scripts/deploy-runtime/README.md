@@ -10,7 +10,6 @@
 ```
 start.mjs              进程入口（清单驱动，管理全部应用）
 db.mjs                 数据库入口（结构上线 / 状态 / 种子）
-nginx.conf.example     nginx 参考配置（单域名同源）
 config/                派生配置（端口 / API 基址 / 连接串的唯一事实源）
 env/                   环境变量值（含密钥）
 apps/server/           服务端：dist + prisma 迁移 + uploads 素材 + 全量 node_modules
@@ -27,7 +26,7 @@ node start.mjs daemon       # 3) 后台守护运行三端
 node start.mjs status       # 4) 查看健康（三端端口应有 HTTP 响应）
 ```
 
-之后按 `nginx.conf.example` 配置反向代理与静态托管，即可对外访问。
+之后按仓库根 `nginx.conf.example`（ADR-045 薄反代形态，含 HTTPS 证书与 gzip 配置）配置反向代理，即可对外访问。
 
 ## 常用命令
 
@@ -56,7 +55,7 @@ node start.mjs status       # 4) 查看健康（三端端口应有 HTTP 响应�
 ## 内容发布（无需服务器操作）
 
 后台改内容保存后，服务端自动调用包内 `apps/geo/scripts/build-sites.mjs` 增量重建对应页面，
-产物写入 `apps/geo/sites/<slug>/`——nginx 直接出静态文件，无需重启任何进程。
+产物写入 `apps/geo/sites/<slug>/`——由 GEO 服务（:3002）统一按 Host 直出，内容发布后自动增量重建，无需重启任何进程。
 
 ## 代码更新
 

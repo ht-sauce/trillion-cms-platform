@@ -196,7 +196,7 @@ pnpm release --env production --build-only   # 体检 + 构建三端产物（已
 pnpm bundle                 # 产出仓库根 deploy/（自包含部署包，gitignore 不入库）
 ```
 
-打包器 `scripts/pack-deploy.mjs` 会：体检产物齐备 → 拷 `config/` 与 `env/.env.production`（**含密钥**）→ 汇集三端产物与运行时入口（`start.mjs` / `db.mjs` / `README.md` / `nginx.conf.example`）。产物目录：
+打包器 `scripts/pack-deploy.mjs` 会：体检产物齐备 → 拷 `config/` 与 `env/.env.production`（**含密钥**）→ 汇集三端产物与运行时入口（`start.mjs` / `db.mjs` / `README.md`）。产物目录：
 
 ```
 deploy/
@@ -375,9 +375,32 @@ pm2 save
 **站点流量统一由 GEO 承接（ADR-045）**：`location /` 全量反代 `cms-geo:3002` 并透传 `Host`，GEO 按域名解析站点、优先直出 `sites/<slug>/` 产物文件（磁盘读 ≈ 静态托管性能），未命中放行 SSR 兜底——nginx 不再 root 产物目录，**配置量随主域名数封顶、不随站点数增长**（多主域名时每个域名一个薄 server 块，见 `nginx.conf.example` 双域名形态）：
 
 ```nginx
+# ---- 80：一律 301 进 HTTPS（完整双域名形态见仓库根 nginx.conf.example） ----
 server {
     listen 80;
-    server_name www.example.com;
+    server_name example.com www.example.com;
+    return 301 https://$host$request_uri;
+}
+
+# ---- 443 主块：证书 + gzip + 四段反代 ----
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name example.com www.example.com;
+
+    # 证书（acme.sh --install-cert 落点；签发命令见本节末尾）
+    ssl_certificate         /etc/ssl/example.com.fullchain.pem;
+    ssl_certificate_key     /etc/ssl/example.com.key;
+    ssl_protocols           TLSv1.2 TLSv1.3;
+    ssl_session_cache       shared:SSL:10m;
+
+    # gzip：首屏 CSS/JS 与接口 JSON 的第一道压缩（text/html 默认压缩无需列出）
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/javascript application/javascript application/json application/xml image/svg+xml;
 
     # 管理后台：Nuxt app.baseURL=/geocms/，前缀原样透传
     location /geocms/ {
@@ -405,6 +428,8 @@ server {
     }
 
     # 站点统一入口：全部交给 GEO（按 Host 直出产物 / SSR 兜底 / 预览票据读草稿，ADR-045）
+    # proxy_set_header Host $host 是命门：丢了它 GEO 收到的是回环地址，
+    # 会错误地走「URL 首段前缀」分支（本地开发形态），线上站点解析即乱。
     location / {
         proxy_pass http://127.0.0.1:3002;
         proxy_set_header Host $host;
@@ -415,7 +440,7 @@ server {
 }
 ```
 
-> - 本文件是**参考模板**：仓库内没有任何脚本会安装 / 写入 / reload nginx（`pnpm release`、`scripts/pm2-config.mjs`、`pnpm db`、`dev.mjs` 均不碰），它只在部署包形态被当作参考附带（`deploy-runtime/nginx.conf.example`）。服务器**已有 nginx** 时**禁止覆盖既有 server 块**：按自身发行版约定新增独立块或把四处 `location` 合并进去（Debian/Ubuntu 走 `sites-available` + `sites-enabled` 软链，RHEL/CentOS 走 `conf.d/*.conf`），改完 `nginx -t` 通过再 `systemctl reload nginx`（不要 `restart`）。
+> - 本文件是**参考模板**：仓库内没有任何脚本会安装 / 写入 / reload nginx（`pnpm release`、`scripts/pm2-config.mjs`、`pnpm db`、`dev.mjs` 均不碰），完整双域名 HTTPS 形态（含 80 跳转、证书路径、gzip）见仓库根 `nginx.conf.example`。服务器**已有 nginx** 时**禁止覆盖既有 server 块**：按自身发行版约定新增独立块或把四处 `location` 合并进去（Debian/Ubuntu 走 `sites-available` + `sites-enabled` 软链，RHEL/CentOS 走 `conf.d/*.conf`），改完 `nginx -t` 通过再 `systemctl reload nginx`（不要 `restart`）。
 > - 对外端口由 `listen` 决定：本示例 `listen 80`（HTTPS 再补 443）。若服务器直连高位端口（如 `listen 8080`、公网只放行 8080），则 `env/.env.production` 的 `API_BASE` 与 `CORS_ORIGINS` 必须同口径写成 `http://<IP 或域名>:8080`，§8 验收地址亦同口径。
 > - HTTPS：`certbot --nginx` 签发后同 server 块补 443 段；**启用 HTTPS 后必须把** **`API_BASE`** **显式设为** **`https://<域名>/geoserver`**（§4.1）。免费泛域名证书只有 ACME 系支持（Let's Encrypt / ZeroSSL，DNS-01 验证 + acme.sh 自动续期，`-d a.com -d '*.a.com'` 一张证书同时覆盖裸域与子域）；多主域名 = 两张独立证书 + 各自 server 块（`nginx.conf.example` 附完整 acme.sh 示例）。
 > - **`proxy_set_header Host $host` 是站点解析的命门**：丢了它 GEO 收到的 Host 是 `127.0.0.1`（回环），会错误地走「URL 首段前缀」分支，线上站点解析即乱。
@@ -423,6 +448,23 @@ server {
 > - **可用性（ADR-045 代价）**：GEO 服务是站点访问单点，必须 PM2 守护（§2）+ 健康检查（§8 #2）兜底；`pm2 logs trillion-geo` 里的 `[access] {...}` 单行 JSON 即站点级访问日志（host / site / path / status / 耗时，静态资产不记），可直接 grep / 采集到监控管道。
 
 ***
+
+### 7.1 泛域名：什么时候需要、怎么判定
+
+**结论先行：单域名单站点的当前形态不需要泛域名**——DNS 加两条记录（`@` 与 `www`）+ 一张证书（`-d forintech.com -d www.forintech.com`）即可，证书签发用 HTTP-01 就行，连 DNS API 都不必配。
+
+| 需求 | 需要 DNS 泛解析（`*` 记录）？ | 需要泛域名证书（`*.域名`）？ | 前置依赖 |
+| --- | --- | --- | --- |
+| 单域名单站点（**现状**） | 否 | 否 | 无（HTTP-01 即可签） |
+| 主域名下开子域名站点（`news.example.com`、`shop.example.com`，且会陆续增加） | 是（或每子域名一条记录） | 是 | DNS 服务商的 API（acme.sh DNS 插件做 DNS-01） |
+| 子域名固定只有 1~2 个 | 每个子域名一条记录即可 | 每个写进同一张证书（`-d news.example.com`） | 同上（DNS-01），或逐个 HTTP-01 |
+
+**两项支持情况的判定**（都支持≠都要用）：
+
+1. **DNS 泛解析**：主流服务商（DNSPod / 阿里云 / Cloudflare / 华为云）控制台都支持加主机记录为 `*` 的 A/CNAME——这是 DNS 服务商的基础能力，不是风险项。查法：控制台解析记录页看是否允许 `*` 作主机名。
+2. **泛域名证书**：依赖 acme.sh 对应服务商的 **DNS API 插件**（DNS-01 自动加 TXT 验证）。DNSPod（`dns_dnspod`）、阿里云（`dns_ali`）、Cloudflare（`dns_cf`）、华为云（`dns_huaweicloud`）均有官方插件；小众服务商若无插件，可用「手动 DNS-01」或改用按主机名逐个签发。
+
+**决策**：先按「单域名 + `www`」签一张证书上线（零额外依赖）；将来真要开子域名站点矩阵时，再补泛解析与泛域名证书——补配动作只涉及 DNS 控制台与 acme.sh 参数，nginx 块无需重写（`server_name` 兜底 + GEO 按 Host 分发已就位）。
 
 ## 8. 上线验收清单
 

@@ -403,8 +403,14 @@ export function buildEntityJsonLd(context: GeoContext): string {
   const sameAs = (site.sameAs || []).filter((item) => item?.url).map((item) => item.url)
   if (sameAs.length) node.sameAs = sameAs
 
-  /** 待补字段显式标注：让「未提供」是可见状态，而不是被悄悄省略 */
-  if (site.pendingFields?.length) {
+  /**
+   * 待补字段显式标注（按行业分派，ADR-050）：
+   *   医疗 —— 有资质披露义务，「未提供」必须是可见状态，不悄悄省略；
+   *   工业 —— 无披露义务，且站点口径是「按实际站点呈现」，缺失字段本来就不输出，
+   *           再写 disambiguatingDescription 等于在机器可读层自曝缺失，
+   *           对实体置信度是负贡献，因此不输出。
+   */
+  if (context.site.businessType !== 'industrial' && site.pendingFields?.length) {
     node.disambiguatingDescription = `${profile.pendingLabel}：${site.pendingFields.join('、')}`
   }
 

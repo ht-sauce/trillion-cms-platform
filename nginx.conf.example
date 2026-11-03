@@ -4,7 +4,7 @@
 # 薄 server 块（证书 + 一条共享反代片段），location / 全量反代 GEO :3002 并透传 Host；
 # GEO 按域名解析站点、优先直出 sites/<slug>/ 产物文件（磁盘读 ≈ 静态托管性能），未命中放行 SSR 兜底。
 # **nginx 配置量随主域名数封顶、不随站点数增长**：加站点 = 后台建站 + 发布 + DNS 解析，服务器零操作；
-# 加主域名才需要复制一个 server 块 + 签一张证书。
+# 加主域名才需要复制一对 server 块（80 重定向 + 443 主块）+ 签一张证书。
 #
 # 实例：两个独立主域名 a.com 与 b.cn（各配一张证书）。服务器上落地（三者缺一不可）：
 #   sudo cp nginx.conf.example /etc/nginx/sites-available/trillion.conf
@@ -12,16 +12,57 @@
 #   sudo nginx -t && sudo systemctl reload nginx
 #
 # 约定：仓库位于 /srv/app/trillion-cms-platform（见 docs/spec/10-launch-runbook.md §4）。
+#
+# 证书路径约定（acme.sh --install-cert 的落点，见文末签发示例）：
+#   /etc/ssl/a.com.key / /etc/ssl/a.com.fullchain.pem
+#   /etc/ssl/b.cn.key  / /etc/ssl/b.cn.fullchain.pem
 
-# 共享反代片段：三个 server 块的 location / 与 API 段完全相同，抽成一处避免漂移
-# （落盘为 /etc/nginx/snippets/trillion-proxy.conf，或直接内联进各 server 块）
+# ============================================================================
+# 共享 gzip：三个 443 块的压缩配置完全相同（text/html 默认压缩，无需列入 types）
+# ============================================================================
+# 落盘为 /etc/nginx/conf.d/trillion-gzip.conf，或直接内联进各 server 块。
+# gzip 是 GeoJSON/大 JSON 交互与首屏 CSS/JS 体积的第一道闸，开在 nginx 比在应用层省 CPU。
+gzip on;
+gzip_comp_level 5;                # 5 是压缩率与 CPU 的平衡点；静态产物压缩一次缓存后收益递减
+gzip_min_length 1024;             # 小于 1KB 不压（压了更胖）
+gzip_vary on;                     # 告知 CDN/代理按 Accept-Encoding 区分缓存
+gzip_proxied any;                 # 反代链路（geo→nginx）也允许压缩
+gzip_types
+    text/plain
+    text/css
+    text/javascript
+    application/javascript
+    application/x-javascript
+    application/json
+    application/manifest+json
+    application/xml
+    image/svg+xml;
 
-# ---------------- server 块 1：a.com（站点 A 及其子域站点） ----------------
+# ============================================================================
+# server 块 1：a.com —— 80 跳转 443（HTTP 一律 301，避免双入口）
+# ============================================================================
 server {
-    listen 8080;
+    listen 80;
+    server_name a.com;
+    return 301 https://$host$request_uri;
+}
+
+# ---------------- server 块 1：a.com（443 主块：站点 A 及其子域站点） ----------------
+# 子域名（如 news.a.com）无需单独 server 块：nginx 精确匹配不到时落到本块，
+# Host 透传给 GEO，GEO 按子域名匹配站点。证书用泛域名一张覆盖 a.com 与 *.a.com。
+server {
+    listen 443 ssl;
+    http2 on;
     server_name a.com;
 
-    # 管理后台：Nuxt app.baseURL=/geocms/，前缀原样透传，proxy_pass 不做路径重写
+    # ---- 证书（acme.sh --install-cert 的落点，续期后自动 reload nginx，见文末） ----
+    ssl_certificate         /etc/ssl/a.com.fullchain.pem;
+    ssl_certificate_key     /etc/ssl/a.com.key;
+    ssl_protocols           TLSv1.2 TLSv1.3;
+    ssl_session_cache       shared:SSL:10m;
+    ssl_session_timeout     1d;
+
+    # ---- 管理后台：Nuxt app.baseURL=/geocms/，前缀原样透传，proxy_pass 不做路径重写 ----
     location /geocms/ {
         proxy_pass http://127.0.0.1:3000;
         proxy_set_header Host $host;
@@ -30,7 +71,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # 服务端 API：全局前缀 /geoserver；client_max_body_size 放开素材上传
+    # ---- 服务端 API：全局前缀 /geoserver；client_max_body_size 放开素材上传 ----
     location /geoserver/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_set_header Host $host;
@@ -40,13 +81,13 @@ server {
         client_max_body_size 20m;
     }
 
-    # 上传资源直出（PUBLIC_URL_PREFIX=/static；物理目录 apps/server/uploads）
+    # ---- 上传资源直出（PUBLIC_URL_PREFIX=/static；物理目录 apps/server/uploads） ----
     location /static/ {
         alias /srv/app/trillion-cms-platform/apps/server/uploads/;
         expires 7d;
     }
 
-    # 站点统一入口：全部交给 GEO（按 Host 直出产物 / SSR 兜底 / 预览票据读草稿，ADR-045）
+    # ---- 站点统一入口：全部交给 GEO（按 Host 直出产物 / SSR 兜底 / 预览票据读草稿，ADR-045） ----
     # proxy_set_header Host $host 是命门：丢了它 GEO 收到的是 127.0.0.1（回环），
     # 会错误地走「URL 首段前缀」分支，线上站点解析即乱。
     location / {
@@ -58,11 +99,26 @@ server {
     }
 }
 
-# ---------------- server 块 2：b.cn（站点 B 及其子域站点） ----------------
-# 与块 1 只差 server_name 与证书路径；站点分发完全由 GEO 按 Host 完成，nginx 不感知站点。
+# ============================================================================
+# server 块 2：b.cn —— 与块 1 只差 server_name 与证书路径；
+# 站点分发完全由 GEO 按 Host 完成，nginx 不感知站点。
+# ============================================================================
 server {
-    listen 8080;
+    listen 80;
     server_name b.cn;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name b.cn;
+
+    ssl_certificate         /etc/ssl/b.cn.fullchain.pem;
+    ssl_certificate_key     /etc/ssl/b.cn.key;
+    ssl_protocols           TLSv1.2 TLSv1.3;
+    ssl_session_cache       shared:SSL:10m;
+    ssl_session_timeout     1d;
 
     location /geocms/ {
         proxy_pass http://127.0.0.1:3000;
@@ -95,21 +151,28 @@ server {
     }
 }
 
-# ---------------- HTTPS（上线时启用） ----------------
-# 换 HTTPS：每个 server 块加 listen 443 ssl + 证书两行（certbot --nginx 或 acme.sh 均可自动补段），
-# 同时把 env/.env.production 的 API_BASE 与 CORS_ORIGINS 改成 https://<域名>。
+# ============================================================================
+# 证书签发（acme.sh · 泛域名走 DNS-01）
+# ============================================================================
+# 免费泛域名证书只有 ACME 系支持（Let's Encrypt / ZeroSSL）：必须 DNS-01 验证 + 自动续期；
+# 泛域名不含裸域，一张证书用 -d a.com -d '*.a.com' 同时覆盖。
+# 两个主域名 = 两张独立证书（各配各的 DNS API 插件，续期互不影响——一张续期失败不拖累另一域）。
 #
-# 免费泛域名证书只有 ACME 系支持（Let's Encrypt / ZeroSSL）：必须 DNS-01 验证 + acme.sh 自动续期；
-# 泛域名不含裸域，一张证书用 -d a.com -d '*.a.com' 同时覆盖。acme.sh 示例（DNSPod 为例）：
+# acme.sh 示例（DNSPod 为例）：
 #   export DP_Id="xxx" DP_Key="xxx"
 #   acme.sh --issue --dns dns_dnspod -d a.com -d '*.a.com'
 #   acme.sh --install-cert -d a.com \
 #     --key-file       /etc/ssl/a.com.key \
 #     --fullchain-file /etc/ssl/a.com.fullchain.pem \
 #     --reloadcmd      "nginx -s reload"
-# 两个主域名 = 两张独立证书（各配各的 DNS API 插件，续期互不影响）。
+#   # b.cn 同理（换 DNS 插件与域名）
 #
-# 预览与监控两件套（缺一不可）：
+# 验证：curl -I https://a.com 应返回 301/200 且证书链完整；
+#       openssl s_client -connect a.com:443 -servername a.com </dev/null 2>/dev/null | openssl x509 -noout -dates
+
+# ============================================================================
+# 预览与监控两件套（缺一不可）
+# ============================================================================
 #   1) proxy_set_header Host $host（上文已含）——站点解析与预览票据都靠它；
 #   2) env/.env.production 显式给 GEO_BASE_URL=<对外基址>（例：https://a.com）——
 #      派生缺省会落到 GEO 内部端口，后台预览 iframe 打不开。

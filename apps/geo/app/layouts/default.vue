@@ -13,11 +13,15 @@
  *   **不再另建 `.mobile-nav`**（那是自创结构，与设计稿不一致）。
  */
 import { useSite } from '../composables/useSite'
+import { useCurrentPath } from '../composables/usePage'
 
 const { site, load, navigationOf } = useSite()
 await load()
 
 const route = useRoute()
+
+/** 导航高亮用的当前路径：统一入口（剥站点前缀 + 归一化），见 useCurrentPath */
+const navCurrentPath = useCurrentPath()
 
 const menuExpanded = ref(false)
 
@@ -55,7 +59,7 @@ const headerItems = computed(() => navigationOf('header')?.items ?? [])
       :mark-text="site?.logoMark || ''"
       :items="headerItems"
       :expanded="menuExpanded"
-      :current-path="route.path"
+      :current-path="navCurrentPath"
       @toggle="menuExpanded = !menuExpanded"
     />
 

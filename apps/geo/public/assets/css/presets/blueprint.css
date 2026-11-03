@@ -1,0 +1,839 @@
+/* ==========================================================================
+   forintech · 站点样式预设（ADR-048 机制）
+   「图纸白」：浅灰蓝工程底 + 钢蓝主色 + 安全橙点睛（ADR-051）
+
+   为什么换预设：暗色工程风（industrial.css）已完成使命。改版定稿为
+   「选型工具信息架构 + 图纸白视觉」——亮色对可读性 / LCP / AI 引用友好，
+   等宽字规格数字与 FIG 式标注强化「技术手册」气质。
+
+   约定与 industrial.css 一致：本文件只做「站点视觉」覆盖，不改任何块的
+   DOM 与语义；加载顺序排在 theme-b.css → site.css → geo-site-bridge.css
+   之后，天然具备覆盖权。交互块（scene-hero / layer-stack / material-compare）
+   自带 scoped 样式，通过 --hero-accent / --on-brand 变量对接本主题。
+
+   前置条件：站点 themeTokens 已翻亮（bg/ink/teal/line 等为浅色值），
+   本文件负责全局 CSS 里写死的深色件与版式级差异（网格底、细线、左对齐）。
+   ========================================================================== */
+
+:root {
+  /* 图纸白色板：主色钢蓝由站点令牌 --teal 给出（#185FA5），这里补位派生 */
+  --ink: #1a2430;
+  --ink-2: #24303e;
+  --panel: #ffffff;
+  --panel-2: #f3f6fa;
+  --paper: #fbfcfd;
+  --paper-2: #f3f6fa;
+  --mute: #5a6675;
+  --mute-2: #8a94a2;
+  --hair: #e2e8f0;
+  --hair-soft: #edf1f6;
+  --hair-dark: rgba(26, 36, 48, 0.14);
+  --brand: var(--teal);
+  --brand-2: #e8590c;
+  --brand-tint: rgba(24, 95, 165, 0.08);
+  --grid-line: rgba(24, 95, 165, 0.06);
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Consolas, monospace;
+  /* 交互块对接变量：钢蓝底上用白字；深色实景首屏上的品牌强调色用亮蓝 */
+  --on-brand: #ffffff;
+  --hero-accent: #7fb3e8;
+  --hero-accent-tint: rgba(127, 179, 232, 0.16);
+}
+
+/* ---------- 全局 ---------- */
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.site-main {
+  background: var(--paper);
+}
+
+/* 顶部信息条：新视觉里没有它的位置，信息合并进页脚 */
+.top {
+  display: none;
+}
+
+/* ---------- 页头：白底、紧凑、下细线 ---------- */
+header {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--hair);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+header .head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;
+  gap: 40px;
+}
+header .logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+}
+header .logo .mark {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+}
+header .logo .n {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+  line-height: 1.2;
+}
+header .logo .s {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: var(--mute-2);
+  font-weight: 600;
+  margin-top: 2px;
+}
+header .mainnav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-left: auto;
+}
+/* 纯文字导航：选中态 = 钢蓝文字 + 安全橙短横线（定位信息必须有可见差异） */
+nav.mainnav > a {
+  padding: 4px 0;
+  border-radius: 0;
+  background: none;
+}
+nav.mainnav > a:hover {
+  background: none;
+  color: var(--ink);
+}
+nav.mainnav > a.on {
+  background: none;
+  color: var(--brand);
+  font-weight: 600;
+}
+nav.mainnav > a.on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 2px;
+  background: var(--brand-2);
+}
+header .mainnav a {
+  position: relative;
+  font-size: 13.5px;
+  color: var(--mute);
+  text-decoration: none;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+header .mainnav a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 1.5px;
+  background: var(--brand-2);
+  transition: width 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+header .mainnav a:hover {
+  color: var(--ink);
+}
+header .mainnav a.on {
+  color: var(--brand);
+}
+header .mainnav a:hover::after,
+header .mainnav a.on::after {
+  width: 100%;
+}
+header .navtoggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--hair);
+  color: var(--ink);
+  font-size: 18px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ---------- Hero（hero-dark 块，9 页页首横幅）：图纸白网格底 ----------
+   theme-b.css 的 .hero 是深色渐变（含写死的 #123252 尾色与白字），整体覆盖 */
+.hero {
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(180deg, #f6f9fc 0%, var(--paper) 100%);
+  background-size: 28px 28px, 28px 28px, 100% 100%;
+  color: var(--ink);
+  border-bottom: 1px solid var(--hair);
+}
+.hero::after {
+  display: none;
+}
+.hero h1 {
+  color: var(--ink);
+}
+.hero .grad {
+  background: linear-gradient(92deg, var(--brand) 20%, #3d8fd6 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hero .orgline {
+  color: var(--mute-2);
+}
+.hero .orgline b {
+  color: var(--brand-2);
+}
+.hero .lead {
+  color: var(--mute);
+}
+.hero .lead em {
+  color: var(--brand);
+  border-bottom-color: rgba(24, 95, 165, 0.4);
+}
+.hero .pill-tag {
+  color: var(--brand);
+  background: var(--brand-tint);
+  border-color: rgba(24, 95, 165, 0.25);
+}
+.hero .pill-tag i {
+  background: var(--brand);
+  box-shadow: none;
+}
+.hero .chip {
+  color: var(--mute);
+  background: #fff;
+  border: 1px solid var(--hair);
+}
+.hero .hero-note {
+  color: var(--mute-2);
+}
+.hero .hero-actions .btn-teal {
+  background: var(--brand) !important;
+  color: var(--on-brand) !important;
+}
+.hero .hero-actions .btn-line {
+  border-color: var(--hair-dark) !important;
+  color: var(--ink) !important;
+  background: transparent !important;
+}
+.hero .hero-actions .btn-line:hover {
+  background: var(--panel-2) !important;
+}
+/* 右栏数据面板：白卡细线 */
+.hero-panel {
+  background: #fff;
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.hero-panel h3 {
+  color: var(--ink);
+}
+.hero-panel h3::before {
+  background: var(--brand-2);
+}
+.hero-panel .row {
+  border-bottom: 1px solid var(--hair-soft);
+}
+.hero-panel .row .k {
+  color: var(--mute-2);
+}
+.hero-panel .row .v {
+  color: var(--ink);
+}
+.hero-panel .row .v big {
+  color: var(--brand);
+}
+.hero-panel .acts span.btn.btn-line {
+  border-color: var(--hair-dark) !important;
+  color: var(--ink) !important;
+}
+
+/* ---------- 区块节奏：纸白与浅灰蓝交替 ---------- */
+.site-section {
+  padding: clamp(44px, 5vw, 72px) 0;
+  background: transparent !important;
+}
+.site-section.flush-top {
+  padding-top: 0;
+}
+.site-section.alt,
+.site-section.alt-flush {
+  background:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+    var(--paper-2) !important;
+  background-size: 28px 28px, 28px 28px, 100% 100% !important;
+  color: var(--ink);
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+
+/* 标题色统一深墨（令牌翻亮后全局已是深色，这里兜底写死值） */
+.site-section h1,
+.site-section h2,
+.site-section h3 {
+  color: var(--ink);
+}
+.site-section.alt h1,
+.site-section.alt h2,
+.site-section.alt h3,
+.site-section.alt-flush h1,
+.site-section.alt-flush h2,
+.site-section.alt-flush h3 {
+  color: var(--ink);
+}
+.site-section.alt .wrap,
+.site-section.alt-flush .wrap {
+  color: var(--ink);
+}
+
+/* 区块标题：左大标题 + 右说明（块的结构是 .sec-head > div > h2 + p） */
+.sec-head {
+  margin-bottom: clamp(22px, 3vw, 36px);
+}
+.sec-head > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: clamp(24px, 4vw, 56px);
+  align-items: end;
+  width: 100%;
+}
+.sec-head > div > h2:only-child {
+  grid-column: 1 / -1;
+}
+.sec-head > div > p {
+  padding-bottom: 4px;
+}
+.sec-head h2 {
+  white-space: pre-line;
+  font-size: clamp(26px, 3.2vw, 40px);
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 800;
+  max-width: 22ch;
+}
+.sec-head p,
+.sec-head .desc {
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--mute);
+  max-width: 38ch;
+  margin: 0;
+}
+.site-section.alt .sec-head p,
+.site-section.alt .sec-head .desc,
+.site-section.alt-flush .sec-head p {
+  color: var(--mute);
+}
+
+/* ---------- 通用卡片：白底细线（工程文档感） ---------- */
+.tcard,
+.itemcard,
+.kitem,
+.term,
+.napcard,
+.certcard,
+.post,
+.glass,
+.idxlist li,
+.doc,
+.dev-row,
+.casecard,
+.pcard,
+.pd-card,
+.step,
+.steps .step,
+.vcard {
+  background: #fff !important;
+  border-color: var(--hair) !important;
+  border-radius: 6px !important;
+  color: var(--ink);
+}
+.tcard h4,
+.itemcard h4,
+.kitem h4,
+.term b,
+.napcard h4,
+.certcard b,
+.dev-row h4,
+.casecard h4,
+.pcard h4,
+.pd-card h4,
+.step h4 {
+  color: var(--ink);
+}
+.tcard p,
+.itemcard p,
+.kitem p,
+.term p,
+.dev-row p,
+.pcard p {
+  color: var(--mute);
+}
+.casecard .meta span,
+.casecard .prod,
+.casecard .go,
+.pd-card .pd-cn,
+.pd-card .pd-desc,
+.pd-card .pd-go {
+  color: var(--mute);
+}
+.casecard .ind,
+.pd-card .pd-series {
+  color: var(--brand);
+  background: var(--brand-tint);
+}
+.tcard .ico {
+  color: var(--brand);
+  background: var(--brand-tint);
+  border-radius: 4px;
+}
+.tcard:hover,
+.itemcard:hover,
+.kitem:hover,
+.post:hover,
+.pcard:hover,
+.pd-card:hover,
+.casecard:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: rgba(24, 95, 165, 0.45) !important;
+}
+
+/* ---------- 数据条 ---------- */
+.stats,
+.stat-bar {
+  border-top: 1px solid var(--hair);
+  border-bottom: 1px solid var(--hair);
+}
+.stats .stat b,
+.stat .n {
+  font-family: var(--mono);
+  letter-spacing: -0.02em;
+  color: var(--brand);
+}
+.stats .stat span,
+.stat .lbl {
+  color: var(--mute);
+}
+.section-source,
+.stat-source {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--mute-2);
+}
+
+/* ---------- FAQ ---------- */
+.qa {
+  border-bottom: 1px solid var(--hair);
+  background: transparent;
+}
+.qa .qt {
+  color: var(--ink);
+  font-weight: 700;
+}
+.qa .qa-link,
+.qa p {
+  color: var(--mute);
+}
+.faq-sec h3 {
+  color: var(--ink);
+}
+.faq-sec h3::before {
+  background: var(--brand-2);
+}
+.faq .q {
+  background: #fff !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 6px !important;
+}
+.faq .q:hover {
+  border-color: rgba(24, 95, 165, 0.45) !important;
+  box-shadow: none !important;
+}
+.faq .q .t {
+  color: var(--ink);
+}
+.faq .q .t b {
+  color: var(--brand);
+}
+.faq .q .a {
+  color: var(--mute);
+}
+.faq-cats a {
+  background: #fff !important;
+  border-color: var(--hair) !important;
+  color: var(--mute) !important;
+}
+.faq-cats a.on,
+.faq-cats a:hover {
+  background: var(--brand-tint) !important;
+  border-color: rgba(24, 95, 165, 0.45) !important;
+  color: var(--brand) !important;
+}
+
+/* ---------- 提示条 ---------- */
+.notice {
+  border-radius: 6px;
+  border: 1px solid var(--hair);
+  background: #fff;
+  color: var(--mute);
+}
+.notice.warning {
+  border-color: rgba(232, 89, 12, 0.35);
+  background: rgba(232, 89, 12, 0.06);
+  color: #9a3a0a;
+}
+
+/* ---------- 页底咨询条：钢蓝底白字 ---------- */
+.telbar {
+  background: var(--brand) !important;
+  border-radius: 6px;
+  color: var(--on-brand);
+}
+.telbar h3 {
+  color: var(--on-brand);
+}
+.telbar p {
+  color: rgba(255, 255, 255, 0.78);
+}
+.telbar::after {
+  display: none;
+}
+.telbar .btn-teal {
+  background: #fff !important;
+  color: var(--brand) !important;
+}
+.telbar .btn-line {
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  color: #fff !important;
+}
+
+/* ---------- 锚点条 ---------- */
+.anchor-bar a,
+.anchors a {
+  border-radius: 99px;
+  border: 1px solid var(--hair);
+  color: var(--mute);
+  background: #fff;
+}
+.anchor-bar a:hover,
+.anchors a:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* ---------- 面包屑 ---------- */
+.crumb {
+  background: transparent !important;
+  border-bottom: 1px solid var(--hair) !important;
+  color: var(--mute-2) !important;
+  font-size: 12px !important;
+}
+.crumb .crumb-item,
+.crumb a {
+  color: var(--mute) !important;
+}
+.crumb .sep {
+  color: var(--mute-2) !important;
+}
+.crumb .crumb-item:last-child {
+  color: var(--ink) !important;
+}
+
+/* ---------- 陈述卡（vcard-grid） ---------- */
+.vcard .k {
+  color: var(--brand-2);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+}
+.vcard .v {
+  color: var(--mute);
+}
+
+/* ---------- 表格：浅表头 + 等宽字体 ---------- */
+.data-table table {
+  border-color: var(--hair);
+}
+.data-table th {
+  background: var(--panel-2);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+}
+.data-table td {
+  border-color: var(--hair-soft);
+  color: var(--mute);
+}
+.data-table tr:hover td {
+  background: var(--brand-tint);
+}
+
+/* ---------- 流程 / 时间轴 ---------- */
+.step h4 {
+  color: var(--ink);
+}
+.step p {
+  color: var(--mute);
+}
+.step .no,
+.step .num {
+  color: var(--brand-2);
+  font-family: var(--mono);
+}
+
+/* ---------- 索引列表（站点地图） ---------- */
+.idxlist a {
+  background: #fff !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 4px !important;
+  color: var(--mute) !important;
+}
+.idxlist a:hover {
+  border-color: rgba(24, 95, 165, 0.45) !important;
+  color: var(--brand) !important;
+}
+.idxlist a i {
+  color: var(--brand-2) !important;
+}
+.idxlist h3 {
+  color: var(--ink);
+}
+
+/* ---------- 正文 ---------- */
+.article-body,
+.article-body p,
+.artbody,
+.artbody p {
+  color: #3a4450;
+  line-height: 1.95;
+}
+.article-body h2,
+.article-body h3,
+.artbody h2,
+.artbody h3,
+.artbody h4 {
+  color: var(--ink);
+}
+.article-body .disclaimer {
+  border-top: 1px solid var(--hair);
+  color: var(--mute-2);
+}
+
+/* ---------- 合规声明条 ---------- */
+.cmpl {
+  background: var(--panel-2) !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 6px !important;
+  color: var(--mute) !important;
+}
+.cmpl b,
+.cmpl strong {
+  color: var(--ink) !important;
+}
+
+/* ---------- 路径卡（path-cards） ---------- */
+.pcard {
+  padding: 26px 24px !important;
+}
+.pcard ul {
+  margin-top: 14px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.pcard ul li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 12.8px;
+  line-height: 1.75;
+  color: var(--mute);
+}
+.pcard ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 5px;
+  height: 1px;
+  background: var(--brand-2);
+}
+.pcard .no {
+  color: var(--brand-2);
+  font-family: var(--mono);
+}
+.pcard .go {
+  color: var(--brand);
+}
+
+/* ---------- 图库与图片占位：浅色占位（亮色主题无需防闪白深底） ---------- */
+.gal figure,
+.envgrid figure {
+  background: #fff !important;
+  border: 1px solid var(--hair) !important;
+  border-radius: 6px !important;
+}
+.gal figure .im,
+.gal figure .ph-img,
+.gal figure > div,
+.envgrid figure .im,
+.envgrid figure > div,
+.pd-card .pd-pic,
+.casecard .pic,
+.envgrid .im {
+  background: #eef2f7 !important;
+}
+.gal figcaption,
+.envgrid figcaption {
+  background: transparent !important;
+  color: var(--mute) !important;
+  border-top: 1px solid var(--hair-soft);
+}
+.pd-card .pd-ph,
+.casecard .ph {
+  background: repeating-linear-gradient(45deg, #eef2f7, #eef2f7 10px, #e6ecf3 10px, #e6ecf3 20px) !important;
+  color: var(--mute-2) !important;
+}
+
+/* ---------- 色卡块（color-palette） ---------- */
+.cp-title {
+  color: var(--ink) !important;
+}
+.cp-note {
+  color: var(--mute) !important;
+}
+.cp-sw .nm {
+  color: var(--ink) !important;
+}
+.cp-sw .cd {
+  color: var(--mute) !important;
+}
+
+/* ---------- 页脚：白底细线 + 等宽版权行 ---------- */
+footer {
+  background: var(--paper-2);
+  border-top: 1px solid var(--hair);
+  padding: 48px 0 28px;
+}
+footer .fgrid {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(3, 1fr);
+  gap: 40px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--hair);
+}
+footer .fgrid h4 {
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute-2);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+footer .fgrid ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+}
+footer .fgrid a {
+  font-size: 13px;
+  color: var(--mute);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+footer .fgrid a:hover {
+  color: var(--brand);
+}
+footer .fgrid p {
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: var(--mute-2);
+}
+footer .flegal {
+  padding-top: 22px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--mute-2);
+  line-height: 1.9;
+}
+footer .flegal strong {
+  color: var(--mute) !important;
+}
+footer .fqr {
+  display: none;
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+  header .navtoggle {
+    display: block;
+  }
+  header .mainnav {
+    display: none;
+  }
+  header .mainnav.open {
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 68px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    background: #fff;
+    border-bottom: 1px solid var(--hair);
+    padding: 8px 20px 16px;
+  }
+  header .mainnav.open a {
+    padding: 12px 0;
+    width: 100%;
+    border-bottom: 1px solid var(--hair-soft);
+  }
+  footer .fgrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  footer .fgrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- 区块标题在窄屏改单列（块结构是 .sec-head > div 两列） ---------- */
+@media (max-width: 760px) {
+  .sec-head > div {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    align-items: start !important;
+  }
+  .sec-head > div > p {
+    padding-bottom: 0;
+  }
+}

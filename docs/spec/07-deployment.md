@@ -12,7 +12,7 @@
 | ------ | ---------------------------- | ---------------------------------------------------------------- | ------------------------- | ----------- | --------------------------- |
 | Docker | `cms-admin`（SPA 3000）      | `cms-geo`（SSR 3002，站点页统一入口，ADR-045）                   | `cms-server`（3001）      | `cms-mysql` | `cms-nginx`（8080）         |
 | 直装   | 一键 `pnpm dev`；单端 `pnpm dev admin`（3000） | 一键同上；单端 `pnpm dev geo`（SSR）、`pnpm site build --site <slug>`（SSG） | 一键同上；单端 `pnpm dev server`（3001） | 本地实例 | 本地 Nginx 或直接用产物目录 |
-| 部署包 | `deploy/apps/admin/.output`（Nitro 自包含，3000） | `deploy/apps/geo/.output`（SSR 3002）+ `sites/`（GEO 读取的磁盘缓存层） | `deploy/apps/server/dist`（3001，全量 node_modules 含 prisma CLI） | 服务器实例 | 包内 `apps/geo/sites/<slug>/` + `nginx.conf.example` 模板 |
+| 部署包 | `deploy/apps/admin/.output`（Nitro 自包含，3000） | `deploy/apps/geo/.output`（SSR 3002）+ `sites/`（GEO 读取的磁盘缓存层） | `deploy/apps/server/dist`（3001，全量 node_modules 含 prisma CLI） | 服务器实例 | 包内 `apps/geo/sites/<slug>/` + nginx 参考（见仓库根 `nginx.conf.example`） |
 
 > **部署包（ADR-042）**：`pnpm bundle` 在本地把三端产物、依赖（`pnpm deploy --node-linker=hoisted`，零 symlink）、`config/` 与 `env/` 汇集为仓库根 `deploy/`（gitignore），整体拷贝到服务器后 `node db.mjs deploy`（结构）→ `node start.mjs daemon`（守护运行三端，`stop` / `status` / `restart` 子命令）——服务器免 git / pnpm / PM2；操作口径见 [`10`](./10-launch-runbook.md) §4.0。包内 `config/` 仍是端口 / 连接串 / 密钥的唯一派生事实源，`start.mjs` 按其 `APPS` 清单驱动进程管理。
 

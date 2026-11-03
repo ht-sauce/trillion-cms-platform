@@ -14,6 +14,7 @@
 import { useApiBase } from '../utils/api-base'
 import { stripSitePrefix, useSiteContext } from './useSiteKey'
 import { usePreview } from './usePreview'
+import type { ComputedRef } from 'vue'
 import type { BlockInstance, EditorialInfo, PageKind } from '@trillion/shared'
 
 export interface PageDetail {
@@ -64,7 +65,24 @@ export function normalizePagePath(input: string): string {
   return collapsed.startsWith('/') ? collapsed : `/${collapsed}`
 }
 
-/** 当前路由路径（首页为 /） */
+/**
+ * 统一入口：当前页面路径（**剥站点前缀 + 归一化**）
+ *
+ * 为什么必须有且只有一个入口（ADR-049 / ADR-050 的两次现身）：
+ *   本地回环形态 URL 是 `/forintech/news/...`（前缀 = 站点标识），
+ *   线上域名形态是 `/news/...`（前缀为空）。消费 `route.path` 的地方若各自处理，
+ *   必然漏掉某一处 —— 已经先后炸出两个 bug：
+ *     ① useState key 带前缀 → 客户端复用不到 SSR 数据 → 接口挂则整页 500
+ *     ② 导航高亮用原始路径比对 → 本地形态全站导航没有选中态
+ *   规则：**任何需要「当前页面路径」的地方一律走这里**，不允许直接读 route.path。
+ */
+export function useCurrentPath(): ComputedRef<string> {
+  const route = useRoute()
+  const { context } = useSiteContext()
+  return computed(() => normalizePagePath(stripSitePrefix(route.path, context.value.prefix)))
+}
+
+/** 当前路由路径（首页为 /）——useCurrentPath 的非响应式别名，仅限无法使用 computed 的场景 */
 export function usePagePath(): string {
   const route = useRoute()
   const raw = Array.isArray(route.params.slug) ? route.params.slug.join('/') : String(route.params.slug || '')

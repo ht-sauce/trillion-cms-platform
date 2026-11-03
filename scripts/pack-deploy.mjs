@@ -15,13 +15,13 @@
  *
  * 流程（任一步失败即中止，deploy/ 保持上次成功状态不动）：
  *   1) 体检：三端产物 + shared dist 齐备（缺失提示先 pnpm release --build-only）
- *   2) 拷贝 config/ 与 env/.env.<环境>（含密钥）+ 运行时模板（start.mjs / db.mjs / README / nginx）
+ *   2) 拷贝 config/ 与 env/.env.<环境>（含密钥）+ 运行时模板（start.mjs / db.mjs / README）
  *   3) `pnpm deploy --node-linker=hoisted` 汇集 server / geo（零 symlink，跨机拷贝不断链），按白名单清掉开发期文件
  *   4) admin 直接拷 .output（Nitro 自包含）
  *   5) 校验关键文件清单 → 输出大小与拷贝提示
  *
  * 产物（仓库根 deploy/，已 gitignore——含数据库口令与 JWT 密钥，禁止入库或外传）：
- *   deploy/start.mjs  db.mjs  README.md  nginx.conf.example  .deploy-env
+ *   deploy/start.mjs  db.mjs  README.md  .deploy-env
  *   deploy/config/  deploy/env/.env.<环境>
  *   deploy/apps/server/{dist, prisma, node_modules, uploads, package.json}
  *   deploy/apps/admin/.output/
@@ -40,7 +40,8 @@ const TAG = '部署包'
 /** 输出目录（仓库根 deploy/；已 gitignore） */
 const OUTPUT_DIR = 'deploy'
 
-/** 运行时模板目录（随包拷到 deploy/ 根：start.mjs / db.mjs / README.md / nginx.conf.example） */
+/** 运行时模板目录（随包拷到 deploy/ 根：start.mjs / db.mjs / README.md）。
+ *  nginx 参考配置已收口到仓库根 nginx.conf.example（ADR-045 薄反代形态），部署包不再随带。 */
 const RUNTIME_DIR = path.join('scripts', 'deploy-runtime')
 
 /** 打包环境名标记（写进包根，start.mjs / db.mjs 据此确定缺省环境） */
@@ -202,7 +203,6 @@ function verifyOutput(output, appEnv) {
     'start.mjs',
     'db.mjs',
     'README.md',
-    'nginx.conf.example',
     ENV_MARKER,
     path.join('config', 'index.mjs'),
     path.join('config', 'apps.mjs'),

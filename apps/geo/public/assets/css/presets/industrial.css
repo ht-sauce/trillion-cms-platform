@@ -107,11 +107,29 @@ nav.mainnav > a {
   border-radius: 0;
   background: none;
 }
-nav.mainnav > a:hover,
-nav.mainnav > a.on {
+nav.mainnav > a:hover {
   background: none;
   color: #fff;
-  font-weight: inherit;
+}
+/**
+ * 当前页选中态（2026-11-03）：品牌橙文字 + 底部短横线。
+ * 之前这行把 .on 与普通项 reset 成完全一样，用户反馈「点进页面后不知道在哪个页面」——
+ * 选中态是导航的定位信息，不是装饰，必须有可见差异。
+ * 组件层（FrameSiteHeader.isActive）已做前缀匹配：栏目详情页也会高亮对应栏目。
+ */
+nav.mainnav > a.on {
+  background: none;
+  color: var(--teal);
+  font-weight: 600;
+}
+nav.mainnav > a.on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 2px;
+  background: var(--teal);
 }
 header .mainnav a {
   position: relative;
@@ -131,9 +149,13 @@ header .mainnav a::after {
   background: var(--brand);
   transition: width 0.25s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-header .mainnav a:hover,
-header .mainnav a.on {
+header .mainnav a:hover {
   color: #fff;
+}
+/* 当前页用品牌橙 —— 与上方 nav.mainnav > a.on 的选中态一致；
+   这里曾在文件后部把 .on 刷回白色，压掉了前面写的选中态（同特异性、后声明者胜） */
+header .mainnav a.on {
+  color: var(--teal);
 }
 header .mainnav a:hover::after,
 header .mainnav a.on::after {
