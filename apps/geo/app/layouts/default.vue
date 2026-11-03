@@ -30,20 +30,11 @@ watch(
 )
 
 const headerItems = computed(() => navigationOf('header')?.items ?? [])
-const footerGroups = computed(() =>
-  ['footer-1', 'footer-2', 'footer-3', 'footer-4']
-    .map((key) => navigationOf(key))
-    .filter((group): group is NonNullable<typeof group> => Boolean(group))
-)
 
-/** 门诊时间一行文本（页脚 NAP 用） */
-const openingHoursText = computed(() => {
-  const hours = site.value?.openingHours || []
-  if (!hours.length) return null
-  return hours
-    .map((rule) => `${rule.weekday} ${rule.open}-${rule.close}${rule.note ? `，${rule.note}` : ''}`)
-    .join('；')
-})
+/**
+ * 页脚只留一行版权条（2026-11-03）：不再读页脚导航分组，也不再拼门诊/营业时间 ——
+ * 导航入口全部在页头，营业时间在公司简介与联系页，页脚重复一遍只是拉长页面。
+ */
 </script>
 
 <template>
@@ -75,19 +66,10 @@ const openingHoursText = computed(() => {
     <FrameSiteFooter
       :legal-name="site?.legalName || site?.name || ''"
       :common-name="site?.commonName || site?.name || ''"
-      :practice-scopes="site?.practiceScopes || []"
-      :credit-code="site?.creditCode || null"
-      :clinic-reg-no="site?.clinicRegNo || null"
-      :issuing-authority="site?.issuingAuthority || null"
-      :address-full="site?.addressFull || null"
       :phone="site?.phone || null"
-      :opening-hours-text="openingHoursText"
       :icp-number="site?.icpNumber || null"
-      :police-number="site?.policeNumber || null"
-      :medical-insurance="site?.medicalInsurance || false"
-      :business-type="site?.businessType || 'medical'"
-      :insurance-note="site?.insuranceNote || null"
-      :groups="footerGroups"
+      :address-full="site?.addressFull || null"
+      :credit-code="site?.creditCode || null"
     />
   </div>
 </template>

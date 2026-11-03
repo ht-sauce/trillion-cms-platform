@@ -17,6 +17,12 @@ model Site {
   icpNumber String? @map("icp_number") @db.VarChar(64)
   /// 公安备案号
   policeNumber String? @map("police_number") @db.VarChar(64)
+  /// 实体声明页路径（GEO）：哪一页输出完整的机构实体 JSON-LD，其余页用 @id 引用
+  ///
+  /// 留空 = 自动推导（优先找 /entity 页，其次 /about，最后首页）。按 2026 年通行做法，
+  /// Organization schema 全站只需实现一次，通常在首页或 About 页即可 —— 中小企业站
+  /// 没必要为「实体」单开一页（ADR-050）。
+  entityPath String? @map("entity_path") @db.VarChar(512)
 
   // ---------- 企业实体标识（GEO 实体唯一性基础） ----------
   /// 工商登记全称（营业执照口径）；缺失时先等于 commonName，并在实体档案页标注「待补」

@@ -102,7 +102,9 @@ export class GeoService {
         geoJsonLd: true,
         geoJsonLdMode: true,
         /** 行业类型决定实体声明与页面节点类型（ADR-046） */
-        businessType: true
+        businessType: true,
+        /** 实体声明页路径（ADR-050：可指向关于页/首页，不强制独立实体页） */
+        entityPath: true
       }
     })
     if (!site) throw new NotFoundException('站点不存在')
@@ -115,8 +117,19 @@ export class GeoService {
       this.publicService.documents(site.slug)
     ])
 
-    /** 实体档案页：path / slug 命中其一即算（与 PublicService.siteConfig 同一口径） */
-    const entityPage = pages.find((page) => page.path === '/entity' || page.slug === 'entity')
+    /**
+     * 实体声明页：与 PublicService.siteConfig 同一口径（ADR-050）
+     *
+     * 不再要求必须叫 /entity —— 站点配置的 entityPath、/entity、/about、首页依次兜底。
+     * 检查项要验的是「实体声明有没有输出」，而不是「有没有一个叫 entity 的页面」。
+     */
+    const configuredEntityPath = String(site.entityPath || '').trim()
+    const entityPage =
+      (configuredEntityPath && pages.find((page) => page.path === configuredEntityPath)) ||
+      pages.find((page) => page.path === '/entity' || page.slug === 'entity') ||
+      pages.find((page) => page.path === '/about') ||
+      pages.find((page) => page.path === '/')
+    const entityPath = entityPage?.path || configuredEntityPath || '/'
 
     /** 实体档案页最终会输出的 JSON-LD（自动 + 自定义按双模式合成，与线上一致） */
     const entityJsonLd = entityPage
@@ -147,6 +160,8 @@ export class GeoService {
 
     return checkSiteGeo({
       hasEntityPage: Boolean(entityPage),
+      /** 实体声明输出在哪一页（错误提示里指出具体路径，便于定位） */
+      entityPath,
       /** 实体声明按行业取类型：工业站输出 Organization，医疗站输出 MedicalClinic（ADR-046） */
       entityDeclared: entityJsonLd.includes(
         site.businessType === 'industrial' ? '"Organization"' : '"MedicalClinic"'

@@ -65,7 +65,22 @@ export class PublicService {
     ])
 
     /** 实体档案页路径：NAP 唯一事实来源，供其他页面 JSON-LD 用 @id 引用 */
-    const entityPage = pages.find((page) => page.path === '/entity' || page.slug === 'entity')
+    /**
+     * 实体声明页（ADR-050）
+     *
+     * 2026 年通行做法是把 Organization schema 全站只实现一次，位置通常在首页或 About 页
+     * （"typically on the homepage, though an About page is also acceptable"）。
+     * 因此不再要求站点必须存在 /entity 页：
+     *   站点显式配置 entityPath → 有 /entity 页就用它 → 有 /about 用 About → 兜底首页。
+     * 医院站这类信息量大的站点仍可保留独立实体页，中小企业站用 About 承载即可。
+     */
+    const configuredEntityPath = String(site.entityPath || '').trim()
+    const entityPage =
+      (configuredEntityPath && pages.find((page) => page.path === configuredEntityPath)) ||
+      pages.find((page) => page.path === '/entity' || page.slug === 'entity') ||
+      pages.find((page) => page.path === '/about') ||
+      pages.find((page) => page.path === '/')
+    const entityPath = entityPage?.path || configuredEntityPath || '/'
 
     return {
       id: site.id,
@@ -135,7 +150,7 @@ export class PublicService {
       entityJsonLd: resolvePlaceholders(
         composeGeoDoc(
           buildEntityJsonLd({
-            site: { ...this.toGeoSite(site, logo?.publicUrl ?? null, entityPage?.path || '/entity') },
+            site: { ...this.toGeoSite(site, logo?.publicUrl ?? null, entityPath) },
             now: formatDateTime(new Date()).slice(0, 10)
           }),
           (site.geoJsonLdMode as 'auto_append' | 'override') ?? 'auto_append',
@@ -156,8 +171,8 @@ export class PublicService {
       logoUrl: logo?.publicUrl ?? null,
       faviconUrl: favicon?.publicUrl ?? null,
 
-      /** 机构实体档案页路径（默认 /entity） */
-      entityPath: entityPage?.path || '/entity',
+      /** 实体声明页路径（站点配置优先，其次 /entity、/about，兜底首页） */
+      entityPath,
       /** 档案中仍待补的资质字段（缺失时页面显式标注，不编造） */
       pendingFields: detectPendingProfileFields(site, site.businessType),
 

@@ -658,11 +658,18 @@ flowchart TB
 | 位置 | 内容 |
 | --- | --- |
 | 页面 | JSON-LD（按 `kind` 与页面类型：`Article` / `WebPage` / `FAQPage` / `ItemList` + `BreadcrumbList`）、canonical、`title` / `description` / `keywords` |
-| 站点 | `MedicalClinic` 实体声明（实体档案页输出，其他页用 `@id` 引用）、`llms.txt`、`robots.txt`（含 AI 爬虫策略说明）、`robots meta`（完整摘要：`max-snippet:-1`、`max-image-preview:large`） |
+| 站点 | 机构实体声明（**实体声明页**输出，其他页用 `@id` 引用）、`llms.txt`、`robots.txt`（含 AI 爬虫策略说明）、`robots meta`（完整摘要：`max-snippet:-1`、`max-image-preview:large`） |
 
 ### 10.2 机构实体唯一性
 
-`/entity` 页输出最完整的机构实体 JSON-LD：
+> **ADR-050（2026-11-03）**：实体声明**不再强制要求独立 `/entity` 页**。按 2026 年通行做法，
+> Organization schema 全站只实现一次，输出位置通常在首页或「关于」页即可
+> （"typically on the homepage, though an About page is also acceptable"）。
+> 输出位置由 `Site.entityPath` 决定：站点配置优先，其次自动推导 `/entity` → `/about` → 首页。
+> 信息量大的机构（如医院，需要展示诊疗科目 / 医保 / 许可证）仍可保留独立实体页；
+> 中小企业站由「关于」页承载即可，页脚全站输出统一 NAP。
+
+实体声明页（由 `entityPath` 指向）输出最完整的机构实体 JSON-LD：
 
 ```json
 {
@@ -702,10 +709,10 @@ GEO 文档类型：`GeoDoc { mode: 'auto_append' | 'override', custom: string }`
 | canonical 重复（同 `siteId + path` 冲突） | 阻断 |
 | 医疗类页面缺编审信息（撰稿 / 审核医师 / 下次复核） | 阻断 |
 | 案例类出现禁止字段（姓名 / 疗效 / 费用 / 满意度 / 对比图） | 阻断 |
-| 无机构实体声明（`/entity` 页缺失或未输出 `MedicalClinic`） | 阻断 |
+| 无机构实体声明（实体声明页缺失，或未输出与行业匹配的实体 JSON-LD） | 阻断 |
 | 无 `llms.txt` / robots 缺 AI 爬虫策略说明 | 阻断 |
 | `robots meta` 未开启完整摘要 | 警告 |
-| NAP 三处（实体档案 / 首页 / 就诊指南）不一致 | 警告 |
+| NAP 不一致或缺失（实体声明页 / 页脚 / 联系页，名称 / 地址 / 电话任一缺失即警告） | 警告 |
 | `stat-bar` 缺 `source` 统计口径 | 警告 |
 | sitemap 无核心 URL（自动判定：首页 + 一级目录页） | 警告 |
 
@@ -719,7 +726,7 @@ GEO 文档类型：`GeoDoc { mode: 'auto_append' | 'override', custom: string }`
 
 ### 11.2 四条硬约束（来自设计稿，实现必须遵守）
 
-1. `Site` 的 NAP 字段只有**实体档案页**可写，其他页面只读引用
+1. `Site` 的 NAP 字段只有**实体声明页**（`entityPath` 指向的页面）可写，其他页面只读引用
 2. 正文用 **Block 数组**，不在正文写死 HTML
 3. 医疗类内容的编审信息（`reviewerId` / `nextReviewDate` 等价字段）为**发布前置**
 4. 案例类模板**不提供**疗效 / 评价 / 费用字段（结构上杜绝）

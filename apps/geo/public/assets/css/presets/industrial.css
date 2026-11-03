@@ -152,7 +152,8 @@ header .navtoggle {
 
 /* ---------- 区块节奏：深底与暖白底交替 ---------- */
 .site-section {
-  padding: clamp(64px, 8vw, 112px) 0;
+  /* 2026-11-03 收紧：112px 的大留白在内容较少的页面上会显得空 */
+  padding: clamp(44px, 5vw, 72px) 0;
   background: transparent !important;
 }
 .site-section.flush-top {
@@ -189,7 +190,7 @@ header .navtoggle {
 
 /* 区块标题：左大标题 + 右说明（块的结构是 .sec-head > div > h2 + p，两列要在内层做） */
 .sec-head {
-  margin-bottom: clamp(32px, 4vw, 56px);
+  margin-bottom: clamp(22px, 3vw, 36px);
 }
 .sec-head > div {
   display: grid;

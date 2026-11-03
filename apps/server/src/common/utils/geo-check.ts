@@ -249,9 +249,11 @@ export function checkPageGeo(
  * 关注「站点作为实体是否可被识别」：机构实体声明、llms.txt、robots AI 策略、robots meta、sitemap 核心 URL
  */
 export function checkSiteGeo(site: {
-  /** 是否存在 /entity 页面且已发布 */
+  /** 是否存在实体声明页（站点配置的 entityPath / /entity / /about / 首页，取第一个命中的已发布页） */
   hasEntityPage: boolean
-  /** 实体档案页是否输出了与行业匹配的实体声明（医疗 MedicalClinic / 工业 Organization） */
+  /** 实体声明页路径（用于错误提示定位） */
+  entityPath?: string
+  /** 实体声明页是否输出了与行业匹配的实体声明（医疗 MedicalClinic / 工业 Organization） */
   entityDeclared: boolean
   /** 是否输出 llms.txt */
   hasLlmsTxt: boolean
@@ -274,7 +276,9 @@ export function checkSiteGeo(site: {
     issues.push({
       level: 'error',
       field: 'entity',
-      message: '缺少机构实体声明：需存在已发布的 /entity 页并输出与行业匹配的实体 JSON-LD'
+      message: site.hasEntityPage
+        ? `实体声明页（${site.entityPath || '首页 / 关于页'}）未输出与行业匹配的实体 JSON-LD`
+        : '缺少机构实体声明：站点需有已发布的实体声明页（默认「关于」或首页）并输出完整实体 JSON-LD'
     })
     score -= 20
   }
