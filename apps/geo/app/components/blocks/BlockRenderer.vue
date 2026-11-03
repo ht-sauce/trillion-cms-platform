@@ -229,6 +229,23 @@ const items = computed(() => {
     })
   }
 
+  /**
+   * 页内锚点映射（2026-11-03）：每个渲染单元的 section 挂 `id="blk-<实例id>"`，
+   * 同时把「区块标题 → 锚点 id」收成一张表，经 context.anchors 发给本页所有块。
+   * 首屏 hero 的 chips 等元素用文案去这张表里命中（互含即算，兼容
+   * 「停车场」→「停车场与坡道」这类标题带后缀的情况），命中就渲染成页内锚点链接。
+   */
+  const anchors: Record<string, string> = {}
+  for (const unit of units) {
+    if (!unit.id || unit.section === 'none') continue
+    const title = String(unit.head?.data?.title || unit.data?.title || '').trim()
+    if (title) anchors[title] = `blk-${unit.id}`
+  }
+  for (const unit of units) {
+    unit.context = { ...unit.context, anchors }
+    if (unit.head) unit.head.context = { ...unit.head.context, anchors }
+  }
+
   return units
 })
 </script>
@@ -239,6 +256,7 @@ const items = computed(() => {
       <!-- 节奏容器（ADR-036 补充）：块自身只描述内容，section 由渲染器按清单/页面提示包裹 -->
       <section
         v-if="item.enabled && item.section !== 'none'"
+        :id="item.id ? `blk-${item.id}` : undefined"
         class="site-section"
         :class="{
           alt: item.section === 'alt' || item.section === 'alt-flush',

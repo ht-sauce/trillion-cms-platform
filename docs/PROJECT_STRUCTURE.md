@@ -151,11 +151,12 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`schema/entity.prisma`](../apps/server/prisma/schema/entity.prisma) —— `Entity` 品牌/产品实体（GEO 实体一致性）
 - [`schema/track.prisma`](../apps/server/prisma/schema/track.prisma) —— `TrackEvent` 埋点事件、`AiCrawlEvent` AI 抓取事件
 - [`schema/news-faq.prisma`](../apps/server/prisma/schema/news-faq.prisma) —— `NewsArticle` 新闻文章表、`FaqItem` 问答条目表（**管理源**，见 04 §8；`pageId` 为发布产物 `Page` 弱引用，`[siteId, slug]` 唯一）
+- [`schema/catalog.prisma`](../apps/server/prisma/schema/catalog.prisma) —— `ProductIndustry` 产品行业分组、`Product` 产品、`CaseStudy` 成功案例（**管理源**，见 04 §9；`Product.industries` 存分组名数组以便多分组归属、`series` 是第二种分类维度；详情字段一律 `Json?`——MySQL 的 JSON/TEXT 列不允许 DEFAULT；`[siteId, slug]` / `[siteId, name]` 唯一）
 - [`schema/publish-task.prisma`](../apps/server/prisma/schema/publish-task.prisma) —— `PublishTask` 发布构建任务（队列与日志）
 - [`schema/menu.prisma`](../apps/server/prisma/schema/menu.prisma) —— `Menu` 后台侧栏菜单（`parentId` 自关联，最多三级）
 - [`schema/role.prisma`](../apps/server/prisma/schema/role.prisma) —— `Role` 后台角色（`platform` 平台级标记、`builtin` 内置保护）与 `RoleMenu` 角色-菜单授权关系
 - [`schema/migrations/migration_lock.toml`](../apps/server/prisma/schema/migrations/migration_lock.toml) —— 迁移锁（Prisma 生成）
-- [`schema/migrations/20261102133000_init_current_schema/migration.sql`](../apps/server/prisma/schema/migrations/20261102133000_init_current_schema/migration.sql) —— **唯一迁移（2026-11-02 重建基线）**：21 张表的完整 DDL、全部外键与主键（`prisma migrate diff --from-empty` 生成，无 `render_mode` 列——ADR-046）。上一版基线（ADR-043 的 `init_id_string`）与历史迁移一并废弃（见 04 §6；本地 Windows 的 migrate drift 误报说明亦见该节）
+- [`schema/migrations/20261103164500_init_current_schema/migration.sql`](../apps/server/prisma/schema/migrations/20261102133000_init_current_schema/migration.sql) —— **唯一迁移（2026-11-03 重建基线）**：24 张表的完整 DDL、全部外键与主键（`prisma migrate diff --from-empty` 生成，无 `render_mode` 列——ADR-046）。上一版基线（ADR-043 的 `init_id_string`）与历史迁移一并废弃（见 04 §6；本地 Windows 的 migrate drift 误报说明亦见该节）
 - [`maintenance/fix-prisma-migrations-meta-table.sql`](../apps/server/prisma/maintenance/fix-prisma-migrations-meta-table.sql) —— **一次性环境修复（不是迁移）**：旧版 Prisma CLI 建出的 `_prisma_migrations` 台账 `applied_steps_count` 无 DEFAULT，会让 `migrate deploy` 报「Field 'applied_steps_count' doesn't have a default value」而整体失败；本脚本为其补默认值，幂等，用 `prisma db execute --file` 执行（见 10-launch-runbook §4.2）
 - [`maintenance/fix-table-name-case.sql`](../apps/server/prisma/maintenance/fix-table-name-case.sql) —— **一次性环境修复（不是迁移）**：Windows MySQL（`lower_case_table_names=1`）导库会把表名落到小写，Linux 默认区分大小写、Prisma 模型未写 `@@map`，于是报「The table `AdminUser` does not exist」；本脚本按映射把 21 张业务表改回大驼峰（`_prisma_migrations` 保持小写），幂等、仅改表名不动数据行、含外键自动改写与前后核对（见 10-launch-runbook §11）
 - [`seed.ts`](../apps/server/prisma/seed.ts) —— 种子数据：内置角色（`admin` / `site_admin`）与角色菜单授权、平台管理员（绑定 `admin` 角色）、后台菜单（站点管理目录：站点列表 / 新闻资讯 / 高频问答；内容管理下六页：页面 / 编辑器 / 块库 / 块模板 / 导航 / 素材 + 系统设置四个子页）、默认模板、示例站点/栏目/页面、内置块定义（若 `prisma/blocks/*.vue` 存在则写入**模板库** `siteId = 0`，目录缺失时跳过）与示例站点的**块副本**（ADR-035）
@@ -229,9 +230,22 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`news-faq.module.ts`](../apps/server/src/modules/news-faq/news-faq.module.ts) —— 模块定义（依赖 Content / Publish 模块，导出同步服务）
 - [`news-faq.controller.ts`](../apps/server/src/modules/news-faq/news-faq.controller.ts) —— `/news-faq/*` 接口：文章与问答的分页列表（读管理表）、单条详情（`articles/:id/detail` / `faqs/:id/detail` **直读表，不接收 siteId 参数**，按记录归属站点鉴权）、增删改、分类清单
 - [`news-faq.service.ts`](../apps/server/src/modules/news-faq/news-faq.service.ts) —— 管理面 CRUD（**表驱动**：`NewsArticle` / `FaqItem` 为管理源）：列表/详情直读表 → 写表 → 委托同步服务创建或补建 kind=detail 发布产物页（保存即发布、slug 自动生成；**slug 创建后不可改**）、按 `pageId` 弱关联挂接失联产物 → 重算派生块 → 自动触发**页面级**发布（响应携带 `affectedPages` 与 `publishTaskId`）
-- [`news-faq-sync.service.ts`](../apps/server/src/modules/news-faq/news-faq-sync.service.ts) —— **派生块同步（核心）**：详情页标准块组合生成；详情数据装载 `loadNewsDetails` / `loadFaqDetails` **直读管理表**（表是唯一事实来源）；`/news` 列表（post-list 按发布日期倒序、hero chips 置空、移除独立 pager）、`/faq` 列表（eyebrow/anchor-bar/hot-faq/分类分组 section-head+faq-index 整体重算）、同分类详情页 related-faq 重算；Prisma 事务写回并重算内容指纹（块实例 id 同 key 顺序复用，常规编辑下指纹稳定）
-- [`news-faq.constants.ts`](../apps/server/src/modules/news-faq/news-faq.constants.ts) —— 详情页标准块组合的固定文案常量（notice / telbar / hero 说明与动作，与既有详情页 1:1）
+- [`news-faq-sync.service.ts`](../apps/server/src/modules/news-faq/news-faq-sync.service.ts) —— **派生块同步（核心）**：`loadDetailTemplate(siteId, section)` 取该栏目最早创建的 detail 页登记为模板，`buildArticleDetailBlocks` / `buildFaqDetailBlocks` 在模板上只做字段覆盖（h1 / lead / chips / 正文段落），块顺序与固定文案全沿用模板；详情数据装载 `loadNewsDetails` / `loadFaqDetails` **直读管理表**（表是唯一事实来源）；`/news` 列表（post-list 按发布日期倒序、hero chips 置空、移除独立 pager）、`/faq` 列表（eyebrow/anchor-bar/hot-faq/分类分组 section-head+faq-index 整体重算）、同分类详情页 related-faq 重算；Prisma 事务写回并重算内容指纹（块实例 id 同 key 顺序复用，常规编辑下指纹稳定）
+- ~~`news-faq.constants.ts`~~ —— **2026-11-03 已删除**：原文件把仁爱医院站的门诊时间 / 029 电话 / 医学合规声明硬编码在此，换站点即错。现在详情页与列表页的块结构、固定文案一律从站点既有同栏目 detail 页克隆（ADR-052），代码内不含任何站点文案
 - [`dto.ts`](../apps/server/src/modules/news-faq/dto.ts) —— 文章 / 问答入参 DTO（含 `YYYY-MM-DD` 格式与「不早于今天」校验、slug 格式校验；编辑 DTO 不收 slug）
+
+### src/modules/catalog（产品体系 / 成功案例管理）
+
+- [`catalog.module.ts`](../apps/server/src/modules/catalog/catalog.module.ts) —— 模块定义（依赖 Content / Publish 模块）
+- [`catalog.controller.ts`](../apps/server/src/modules/catalog/catalog.controller.ts) —— `/catalog/*` 接口 14 条：行业分组 4 条、产品 5 条、案例 5 条（列表 / 单条详情 / 增删改）
+- [`products.service.ts`](../apps/server/src/modules/catalog/products.service.ts) —— 行业分组 CRUD（**改名时事务内同步改写产品的 `industries` 引用**；有产品引用时删除 400）+ 产品 CRUD + `deriveDetailPage`（**保存即自动建页**，有 `pageId` 走页面更新、无则补建并回写）+ `syncAndPublish`（重算 `/products` 分组 + 只发布 `status='published'` 的页面）
+- [`cases.service.ts`](../apps/server/src/modules/catalog/cases.service.ts) —— 案例 CRUD + `deriveDetailPage` + `syncAndPublish`（只重写 `/cases` 的 `case-grid.items`）
+- [`catalog-sync.service.ts`](../apps/server/src/modules/catalog/catalog-sync.service.ts) —— **派生块同步**：`loadDetailTemplate` 取栏目模板；`buildProductBlocks` / `buildCaseBlocks` 在模板上覆盖字段（`overrides[key] = null` 表示不输出该块，其前的 `section-head` 一并跳过）；`syncProductsList` 重建分组块（定位 product-card 及其紧邻 section-head，前后缀块原样保留，无产品的分组不输出）；`syncCasesList` 只更新 `case-grid.items`
+- [`dto.ts`](../apps/server/src/modules/catalog/dto.ts) —— 入参 DTO（复用 `news-faq/dto` 的 `SLUG_PATTERN`）
+
+### src/common/utils（跨模块公共工具）
+
+- [`block-instances.ts`](../apps/server/src/common/utils/block-instances.ts) —— 块实例工具：`generateInstanceId`、**`withStableIds(next, oldBlocks)`（同 key 按出现顺序复用旧 id，保证常规编辑下 `contentHash` 稳定）**、`blockData`、`assembleFromTemplate`（按模板拼装 + 覆盖，`overrides[key] === null` 时跳过该块与其分组头）
 
 ### src/modules/blocks（块定义 / 块库 · 块隔离见 ADR-035）
 
@@ -332,7 +346,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 ### app/config（配置化内容统一在此）
 
-- [`api/http.ts`](../apps/admin/app/config/api/http.ts) —— **请求唯一出口**：baseURL（缺失即报错、指向回环地址时按浏览器主机名自适应以便同局域网访问）、token 注入、401 跳转（`currentRoutePath()` 剥 `/geocms` 前缀后判定，避免基础路径误判）、错误提示、get/post/patch/del/upload
+- [`api/http.ts`](../apps/admin/app/config/api/http.ts) —— **请求唯一出口**：baseURL（缺失即报错、指向回环地址时按浏览器主机名自适应以便同局域网访问）、token 注入、401 跳转（`currentRoutePath()` 剥 `/geocms` 前缀后判定，避免基础路径误判）、错误提示、get/post/patch/del/upload；两个地址解析函数——`resolveFileUrl`（`/static/` 素材库 → 服务端 origin）与 `resolveMediaUrl`（`/assets/...` 站点产物图片 → 站点基址 `NUXT_PUBLIC_SITE_BASE`，两类路径语义不同不可混用）
 - [`api/auth.ts`](../apps/admin/app/config/api/auth.ts) —— 登录、当前用户接口
 - [`api/sites.ts`](../apps/admin/app/config/api/sites.ts) —— 站点相关接口（`SiteItem.build` = 最新构建任务摘要，站点列表「构建状态」列的数据来源）
 - [`api/files.ts`](../apps/admin/app/config/api/files.ts) —— 静态文件上传/列表/删除/替换（`replace` → `PUT /files/:id/replace`，URL 不变仅换文件）接口
@@ -349,6 +363,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`api/roles.ts`](../apps/admin/app/config/api/roles.ts) —— 角色 CRUD 与角色-菜单授权接口
 - [`api/users.ts`](../apps/admin/app/config/api/users.ts) —— 后台用户 CRUD 与角色绑定接口
 - [`api/news-faq.ts`](../apps/admin/app/config/api/news-faq.ts) —— 新闻资讯 / 高频问答接口（**表驱动 id 寻址**：读 `NewsArticle` / `FaqItem` 表，列表 / 按 `id` 详情（不传 siteId）/ 增删改；列表不返回正文，编辑回显走 `articleDetail` / `faqDetail`；`pageId` 为发布产物弱引用；保存后由服务端同步派生块并自动页面级发布）
+- [`api/catalog.ts`](../apps/admin/app/config/api/catalog.ts) —— 产品体系 / 成功案例接口（**表驱动 id 寻址**：读 `ProductIndustry` / `Product` / `CaseStudy`；列表不返回详情字段，编辑回显走 `productDetail` / `caseDetail`；分组删除前由前端校验 `productCount`；保存后服务端自动派生详情页并页面级发布）
 - [`api/index.ts`](../apps/admin/app/config/api/index.ts) —— API 统一出口
 - [`menu.ts`](../apps/admin/app/config/menu.ts) —— 站点状态等字典映射（含 **`BUILD_STATUS_META`：构建状态唯一口径**——未构建 / 排队中 / 构建中 / 构建成功 / 构建失败，站点列表、内容编辑器、总览发布任务三处共用；原 `RENDER_MODE_LABEL` 已随 ADR-046 删除）；**侧栏菜单与角色名均已改为后台数据驱动，不在此硬编码**；状态色只给 `.c-*` 语义类名）
 - [`site-defaults.ts`](../apps/admin/app/config/site-defaults.ts) —— 站点主题默认值（与服务端 `SITE_DEFAULTS.theme` 对齐；唯一允许写颜色字面量的 TS 文件）
@@ -377,6 +392,9 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`MemberCreateDialog.vue`](../apps/admin/app/components/MemberCreateDialog.vue) —— 新增站点会员弹窗
 - [`PlainTextEditor.vue`](../apps/admin/app/components/PlainTextEditor.vue) —— **纯文本编辑器（wangEditor 封装）**：v-model 只暴露纯文本（初始化 `\n` 段落转 `<p>`、onchange 用 `editor.getText()` 输出段落间 `\n` 的纯文本）；工具栏精简为标题 + 基础强调按钮；编辑器实例 `shallowRef` 持有、组件销毁时 `destroy()`；外部值变化（编辑异步回显）经 watch 用 `setHtml` 同步
 - [`NewsDialog.vue`](../apps/admin/app/components/NewsDialog.vue) —— 新闻新建/编辑弹窗（标题 / URL 片段（仅创建，留空自动生成）/ 发布日期 / 摘要 / 正文 `PlainTextEditor`；编辑打开时拉单条详情回显正文）
+- [`ProductDialog.vue`](../apps/admin/app/components/ProductDialog.vue) —— **产品新建/编辑弹窗（2026-11-03）**：两个页签——「基础信息」（名称 / 中文名 / 系列 / 行业分组多选（必填，空则 warning）/ 卡片说明 / 特性标签（逗号分隔）/ 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（系统说明 `{k,v}`、系统构造 `{role,product,thickness,desc,code}`、系统特点 `{title,desc,icon}`、色卡 `{name,hex}` 带色块预览、常见问题 `{q,a}`；均可留空 = 该区块不输出）
+- [`IndustryDialog.vue`](../apps/admin/app/components/IndustryDialog.vue) —— **产品行业分组弹窗（2026-11-03）**：分组名称 / 分组说明（textarea 200 字）/ 更多文案 / 排序
+- [`CaseDialog.vue`](../apps/admin/app/components/CaseDialog.vue) —— **案例新建/编辑弹窗（2026-11-03）**：两个页签——「基础信息」（标题 / 行业 / 地点 / 面积 / 年份 / 使用体系 / 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（项目信息行 `{k,v,sub}` 支持「按卡片字段带入」一键填充、案例正文 `PlainTextEditor`、项目画面 `{img,caption,note,alt}` 带缩略预览）
 - [`FaqDialog.vue`](../apps/admin/app/components/FaqDialog.vue) —— 高频问筷新建/编辑弹窗（问题 / 分类（allow-create 可输入新分类）/ 答案 `PlainTextEditor`；编辑打开时拉单条详情回显答案）
 - [`MenuFormDialog.vue`](../apps/admin/app/components/MenuFormDialog.vue) —— 菜单新建/编辑弹窗（上级菜单树选择 + 环路排除）
 - [`RoleFormDialog.vue`](../apps/admin/app/components/RoleFormDialog.vue) —— 角色新建/编辑弹窗（内置角色标识与状态受保护）
@@ -408,6 +426,8 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`index.vue`](../apps/admin/app/pages/index.vue) —— 总览仪表盘：PV/UV、AI 抓取、发布任务、热门路由
 - [`sites/index.vue`](../apps/admin/app/pages/sites/index.vue) —— 站点列表（搜索/筛选/分页；**域名映射列**：主域名 + 别名域名；**站点前缀列**：站点标识 `slug`，进编辑页可改；**构建状态列**：未构建 / 排队中 / 构建中 / 构建成功 / 构建失败 + 时间（进行中显示已运行时长，失败悬停看日志尾部；有进行中任务时每 4 秒静默轮询）；操作列「预览」新标签打开**主域名 + 站点前缀**、「编辑」进入深入编辑页、「内容编辑器」进入 `/content/editor?siteId=<id>`、「下载」打开 `SiteDownloadDialog` 下载产物包）
 - [`sites/[id].vue`](../apps/admin/app/pages/sites/%5Bid%5D.vue) —— 站点深入编辑页（单页三分区、无 Tab：基本信息（含**站点前缀 slug**、**主域名 + 别名域名增删**）/ 企业资质 / SEO 设置；渲染模式与主题色不在此页）
+- [`sites/products.vue`](../apps/admin/app/pages/sites/products.vue) —— **产品体系管理（2026-11-03）**：左侧 260px「行业分组」面板（组名 / 产品数 / 说明摘要 + 编辑、删除、加分组；`productCount > 0` 时前端直接 warning 阻止删除，与服务端 400 口径一致）+ 右侧产品表格（缩略图 + 名称、系列、行业标签、访问路径、状态、操作；筛选 keyword / 系列 / 行业；分页）。弹窗 `ProductDialog`（两页签）+ `IndustryDialog`
+- [`sites/cases.vue`](../apps/admin/app/pages/sites/cases.vue) —— **成功案例管理（2026-11-03）**：按站点隔离 + 关键词 / 行业筛选；表格列案例（缩略图 + 标题）/ 行业 / 地点 / 面积·年份 / 使用体系 / 访问路径 / 状态 / 操作；弹窗 `CaseDialog`（两页签，项目信息行支持「按卡片字段带入」快捷填充）
 - [`sites/news.vue`](../apps/admin/app/pages/sites/news.vue) —— 新闻资讯管理（按站点隔离：站点切换 + 关键词搜索；表格列标题 / 访问路径 / 发布日期 / 发布状态徽标；操作编辑、删除（删除与保存均由服务端自动触发站点构建）；弹窗 `NewsDialog`）
 - [`sites/faqs.vue`](../apps/admin/app/pages/sites/faqs.vue) —— 高频问答管理（按站点隔离：站点切换 + 关键词搜索 + 分类筛选（选项来自分类接口，清空 = 全部）；表格列问题 / 分类 / 访问路径 / 发布状态徽标；操作编辑、删除；弹窗 `FaqDialog`，新分类保存后刷新分类清单）
 - [`content/index.vue`](../apps/admin/app/pages/content/index.vue) —— 页面列表（状态三态、GEO 分、提交审核与发布）

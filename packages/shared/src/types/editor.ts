@@ -207,6 +207,11 @@ export interface BlockContext {
   block: { id: string; key: string; enabled: boolean }
   /** 仅 dataSource.kind = childPages 时注入的列表数据 */
   items?: unknown[]
+  /**
+   * 页内锚点映射（BlockRenderer 注入）：本页各区块标题 → 锚点 id。
+   * 供首屏 chips 等元素与下方区块做页内联动（标题互含即视为命中）。
+   */
+  anchors?: Record<string, string>
   entities: BlockEntityRef[]
   /** 构建期/请求期日期（YYYY-MM-DD） */
   now: string

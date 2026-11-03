@@ -47,7 +47,7 @@ flowchart TB
 | 路径                            | 职责                                                                                              |
 | ------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `app/config/api/http.ts`        | 唯一请求封装：注入 token、统一错误提示、401 跳登录、`ApiResult` 类型                              |
-| `app/config/api/*.ts`           | 按业务模块拆分的接口定义（auth / sites / files / content / news-faq / members / publish / track / menus / roles / users；`news-faq.ts` 见 2026-10-14 新闻/问答管理） |
+| `app/config/api/*.ts`           | 按业务模块拆分的接口定义（auth / sites / files / content / news-faq / catalog / members / publish / track / menus / roles / users；`news-faq.ts` 见 2026-10-14 新闻/问答管理，`catalog.ts` 见 2026-11-03 产品/案例管理）。`http.ts` 另导出 `resolveFileUrl`（`/static/` 素材库 → 服务端 origin）与 `resolveMediaUrl`（站点产物图片 `/assets/...` → 站点基址 `runtimeConfig.public.siteBase`，即 `NUXT_PUBLIC_SITE_BASE`）——两类根相对路径语义不同，**内容图片一律用 `resolveMediaUrl`** |
 | `app/config/menu.ts`            | 渲染模式/状态等字典映射（**菜单项与角色名均不再硬编码**：菜单来自 `/geoserver/menus/tree`，角色名随 `/auth/me` 返回；**状态色只给 `.c-*` 语义类名，不给色值**；`BUILD_STATUS_META` = 构建状态唯一口径，站点列表 / 内容编辑器 / 总览发布任务三处共用，见 [`06`](./06-publish-and-geo.md) §1.1） |
 | `app/config/site-defaults.ts`   | 站点主题默认值（与后端 `SITE_DEFAULTS.theme` 对齐；**全项目唯一允许出现颜色字面量的 TS 文件**，ESLint 已豁免） |
 | `app/config/glossary.ts`        | **专有名词字典（界面文案唯一事实来源）**：`TERMS.<key> = { label, hint }`；页面禁止硬编码这些名词与解释，取值用 `TERMS.x.label`、出问号用 `<TermHint term="x" />`（文档侧同口径解释见 [`../GLOSSARY.md`](../GLOSSARY.md)） |
@@ -55,13 +55,13 @@ flowchart TB
 | `app/stores/auth.ts`            | Pinia 登录态与当前用户信息（token 存 localStorage，刷新后由 `init()` 读回）                       |
 | `app/stores/menu.ts`            | Pinia 菜单树：登录后拉取 `/geoserver/menus/tree`（按角色授权过滤），缓存并供布局与面包屑使用      |
 | `app/components/SideMenuNode.vue` | 侧栏菜单递归节点（最多三级，目录可展开/收起，命中路由高亮）                                     |
-| `app/components/*Dialog.vue`    | 业务弹窗组件（会员新增 / 新闻 `NewsDialog` / 问答 `FaqDialog` / 菜单表单 / 角色表单 / 角色菜单授权 / 用户表单）：`defineModel` 控制显隐、`emit('saved')` 通知父页面刷新；新闻弹窗的发布日期必填且**禁选早于今天的日期**（日期选择器禁用过去日期，与服务端 `todayInChina()` 校验同口径），问答无发布日期字段 |
+| `app/components/*Dialog.vue`    | 业务弹窗组件（会员新增 / 新闻 `NewsDialog` / 问答 `FaqDialog` / 产品 `ProductDialog` / 行业分组 `IndustryDialog` / 案例 `CaseDialog` / 菜单表单 / 角色表单 / 角色菜单授权 / 用户表单）：`defineModel` 控制显隐、`emit('saved')` 通知父页面刷新；新闻弹窗的发布日期必填且**禁选早于今天的日期**（日期选择器禁用过去日期，与服务端 `todayInChina()` 校验同口径），问答无发布日期字段 |
 | `app/components/PlainTextEditor.vue` | **纯文本编辑器（wangEditor 封装，2026-10-14）**：v-model 只暴露**纯文本**——初始化把段落间 `\n` 转 `<p>`，变更时用 `editor.getText()` 输出段落间 `\n`，样式不落库（最终提交只取纯文本，服务端按换行拆段落块）；工具栏精简（标题 + 基础强调，去图片 / 视频 / 表格 / 代码块 / 全屏）；实例 `shallowRef` 持有、`onBeforeUnmount` 时 `destroy()`，外部值异步回显经 watch `setHtml` 同步。新闻正文 / 问答答案用 |
 | `app/utils/menu-tree.ts`        | 菜单树工具：平铺列表 ↔ 多级树（菜单管理页与角色授权页共用）                                       |
 | `app/utils/tool.ts`             | 交互工具（**两个独立概念**）：时间维度 `debounce` / `throttle`（默认 `leading`，即先触发后防抖）；状态维度 `useLoading()`（`run` / `runKeyed` / `isLoading`） |
 | `app/middleware/auth.global.ts` | 路由级守卫                                                                                        |
 | `app/layouts/default.vue`       | 深空控制台骨架：动态侧边菜单（后端配置驱动） + 顶栏（角色名来自接口）                             |
-| `app/pages/**`                  | 各功能页面，右侧"编辑"进入独立深入页（非弹窗）；系统设置为目录：运行配置 / 用户管理 / 角色管理 / 菜单管理；**站点管理为目录**（2026-10-14 起）：站点列表 /sites（原站点管理页改名）、新闻资讯 /sites/news、高频问答 /sites/faqs（el-table border + 分页 + 站点下拉，问答带分类筛选）。**新闻/问答管理为表驱动 id 寻址**（2026-10-15 起，ADR-039）：列表行 `NewsArticleItem` / `FaqItem` 携带表主键 `id`（`pageId` 可选，仅作发布产物弱引用），编辑 / 删除按 `id` 调接口，详情直读表**不再收 `siteId` 参数**；新闻表单发布日期必填、禁选过去日期，问答无发布日期字段 |
+| `app/pages/**`                  | 各功能页面，右侧"编辑"进入独立深入页（非弹窗）；系统设置为目录：运行配置 / 用户管理 / 角色管理 / 菜单管理；**站点管理为目录**（2026-10-14 起）：站点列表 /sites（原站点管理页改名）、产品体系 /sites/products、成功案例 /sites/cases、新闻资讯 /sites/news、高频问答 /sites/faqs（el-table border + 分页 + 站点下拉，问答带分类筛选）。**产品页为「左分组 + 右表格」双区**（2026-11-03）：左侧 260px 面板管理 `ProductIndustry`（组内产品数、编辑/删除、加分组；有产品引用时禁止删除），右侧产品表格带关键词/系列/行业三筛选，弹窗分「基础信息 / 详情内容」两个页签。**新闻/问答管理为表驱动 id 寻址**（2026-10-15 起，ADR-039）：列表行 `NewsArticleItem` / `FaqItem` 携带表主键 `id`（`pageId` 可选，仅作发布产物弱引用），编辑 / 删除按 `id` 调接口，详情直读表**不再收 `siteId` 参数**；新闻表单发布日期必填、禁选过去日期，问答无发布日期字段 |
 | `app/assets/scss/*`             | `tokens.scss`（设计令牌）→ `mixins.scss`（复用片段）→ `main.scss`（Element Plus 暗色覆盖 + 重置） |
 
 ### 2.2 请求链路（强制）
@@ -99,7 +99,7 @@ sequenceDiagram
 6. `element-plus` 与 `dayjs` **必须**走 Vite 依赖预构建（`nuxt.config.ts` 的 `vite.optimizeDeps.include`）；**禁止**把 element-plus 放进 `build.transpile`
    —— 一旦被排除预构建，浏览器会直接加载其 ESM 源码，内部 `import dayjs` 落到 CJS 的 `dayjs.min.js`，报 `does not provide an export named 'default'`，前端模块图崩溃、页面完全无法交互（实测必现）
 7. 后台代码**不要写 SSR 专用分支**（`import.meta.server`、`<ClientOnly>`、以 cookie 让"服务端可读 token"的设计）：渲染模式是 SPA，这类分支只会增加噪音
-8. 侧栏菜单**禁止在前端硬编码**：菜单是后台配置数据（`Menu` 表），由 `stores/menu.ts` 从 `/geoserver/menus/tree` 拉取后经 `SideMenuNode.vue` 递归渲染，最多三级（见 [08 ADR-018](./08-adr.md#adr-018-后台菜单数据驱动三级结构--平台级标记)）；菜单条目本身由**服务端种子**（`apps/server/prisma/seed.ts`，幂等键 `path`）维护——如 2026-10-14 起「站点管理」改为目录型（`path=null`），下挂站点列表 / 新闻资讯 / 高频问答，前端零配置
+8. 侧栏菜单**禁止在前端硬编码**：菜单是后台配置数据（`Menu` 表），由 `stores/menu.ts` 从 `/geoserver/menus/tree` 拉取后经 `SideMenuNode.vue` 递归渲染，最多三级（见 [08 ADR-018](./08-adr.md#adr-018-后台菜单数据驱动三级结构--平台级标记)）；菜单条目本身由**服务端种子**（`apps/server/prisma/seed.ts`，幂等键 `path`）维护——如 2026-10-14 起「站点管理」改为目录型（`path=null`），下挂站点列表 / 产品体系 / 成功案例 / 新闻资讯 / 高频问答（按站点导航同序，sort 10/12/14/20/30），前端零配置
 9. **角色与权限同样禁止前端硬编码**：用户的角色来自「用户 → 角色」绑定（`/geoserver/auth/me` 返回 `roleId/roleCode/roleName/platform`），前端只消费 `platform` 做展示判断，不维护角色枚举；权限边界始终在服务端（见 [08 ADR-019](./08-adr.md#adr-019-rbac用户--角色--菜单绑定)）
 10. 数据表格统一 **`el-table` + `border`**（border 模式下才可自由拖拽列宽），**禁止手写 `<table>` 模拟数据表格**；border 表格的外框由表格承担，其所在面板不再叠加边框（样式基线在 `app/assets/scss/main.scss`）
 11. **所有弹窗（不论大小）必须独立成组件** `app/components/*Dialog.vue`：`defineModel` 控制显隐、`emit('saved')` 通知父页面刷新；**页面文件内禁止内联 dialog 内容**

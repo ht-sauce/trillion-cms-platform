@@ -345,6 +345,7 @@ flowchart LR
 | `context.channel` | `{ id, name, slug, path, ancestors[] }` | 所属目录与祖先链（面包屑用） |
 | `context.block` | `{ id, key, enabled }` | 当前块实例 |
 | `context.items` | `Array` | 仅 `dataSource.kind = childPages` 时注入的列表数据 |
+| `context.anchors` | `Record<string, string>` | 页内锚点映射（区块标题 → 锚点 id）。BlockRenderer 给每个渲染单元的 `<section>` 挂 `id="blk-<实例id>"`，并把本页各区块标题收成此映射下发给所有块；供 hero chips 等元素做页内联动——文案与某区块标题**互含**即视为命中（兼容「停车场」→「停车场与坡道」），命中渲染成 `#blk-*` 锚点链接，未命中保持纯展示（2026-11-03） |
 | `context.entities` | `Array` | 站点实体（品牌/别名，GEO 一致性用） |
 | `context.now` / `context.locale` | `string` | 构建期/请求期时间（`YYYY-MM-DD`）与语言（v1 固定 `zh-CN`） |
 | 组合式 | `useSite()` / `usePage()` / `useEntities()` | 已有能力，块内可直接调用 |

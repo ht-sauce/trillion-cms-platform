@@ -42,7 +42,13 @@ export default defineNuxtConfig({
        * 服务端 API 基址：由根 env/ 提供、启动器注入（config/index.mjs 按服务端端口派生）
        * 不再内置默认地址，缺失时 app/config/api/http.ts 会给出明确报错
        */
-      apiBase: process.env.NUXT_PUBLIC_API_BASE
+      apiBase: process.env.NUXT_PUBLIC_API_BASE,
+      /**
+       * 站点静态资源基址（GEO 引擎地址）：产品/案例/新闻卡片图片在产物里写作 `/assets/img/...`，
+       * 那是 GEO 站点的根相对路径，后台源下访问必然 404；预览时须换成站点侧地址。
+       * 由根 env/ 派生（与 GEO_BASE_URL 同值），线上为站点对外入口
+       */
+      siteBase: process.env.NUXT_PUBLIC_SITE_BASE
     }
   },
 

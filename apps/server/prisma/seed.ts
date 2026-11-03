@@ -213,6 +213,13 @@ async function main() {
    */
   const sitesRoot = await upsertMenu({ title: '站点管理', parentId: null, path: null, sort: 2 })
   const sitesList = await upsertMenu({ title: '站点列表', parentId: sitesRoot.id, path: '/sites', sort: 10 })
+  /**
+   * 站点内容域入口：与站点导航同序（产品 → 案例 → 新闻 → 问答）。
+   * 前两者是「表驱动」内容域（Product / CaseStudy 为管理源，保存即自动派生详情页 + 重算列表页），
+   * 后两者沿用 NewsArticle / FaqItem；四个域共用同一套「表 + 派生页面」口径。
+   */
+  const sitesProducts = await upsertMenu({ title: '产品体系', parentId: sitesRoot.id, path: '/sites/products', sort: 12 })
+  const sitesCases = await upsertMenu({ title: '成功案例', parentId: sitesRoot.id, path: '/sites/cases', sort: 14 })
   const sitesNews = await upsertMenu({ title: '新闻资讯', parentId: sitesRoot.id, path: '/sites/news', sort: 20 })
   const sitesFaqs = await upsertMenu({ title: '高频问答', parentId: sitesRoot.id, path: '/sites/faqs', sort: 30 })
   /** 内容域父菜单（容器，本身不可点击）：让「内容 / 页面」与「块库」等同级并列 */
@@ -252,6 +259,8 @@ async function main() {
     dashboard.id,
     sitesRoot.id,
     sitesList.id,
+    sitesProducts.id,
+    sitesCases.id,
     sitesNews.id,
     sitesFaqs.id,
     contentRoot.id,

@@ -2,9 +2,10 @@
  * 新闻 / 问答管理服务（表驱动）
  *
  * 新闻与问答的管理源是 NewsArticle / FaqItem 独立数据表（表为管理源，页面是发布产物）。
- * 本服务做管理面 CRUD：写表 → 委托 NewsFaqSyncService 用表数据构建/更新详情页标准块组合
- * （article-meta/article-body、faq-detail）并创建或补建 Page → 整体重算派生块
- * （/news、/faq 列表页 + 同分类详情页 related-faq）→ 自动触发页面级发布。
+ * 本服务做管理面 CRUD：写表 → 委托 NewsFaqSyncService 以站点既有详情页为结构模板、
+ * 用表数据构建/更新详情页块组合，并创建或补建 Page → 整体重算派生块
+ * （/news、/faq 列表页 + 同分类详情页的相关问答）→ 自动触发页面级发布。
+ * 详情页的固定文案（telbar / notice / disclaimer）全部来自模板页，代码不含站点文案。
  *
  * 约定：
  * - 保存即发布（status 直接 published，管理端保存免审核，与站点编辑器保存行为一致）
@@ -22,14 +23,8 @@ import type { AuthUser } from '../../common/decorators/current-user.decorator'
 import { assertSiteAccess } from '../../common/utils/site-scope'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
-import {
-  parseFaqSeq,
-  pad3,
-  splitParagraphs,
-  truncate,
-  NewsFaqSyncService,
-  type BlockInstanceInput
-} from './news-faq-sync.service'
+import type { BlockInstanceInput } from '../../common/utils/block-instances'
+import { parseFaqSeq, pad3, splitParagraphs, truncate, NewsFaqSyncService } from './news-faq-sync.service'
 import type { CreateArticleDto, CreateFaqDto, UpdateArticleDto, UpdateFaqDto } from './dto'
 
 /** 新建问答/文章时页面摘要的截断长度（summary 列上限 512） */
@@ -147,12 +142,11 @@ export class NewsFaqService {
       }
     })
 
-    const blocks = this.sync.buildArticleDetailBlocks({
-      title: dto.title,
-      summary,
-      publishDate: dto.publishDate,
-      paragraphs
-    })
+    const template = await this.sync.loadDetailTemplate(siteId, '/news')
+    const blocks = this.sync.buildArticleDetailBlocks(
+      { title: dto.title, summary, publishDate: dto.publishDate, paragraphs },
+      template
+    )
     const pageId = await this.ensureDetailPage({
       siteId,
       section: '/news',
@@ -190,16 +184,22 @@ export class NewsFaqService {
     })
 
     const paragraphs = splitParagraphs(content)
-    const blocks = this.sync.buildArticleDetailBlocks({ title, summary, publishDate, paragraphs })
+    const template = await this.sync.loadDetailTemplate(row.siteId, '/news')
     const linked = await this.findLinkedPage(row.pageId, row.siteId, '/news/')
     let pageId: string
     if (linked) {
+      const blocks = this.sync.buildArticleDetailBlocks(
+        { title, summary, publishDate, paragraphs },
+        template,
+        linked.blocks
+      )
       await this.prisma.page.update({
         where: { id: linked.id },
         data: { title, summary, blocks: toJsonInput(blocks) }
       })
       pageId = linked.id
     } else {
+      const blocks = this.sync.buildArticleDetailBlocks({ title, summary, publishDate, paragraphs }, template)
       pageId = await this.ensureDetailPage({
         siteId: row.siteId,
         section: '/news',
@@ -329,12 +329,11 @@ export class NewsFaqService {
     const related = (await this.sync.loadFaqDetails(siteId)).filter(
       (item) => item.category === dto.category && item.id !== row.id
     )
-    const blocks = this.sync.buildFaqDetailBlocks({
-      question: dto.question,
-      category: dto.category,
-      paragraphs,
-      related
-    })
+    const template = await this.sync.loadDetailTemplate(siteId, '/faq')
+    const blocks = this.sync.buildFaqDetailBlocks(
+      { question: dto.question, category: dto.category, paragraphs, related },
+      template
+    )
     const pageId = await this.ensureDetailPage({
       siteId,
       section: '/faq',
@@ -376,11 +375,12 @@ export class NewsFaqService {
     const related = (await this.sync.loadFaqDetails(row.siteId)).filter(
       (item) => item.category === category && item.id !== row.id
     )
-    const blocks = this.sync.buildFaqDetailBlocks({ question, category, paragraphs, related })
+    const template = await this.sync.loadDetailTemplate(row.siteId, '/faq')
 
-    const linked = await this.findLinkedPage(row.pageId, row.siteId, '/faq/q')
+    const linked = await this.findLinkedPage(row.pageId, row.siteId, '/faq/')
     let pageId: string
     if (linked) {
+      const blocks = this.sync.buildFaqDetailBlocks({ question, category, paragraphs, related }, template, linked.blocks)
       /** 答案变化时同步摘要，保持 meta description 与正文一致 */
       await this.prisma.page.update({
         where: { id: linked.id },
@@ -388,6 +388,7 @@ export class NewsFaqService {
       })
       pageId = linked.id
     } else {
+      const blocks = this.sync.buildFaqDetailBlocks({ question, category, paragraphs, related }, template)
       pageId = await this.ensureDetailPage({
         siteId: row.siteId,
         section: '/faq',
@@ -414,7 +415,7 @@ export class NewsFaqService {
     if (!row) throw new NotFoundException('问答不存在')
     assertSiteAccess(user, row.siteId)
 
-    const linked = await this.findLinkedPage(row.pageId, row.siteId, '/faq/q')
+    const linked = await this.findLinkedPage(row.pageId, row.siteId, '/faq/')
     if (linked) await this.prisma.page.delete({ where: { id: linked.id } })
     await this.prisma.faqItem.delete({ where: { id: row.id } })
 

@@ -100,3 +100,13 @@
  * 相邻选择器保证 meta 独立使用时正文节奏不受影响。 */
 .site-section[data-block-key="article-meta"]{padding-bottom:0}
 .site-section[data-block-key="article-meta"] + .site-section[data-block-key="article-body"]{padding-top:0}
+
+/* ---- 页内锚点联动（2026-11-03）：hero chips 与下方区块互跳 ----
+ * BlockRenderer 给每个渲染单元的 section 挂 id="blk-<实例id>"，
+ * hero 的 chips 命中区块标题时渲染成 a.chip-link 页内锚点。
+ * 这里补：平滑滚动、锚点落位的上边距（避开后续可能出现的吸顶件）、
+ * 以及链接态 chip 的观感（去掉 a 默认下划线/颜色，悬停给品牌色反馈）。 */
+html{scroll-behavior:smooth}
+.site-section[id]{scroll-margin-top:20px}
+a.chip{text-decoration:none;cursor:pointer;transition:color .18s,border-color .18s,background .18s}
+a.chip:hover{color:var(--brand,#0F62FE);border-color:var(--brand,#0F62FE)}

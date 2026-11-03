@@ -387,7 +387,11 @@ header .navtoggle {
   font-size: 14px;
   line-height: 1.85;
   color: var(--mute);
-  max-width: 38ch;
+  /* 宽度上限用 em 不用 ch：ch 按「0」的半角宽度算，中文全角字符只装得下
+     约一半字数，短短一句就会在末尾悬出一个字（2026-11-03）。
+     34em ≈ 34 个汉字，比两列网格的说明列更宽，实际由网格列宽兜底 ——
+     短说明不再提前换行，长说明仍按列宽自然折行。 */
+  max-width: 34em;
   margin: 0;
 }
 .site-section.alt .sec-head p,

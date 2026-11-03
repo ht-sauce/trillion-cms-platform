@@ -53,6 +53,16 @@ const phoneText = computed(() => {
 
 <template>
   <footer class="foot">
+    <!--
+      NAP 行：地址与信用代码（在版权行上方）。
+      全站每页可见的统一实体信息是「实体一致性」的地基 —— AI 与搜索引擎做交叉比对时，
+      页脚 NAP 是跨页面出现频次最高的信源。字段有值才渲染，缺失时以公司简介页为准。
+    -->
+    <div v-if="addressFull || creditCode" class="wrap foot-row nap-line">
+      <span v-if="addressFull" class="addr">{{ addressFull }}</span>
+      <span v-if="addressFull && creditCode" class="dot" aria-hidden="true">·</span>
+      <span v-if="creditCode" class="icp">统一社会信用代码 {{ creditCode }}</span>
+    </div>
     <div class="wrap foot-row">
       <span class="cpy">© {{ year }} {{ owner }}</span>
       <template v-if="phoneText">
@@ -63,16 +73,6 @@ const phoneText = computed(() => {
         <span class="dot" aria-hidden="true">·</span>
         <span class="icp">{{ icp }}</span>
       </template>
-    </div>
-    <!--
-      NAP 第二行：地址与信用代码。
-      全站每页可见的统一实体信息是「实体一致性」的地基 —— AI 与搜索引擎做交叉比对时，
-      页脚 NAP 是跨页面出现频次最高的信源。字段有值才渲染，缺失时以公司简介页为准。
-    -->
-    <div v-if="addressFull || creditCode" class="wrap foot-row nap-line">
-      <span v-if="addressFull" class="addr">{{ addressFull }}</span>
-      <span v-if="addressFull && creditCode" class="dot" aria-hidden="true">·</span>
-      <span v-if="creditCode" class="icp">统一社会信用代码 {{ creditCode }}</span>
     </div>
   </footer>
 </template>
@@ -111,7 +111,7 @@ const phoneText = computed(() => {
   color: rgba(255, 255, 255, 0.42);
 }
 .nap-line {
-  margin-top: 6px;
+  margin-bottom: 6px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.42);
 }

@@ -41,15 +41,16 @@ defineBlock({
       key: 'columns',
       label: '列数',
       type: 'select',
-      options: ['2', '3'],
-      default: '3'
+      options: ['1', '2', '3'],
+      default: '3',
+      hint: '1 = 一行一条的列表式陈列（图左文右），2/3 = 网格大卡'
     }
   ]
 })
 </script>
 
 <template>
-  <div class="cgrid" :class="data.columns === '2' ? 'cols-2' : 'cols-3'">
+  <div class="cgrid" :class="data.columns === '2' ? 'cols-2' : data.columns === '1' ? 'cols-1' : 'cols-3'">
     <template v-for="item in data.items || []" :key="item.title">
       <NuxtLink v-if="item.href" class="casecard" :to="item.href">
         <div class="pic">

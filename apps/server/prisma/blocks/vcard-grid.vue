@@ -51,3 +51,10 @@ defineBlock({
     </div>
   </div>
 </template>
+
+<style>
+/* 正文内的 \n 渲染为换行（联系地址等多行场景）；已有单行正文不受影响 */
+.vcard .v {
+  white-space: pre-line;
+}
+</style>

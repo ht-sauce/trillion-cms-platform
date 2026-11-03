@@ -195,6 +195,12 @@ export function buildAppEnv(config, appName) {
      * 分流到 GEO，派生缺省值指向 GEO 的**内部监听端口**，浏览器打不开 iframe。
      */
     GEO_BASE_URL: config.vars.GEO_BASE_URL || config.urls.geo,
+    /**
+     * 站点静态资源基址（管理后台预览站点图片用）：与 GEO_BASE_URL 同源。
+     * 站点产物里的图片一律写成 `/assets/img/...`（GEO 站点的根相对路径），
+     * 后台页面在 admin 源下直接用该路径会 404，必须换成站点侧地址才能预览。
+     */
+    NUXT_PUBLIC_SITE_BASE: config.vars.GEO_BASE_URL || config.urls.geo,
     /** 对外主机名：预览地址与绝对 URL 派生用 */
     PUBLIC_HOST: config.urls.host,
     /**

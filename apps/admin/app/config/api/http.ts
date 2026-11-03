@@ -92,6 +92,34 @@ export function resolveFileUrl(publicUrl: string): string {
 }
 
 /**
+ * 站点侧静态资源基址（GEO 引擎地址，取自 runtimeConfig.public.siteBase）
+ * 未注入时返回空串，`resolveMediaUrl` 会退回原值（预览失败但不至于报错）
+ */
+export function resolveSiteBase(): string {
+  const cfg = useRuntimeConfig()
+  return String(cfg.public.siteBase || '').replace(/\/+$/, '')
+}
+
+/**
+ * 内容图片地址 → 后台可访问的绝对地址
+ *
+ * 两类来源必须分开解析：
+ *   - `/static/...`：后台素材库（服务端 UPLOAD_DIR 静态托管）→ 拼服务端 origin
+ *   - 其他根相对路径（`/assets/img/...`）：GEO 站点产物里的静态资源，语义是「站点根」
+ *     → 拼站点基址；这类路径在后台源下直接访问必然 404
+ * 已带协议、协议相对（`//cdn...`）、data/blob 内联地址一律原样返回。
+ */
+export function resolveMediaUrl(path: string): string {
+  const value = String(path ?? '').trim()
+  if (!value) return ''
+  if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(value)) return value
+  if (value.startsWith('/static/')) return resolveFileUrl(value)
+  const base = resolveSiteBase()
+  if (!base) return value
+  return `${base}${value.startsWith('/') ? '' : '/'}${value}`
+}
+
+/**
  * 当前页面路由路径（剥离 app.baseURL 前缀）
  * 后台挂在 /geocms/ 基础路径下，location.pathname 会带前缀（如 /geocms/login），
  * 对路由路径做判断（登录页判定等）必须先剥离，否则 401 跳转逻辑失灵

@@ -51,6 +51,20 @@ const h1Html = computed(() => {
 const leadHtml = computed(() => escapeHtml(props.data.lead).replace(/\[\[(.+?)\]\]/g, '<em>$1</em>'))
 
 /**
+ * 页内联动（2026-11-03）：chips 文案与本页某个区块标题互含时，
+ * 渲染成页内锚点链接（映射由 BlockRenderer 注入 context.anchors）。
+ * 互含而不是全等：标题常带后缀（如 chip「停车场」→ 标题「停车场与坡道」）。
+ */
+function chipAnchor(chip: unknown): string | undefined {
+  const text = String(chip ?? '').trim()
+  if (!text) return undefined
+  const anchors = props.context.anchors || {}
+  if (anchors[text]) return anchors[text]
+  const hit = Object.keys(anchors).find((title) => title.includes(text) || text.includes(title))
+  return hit ? anchors[hit] : undefined
+}
+
+/**
  * 行动按钮渲染方式（2026-10-14 需求）：电话类链接（tel: / mailto:）与空链接
  * 一律纯展示——渲染为 span，无跳转、无点击逻辑；站内路径仍用 NuxtLink 正常跳转。
  */
@@ -77,7 +91,7 @@ defineBlock({
       required: true,
       hint: '60~120 字，让患者单独读懂；[[文字]] 包住的内容会显示为高亮数字'
     },
-    { key: 'chips', label: '标签组', type: 'list', item: { type: 'text' }, hint: '3~6 个' },
+    { key: 'chips', label: '标签组', type: 'list', item: { type: 'text' }, hint: '3~6 个；与本页某区块标题同名（或互含）时自动变成页内锚点，点击滚动到该区块' },
     {
       key: 'actions',
       label: '行动按钮',
@@ -117,7 +131,10 @@ defineBlock({
         <p v-if="props.data.lead" class="lead" v-html="leadHtml"></p>
 
         <div v-if="props.data.chips?.length" class="chips">
-          <span v-for="chip in props.data.chips" :key="chip" class="chip">{{ chip }}</span>
+          <template v-for="chip in props.data.chips" :key="chip">
+            <a v-if="chipAnchor(chip)" class="chip chip-link" :href="`#${chipAnchor(chip)}`">{{ chip }}</a>
+            <span v-else class="chip">{{ chip }}</span>
+          </template>
         </div>
 
         <div v-if="props.data.actions?.length || props.data.note" class="hero-actions">

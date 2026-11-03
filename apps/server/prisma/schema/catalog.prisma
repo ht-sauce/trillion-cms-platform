@@ -1,0 +1,128 @@
+/// 产品行业分组表：产品体系列表页的行业维度（表为管理源，/products 页面是发布产物）
+/// 分组顺序 = sort 升序；每组介绍文案（desc / moreLabel）从既有页面块回填，管理面可改
+model ProductIndustry {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 归属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 分组名称（如 食品饮料 / 医药净化），站点内唯一
+  name String @db.VarChar(100)
+  /// 分组介绍文案（section-head.desc，随行业分组头块输出）
+  desc String @default("") @db.VarChar(500)
+  /// 分组头更多链接文案（section-head.moreLabel，可为空 = 不输出）
+  moreLabel String? @map("more_label") @db.VarChar(100)
+  /// 同级排序，升序（/products 页分组顺序）
+  sort Int @default(0)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@index([siteId, sort])
+  @@unique([siteId, name])
+}
+
+/// 产品表：产品体系的管理源（表为管理源，Page 是发布产物）
+/// 管理面 CRUD 直接读写本表，保存后由 catalog 模块派生 /products/{slug} 详情页并重算 /products 列表页
+/// 卡片字段（name~tags）输出到列表页 product-card；详情字段（可空）派生详情页对应块
+model Product {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 归属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 产品名（如 ForinCrete SL，卡片主标题）
+  name String @db.VarChar(120)
+  /// 中文名称（如 聚氨酯砂浆自流平，卡片副标题）
+  cnName String @default("") @map("cn_name") @db.VarChar(120)
+  /// 树脂系列（如 ForinCrete / ForinCoat / ForinShield / ForinDeck，第二种分类维度）
+  series String @default("") @db.VarChar(120)
+  /// 所属行业分组名清单（Json 字符串数组，对应 ProductIndustry.name，一个产品可属多个行业；null = 未分组）
+  industries Json?
+  /// 一句话说明（卡片 desc；详情页缺省作为 lead 摘要来源）
+  desc String @default("") @db.VarChar(500)
+  /// 卡片图片地址（/assets/img/** 静态轨）
+  img String @default("") @db.VarChar(300)
+  /// 详情页导语（hero.lead；空 = 回落到 desc）
+  lead String @default("") @db.VarChar(500)
+  /// 详情页头部标签（Json 字符串数组，hero.chips；空 = 回落卡片 tags）
+  chips Json?
+  /// 详情页大图（hero.bgImage；空 = 回落 img）
+  bgImage String @default("") @map("bg_image") @db.VarChar(300)
+  /// 特性标签（Json 字符串数组，如 ["耐冲洗","耐腐蚀"]；null = 无标签）
+  tags Json?
+  /// 系统说明（Json：[{k,v}] vcard-grid items；null/空数组 = 详情页不含系统说明块）
+  systemIntro Json? @map("system_intro")
+  /// 系统构造分层（Json：layer-stack layers [{role,product,thickness,desc,code}]；null/空数组 = 不含构造块）
+  layers Json?
+  /// 系统特点（Json：feature-cards items [{title,desc,icon}]；null/空数组 = 不含特点块）
+  features Json?
+  /// 标准色卡（Json：color-palette swatches [{name,hex}]；null/空数组 = 不含色卡块）
+  colors Json?
+  /// 产品常见问题（Json：[{q,a}] faq-list items；null/空数组 = 不含常见问题块）
+  faqs Json?
+  /// URL 片段，创建后不可修改（访问地址 /products/{slug}）
+  slug String @db.VarChar(120)
+  /// 状态：published=已发布 / draft=草稿（保存即发布口径，默认 published）
+  status String @default("published") @db.VarChar(20)
+  /// 发布产物页面 ID（Page 表弱引用，未建外键；页面缺失时编辑会自动补建）
+  pageId String? @map("page_id") @db.VarChar(36)
+  /// 列表内排序，升序（同行业内 product-card 顺序）
+  sort Int @default(0)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@index([siteId, status])
+  @@unique([siteId, slug])
+}
+
+/// 工程案例表：成功案例的管理源（表为管理源，Page 是发布产物）
+/// 管理面 CRUD 直接读写本表，保存后由 catalog 模块派生 /cases/{slug} 详情页并重算 /cases 列表页
+model CaseStudy {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 归属站点 ID
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 案例标题（如 海康威视 AGV 工厂）
+  title String @db.VarChar(200)
+  /// 行业（如 电子制造 / 食品加工，卡片与详情页 badge）
+  industry String @default("") @db.VarChar(100)
+  /// 项目地点（如 浙江杭州）
+  location String @default("") @db.VarChar(120)
+  /// 地坪面积（展示文本，如 "35,000 ㎡"）
+  area String @default("") @db.VarChar(60)
+  /// 完成年份（展示文本，如 "2022"）
+  year String @default("") @db.VarChar(20)
+  /// 使用体系（如 ForinCrete SL-ESD）
+  system String @default("") @map("system") @db.VarChar(200)
+  /// 卡片图片地址（/assets/img/** 静态轨）
+  img String @default("") @db.VarChar(300)
+  /// 详情页导语（hero.lead；空 = 回落到 title）
+  lead String @default("") @db.VarChar(500)
+  /// 详情页头部标签（Json 字符串数组，hero.chips；空 = 使用 area/industry 派生）
+  chips Json?
+  /// 详情页大图（hero.bgImage；空 = 回落 img）
+  bgImage String @default("") @map("bg_image") @db.VarChar(300)
+  /// 项目信息行（Json：glass-card rows [{k,v,sub?}]；null/空数组 = 详情页不含项目信息卡）
+  infoRows Json? @map("info_rows")
+  /// 案例正文纯文本，按 \n 分段（发布时拆为 article-body 段落块）
+  body String @db.Text
+  /// 项目画面（Json：env-grid items [{img,caption,note,alt}]；null/空数组 = 不含画面块）
+  images Json?
+  /// URL 片段，创建后不可修改（访问地址 /cases/{slug}）
+  slug String @db.VarChar(120)
+  /// 状态：published=已发布 / draft=草稿（保存即发布口径，默认 published）
+  status String @default("published") @db.VarChar(20)
+  /// 发布产物页面 ID（Page 表弱引用，未建外键；页面缺失时编辑会自动补建）
+  pageId String? @map("page_id") @db.VarChar(36)
+  /// 列表内排序，升序（case-grid 顺序）
+  sort Int @default(0)
+  /// 创建时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  @@index([siteId, status])
+  @@unique([siteId, slug])
+}

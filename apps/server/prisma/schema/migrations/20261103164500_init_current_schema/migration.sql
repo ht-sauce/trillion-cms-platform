@@ -53,6 +53,82 @@ CREATE TABLE `BlockDefinitionVersion` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `ProductIndustry` (
+    `id` VARCHAR(36) NOT NULL,
+    `site_id` VARCHAR(36) NOT NULL,
+    `name` VARCHAR(100) NOT NULL,
+    `desc` VARCHAR(500) NOT NULL DEFAULT '',
+    `more_label` VARCHAR(100) NULL,
+    `sort` INTEGER NOT NULL DEFAULT 0,
+    `created_at` DATETIME(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+    `updated_at` DATETIME(0) NOT NULL,
+
+    INDEX `ProductIndustry_site_id_sort_idx`(`site_id`, `sort`),
+    UNIQUE INDEX `ProductIndustry_site_id_name_key`(`site_id`, `name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `Product` (
+    `id` VARCHAR(36) NOT NULL,
+    `site_id` VARCHAR(36) NOT NULL,
+    `name` VARCHAR(120) NOT NULL,
+    `cn_name` VARCHAR(120) NOT NULL DEFAULT '',
+    `series` VARCHAR(120) NOT NULL DEFAULT '',
+    `industries` JSON NULL,
+    `desc` VARCHAR(500) NOT NULL DEFAULT '',
+    `img` VARCHAR(300) NOT NULL DEFAULT '',
+    `lead` VARCHAR(500) NOT NULL DEFAULT '',
+    `chips` JSON NULL,
+    `bg_image` VARCHAR(300) NOT NULL DEFAULT '',
+    `tags` JSON NULL,
+    `system_intro` JSON NULL,
+    `layers` JSON NULL,
+    `features` JSON NULL,
+    `colors` JSON NULL,
+    `faqs` JSON NULL,
+    `slug` VARCHAR(120) NOT NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'published',
+    `page_id` VARCHAR(36) NULL,
+    `sort` INTEGER NOT NULL DEFAULT 0,
+    `created_at` DATETIME(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+    `updated_at` DATETIME(0) NOT NULL,
+
+    INDEX `Product_site_id_status_idx`(`site_id`, `status`),
+    UNIQUE INDEX `Product_site_id_slug_key`(`site_id`, `slug`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `CaseStudy` (
+    `id` VARCHAR(36) NOT NULL,
+    `site_id` VARCHAR(36) NOT NULL,
+    `title` VARCHAR(200) NOT NULL,
+    `industry` VARCHAR(100) NOT NULL DEFAULT '',
+    `location` VARCHAR(120) NOT NULL DEFAULT '',
+    `area` VARCHAR(60) NOT NULL DEFAULT '',
+    `year` VARCHAR(20) NOT NULL DEFAULT '',
+    `system` VARCHAR(200) NOT NULL DEFAULT '',
+    `img` VARCHAR(300) NOT NULL DEFAULT '',
+    `lead` VARCHAR(500) NOT NULL DEFAULT '',
+    `chips` JSON NULL,
+    `bg_image` VARCHAR(300) NOT NULL DEFAULT '',
+    `info_rows` JSON NULL,
+    `body` TEXT NOT NULL,
+    `images` JSON NULL,
+    `slug` VARCHAR(120) NOT NULL,
+    `status` VARCHAR(20) NOT NULL DEFAULT 'published',
+    `page_id` VARCHAR(36) NULL,
+    `sort` INTEGER NOT NULL DEFAULT 0,
+    `created_at` DATETIME(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+    `updated_at` DATETIME(0) NOT NULL,
+
+    INDEX `CaseStudy_site_id_status_idx`(`site_id`, `status`),
+    UNIQUE INDEX `CaseStudy_site_id_slug_key`(`site_id`, `slug`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `Channel` (
     `id` VARCHAR(36) NOT NULL,
     `site_id` VARCHAR(36) NOT NULL,
@@ -288,6 +364,7 @@ CREATE TABLE `Site` (
     `domain` VARCHAR(128) NOT NULL,
     `icp_number` VARCHAR(64) NULL,
     `police_number` VARCHAR(64) NULL,
+    `entity_path` VARCHAR(512) NULL,
     `legal_name` VARCHAR(128) NOT NULL DEFAULT '',
     `common_name` VARCHAR(128) NOT NULL DEFAULT '',
     `abbr_name` JSON NOT NULL,
@@ -337,6 +414,7 @@ CREATE TABLE `Site` (
     `robots_meta` JSON NOT NULL,
     `theme_config` JSON NOT NULL,
     `status` VARCHAR(8) NOT NULL DEFAULT 'active',
+    `business_type` VARCHAR(16) NOT NULL DEFAULT 'medical',
     `created_at` DATETIME(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
     `updated_at` DATETIME(0) NOT NULL,
 

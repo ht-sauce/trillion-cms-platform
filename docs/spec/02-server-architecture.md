@@ -95,11 +95,15 @@ common/   →  modules/  ❌ 禁止反向依赖
 | `menus`        | `/geoserver/menus`     | 后台菜单树（按当前用户角色的菜单授权过滤）与菜单配置维护   | 树需登录，写操作限平台级角色 | ——  |
 | `roles`        | `/geoserver/roles`     | 角色 CRUD 与「角色 → 菜单」授权（三级菜单、自动补全上级）  | JWT-A + 平台级角色   | ——       |
 | `admin-users`  | `/geoserver/admin-users` | 后台用户 CRUD 与「用户 → 角色」绑定（含站点授权、安全护栏） | JWT-A + 平台级角色 | ——     |
+| `news-faq`     | `/geoserver/news-faq`  | 新闻文章 / 问答条目管理面（表为管理源、页面是发布产物）     | JWT-A                | ✅       |
+| `catalog`      | `/geoserver/catalog`   | 产品体系（含行业分组）/ 成功案例管理面（同表驱动口径）     | JWT-A                | ✅       |
 | `site-auth`    | `/geoserver/site-auth` | 站点会员注册/登录/校验/获取自身信息（JWT-M）               | 除登录注册外需 JWT-M | ✅       |
 | `public`       | `/geoserver/public`    | **无鉴权只读**：站点配置、路由清单、页面详情、robots、实体 | 无                   | 按 key   |
 | `health`       | `/geoserver/health`    | 健康检查                                                   | 无                   | ——       |
 
-> 合计 **57 条已注册路由**（在首轮全量验证 43 条之上新增：`menus` 5 条 + `roles` 5 条 + `admin-users` 4 条）。逐条清单与请求/响应字段见 [`05-api-contract.md`](./05-api-contract.md)。
+> 合计 **71 条已注册路由**（43 条首轮验证 + `menus` 5 + `roles` 5 + `admin-users` 4 + `news-faq` 12 + `catalog` 14，另有 `public` / `preview` 等按需扩展）。逐条清单与请求/响应字段见 [`05-api-contract.md`](./05-api-contract.md)。
+
+> **表驱动内容域**（`news-faq` / `catalog`）共用一套模式：管理源是独立数据表，`Page` 只是发布产物；保存后自动派生/重算页面块 → 自动触发页面级发布。派生详情页的块结构从站点既有同栏目 detail 页**克隆为模板**（[ADR-052](./08-adr.md)），代码内不含任何站点文案，换站点零改动。
 
 ## 4. 横切机制
 

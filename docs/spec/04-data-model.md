@@ -53,6 +53,9 @@ erDiagram
 | `RoleMenu`     | 平台 | 角色-菜单授权关系（复合主键，授权即可见）               | 全局      |
 | `NewsArticle`  | 站点 | 新闻文章**管理源**表（页面是发布产物，见 §8）           | `siteId`  |
 | `FaqItem`      | 站点 | 问答条目**管理源**表（页面是发布产物，见 §8）           | `siteId`  |
+| `ProductIndustry` | 站点 | 产品**行业分组**（`/products` 列表页的分组结构，见 §9） | `siteId`  |
+| `Product`      | 站点 | 产品**管理源**表（一条产品 = 一张卡片 + 一个详情页，见 §9） | `siteId`  |
+| `CaseStudy`    | 站点 | 成功案例**管理源**表（见 §9）                            | `siteId`  |
 
 > `Entity.siteId` 与 `StaticFile.siteId` 允许为 `null`，代表**集团级公共**资源。
 
@@ -265,6 +268,43 @@ apps/server/prisma/
 ### 8.2 数据回填
 
 `apps/server/scripts/backfill-news-faq-tables.mjs`（一次性，幂等按 siteId+slug 判重）：siteId=3 的 `/news/*` 详情页 → `NewsArticle`（title/summary 取页面，content=article-body 段落按 `\n` 拼接，publishDate=article-meta.date，slug=去 `/news/` 前缀，pageId=page.id）；`/faq/qNNN` → `FaqItem`（question/cat/paragraphs 取 faq-detail 块）。预期结果：**NewsArticle 7 条、FaqItem 102 条**。
+
+---
+
+## 9. 产品 / 案例独立数据表（2026-11-03，与 §8 同口径）
+
+> 背景：`/products` 与 `/cases` 此前同样只有「Page + 块数据」。产品列表页的分组信息藏在 `section-head` 文案里、案例卡片散落在 `case-grid.items` 中，运营改一个产品要手工同步卡片与详情页两处。本轮沿用 §8 的「表为管理源、页面是发布产物」，把**四个内容域（产品 / 案例 / 新闻 / 问答）统一到同一口径**。DDL 以 `apps/server/prisma/schema/catalog.prisma` 为准。
+
+### 9.1 表结构
+
+| 表 | 字段 | 关键约束 |
+| -- | ---- | -------- |
+| `ProductIndustry` 行业分组 | `siteId` / `name`(100) / `desc`(300，分组头的说明文案) / `moreLabel`(20，分组头更多链接文案，可空) / `sort` / `createdAt` / `updatedAt` | `@@unique([siteId, name])`（`name` 同时是产品 `industries` 的引用键）；`@@index([siteId, sort])` |
+| `Product` 产品 | **卡片**：`name`(100) / `cnName`(100) / `series`(60，树脂系列，第二种分类维度) / `industries`(**Json?**，行业分组名数组) / `desc`(300) / `img` / `lead`(500) / `chips`(Json?) / `bgImage` / `tags`(Json?) / `sort`<br>**详情**：`systemIntro`(Json?) / `layers`(Json?) / `features`(Json?) / `colors`(Json?) / `faqs`(Json?)<br>**标识**：`slug`(120) / `status` / `pageId` | `@@unique([siteId, slug])`；`@@index([siteId, series])` |
+| `CaseStudy` 案例 | `title`(200) / `industry`(60) / `location`(60) / `area`(60) / `year`(10) / `system`(60) / `img` / `lead`(500) / `chips`(Json?) / `bgImage` / `infoRows`(Json?) / `body`(**Text 纯文本，\n 分段**) / `images`(Json?，项目画面) / `slug`(120) / `status` / `pageId` / `sort` | `@@unique([siteId, slug])`；`@@index([siteId, sort])` |
+
+设计口径（与 §8 一致，差异项单独说明）：
+
+- **一套产品数据、两种分类维度**：`Product.industries`（行业分组，决定在 `/products` 列表页的哪个分组下出现，可多值）+ `Product.series`（树脂系列 ForinCrete / ForinCoat / ForinShield / ForinDeck，用于筛选与详情页 eyebrow）。同一产品可同时属于多个行业分组（如 `mma-floor`），这正是原站「按行业看」与「按体系看」共用一套数据的形态。
+- **分组结构本身入库**（`ProductIndustry`）：分组顺序（`sort`）、分组说明（`desc`）、空分组是否保留都由表决定；产品 `industries` 存**分组名**而非 id——改名时由 `ProductsService.updateIndustry` 事务内同步改写引用，删除时若有产品引用直接 400 拒绝。
+- **`pageId` 同 §8 为弱引用**，但产品/案例的策略是**保存即自动建页**（不采用「可选建页」）：`createProduct` / `createCase` 落表后立即派生详情页并回写 `pageId`，运营无需第二个动作。
+- **Json 字段一律 `Json?` 无默认值**（MySQL 的 JSON/TEXT 列不允许 DEFAULT，见 §8 踩坑记录）；`body` 是 `String @db.Text` 无默认值，写入时 service 兜底 `?? ''`。
+- 列表接口**不返回详情字段**（`layers` / `colors` / `body` / `images` 等），编辑回显走单条详情接口，避免列表页把大字段全量拉一遍。
+
+### 9.2 派生页面模板化（ADR-052）
+
+派生详情页的块结构**不再由代码硬编码**，而是从站点既有同栏目 detail 页面**克隆**：
+
+- `loadDetailTemplate(siteId, section)` 取该栏目（`/products` / `/cases` / `/news` / `/faq`）**最早创建的 `kind='detail'` 页面**的 `blocks` 作为模板；
+- `buildProductBlocks` / `buildCaseBlocks` / `buildArticleDetailBlocks` / `buildFaqDetailBlocks` 只在模板上做**字段覆盖**（h1 / lead / chips / 图片 / 正文段落），块顺序、固定文案（telbar / notice / disclaimer / section-head 文案）全部沿用模板；
+- `overrides[key] = null` 表示该块**不输出**；若其前一块是 `section-head`，分组头一并跳过（避免出现空标题）；
+- 块实例 id 用 `withStableIds(next, oldBlocks)` 按 key 的出现顺序复用旧 id，结构不变时 `contentHash` 稳定，增量发布不会误判为「页面已变更」。
+
+原实现（2026-10 之前）把门诊时间、029 电话、医学合规声明等**仁爱医院站文案硬编码在代码里**，换站点即错。模板化后代码内不含任何站点文案，换站点零改动。
+
+### 9.3 数据回填
+
+`apps/server/scripts/backfill-catalog.mjs`（一次性，按 `siteId + slug` upsert 幂等）：从 `/products` 页面块反读——按 `section-head` 顺序切分产品卡片聚合出 4 个行业分组、10 个产品（详情字段从对应 detail 页的 `layer-stack` / `feature-cards` / `color-palette` / `faq-list` 反解）；`/cases` 的 `case-grid.items` → 5 条 `CaseStudy`（slug 由中文标题映射，如 `hikvision` / `beijing-olympics-2022`）；新闻 1 条、问答 12 条由 §8.2 的表补齐 `pageId`。回填结果：**ProductIndustry 4 / Product 10 / CaseStudy 5 / NewsArticle 1 / FaqItem 12**。
 
 ---
 

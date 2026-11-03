@@ -13,6 +13,7 @@ import { SitesModule } from './modules/sites/sites.module'
 import { StaticFilesModule } from './modules/static-files/static-files.module'
 import { ContentModule } from './modules/content/content.module'
 import { NewsFaqModule } from './modules/news-faq/news-faq.module'
+import { CatalogModule } from './modules/catalog/catalog.module'
 import { MembersModule } from './modules/members/members.module'
 import { PublishModule } from './modules/publish/publish.module'
 import { TrackModule } from './modules/track/track.module'
@@ -47,6 +48,7 @@ import { GeoModule } from './modules/geo/geo.module'
     StaticFilesModule,
     ContentModule,
     NewsFaqModule,
+    CatalogModule,
     MembersModule,
     PublishModule,
     TrackModule,

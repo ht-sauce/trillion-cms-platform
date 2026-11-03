@@ -57,7 +57,7 @@ flowchart LR
   E -->|是| OK1
 ```
 
-## 3. 接口清单（72 条）
+## 3. 接口清单（86 条）
 
 ### 3.1 auth · 管理员鉴权
 
@@ -225,6 +225,33 @@ flowchart LR
 > 保存即发布：表记录 `status` 恒为 `published`（管理端保存免审核，与站点编辑器保存行为一致）。
 > 发布日期校验：`publishDate` 必填、`/^\d{4}-\d{2}-\d{2}$/` 且**不允许早于今天**（Asia/Shanghai 口径），错误信息为中文（如「发布日期不能早于今天」）。
 > 正文均为纯文本，按换行拆成段落块；新闻去分类（`post-list` / `article-meta` 块已无 category 字段，`/news` 列表 hero chips 置空、独立 pager 移除，分页由 `post-list` 客户端分页承担）。
+
+### 3.14 catalog · 产品体系 / 成功案例（管理面）
+
+> **表驱动**：产品与案例的管理源是 `ProductIndustry` / `Product` / `CaseStudy`（见 [04 §9](./04-data-model.md)），`Page` 只是发布产物。
+> 与 §3.13 同口径：本组接口做管理面 CRUD，每次增删改后自动**重算列表页块**（`/products` 的分组结构、`/cases` 的 `case-grid.items`）并**派生详情页**，然后自动触发**页面级**发布（系统入口、可排队）。
+> 列表接口的 `siteId` 参与站点权限校验（`assertSiteAccess`，越权 403）；详情接口直读表、不接收 `siteId`（按记录归属鉴权）。
+
+| 方法   | 路径                            | 用途 | 鉴权 |
+| ------ | ------------------------------- | ---- | ---- |
+| GET    | `/catalog/industries`           | 行业分组列表（`?siteId`，按 sort 升序；行含 `id, name, desc, moreLabel, sort, productCount`，`productCount` 用于后台判断能否删除分组） | JWT-A |
+| POST   | `/catalog/industries`           | 新建分组（`{ siteId, name, desc?, moreLabel?, sort? }`；`(siteId, name)` 唯一，重名 400；`sort` 缺省取 max+1） | JWT-A |
+| PATCH  | `/catalog/industries/:id`       | 编辑分组（改名时**事务内同步改写所有产品的 `industries` 引用** + 重算列表页分组头） | JWT-A |
+| DELETE | `/catalog/industries/:id`       | 删除分组（**仍被产品引用时 400**，需先把产品移出该分组） | JWT-A |
+| GET    | `/catalog/products`             | 产品分页列表（`?siteId&page&pageSize&keyword&series&industry`；`industries` 用 JSON `string_contains` 做多值匹配；行含卡片字段 + `path`，**不含详情字段**；响应附带 `seriesList` 供筛选下拉） | JWT-A |
+| GET    | `/catalog/products/:id/detail`  | 单条产品详情（含 `systemIntro / layers / features / colors / faqs`） | JWT-A |
+| POST   | `/catalog/products`             | 新建产品（`{ siteId, name, cnName?, series?, industries, desc?, img?, lead?, chips?, bgImage?, tags?, ... }`；`slug = slugify(name)`，路径占用 400；`sort` 取 max+1；**落表后立即派生详情页并回写 `pageId`**） | JWT-A |
+| PATCH  | `/catalog/products/:id`         | 编辑产品（slug 不可改；有 `pageId` 走页面更新，无则补建；详情字段留空 = 该区块不输出） | JWT-A |
+| DELETE | `/catalog/products/:id`         | 删除产品（删发布产物页面与表记录，重算列表页） | JWT-A |
+| GET    | `/catalog/cases`                | 案例分页列表（`?siteId&page&pageSize&keyword&industry`；行含卡片字段 + `path`；响应附带 `industryList`） | JWT-A |
+| GET    | `/catalog/cases/:id/detail`     | 单条案例详情（含 `infoRows / body / images`） | JWT-A |
+| POST   | `/catalog/cases`                | 新建案例（`{ siteId, title, industry?, location?, area?, year?, system?, img?, lead?, chips?, bgImage?, infoRows?, body?, images? }`；slug 缺省 `case-YYYYMMDD-序号`；落表后立即派生详情页） | JWT-A |
+| PATCH  | `/catalog/cases/:id`            | 编辑案例（slug 不可改；页面缺失自动补建） | JWT-A |
+| DELETE | `/catalog/cases/:id`            | 删除案例（删发布产物页面与表记录，重算列表页） | JWT-A |
+
+> **详情页派生走模板**（[ADR-052](./08-adr.md)）：块结构从站点既有同栏目 detail 页克隆，代码只做字段覆盖，不含任何站点文案。
+> 响应口径与 §3.13 一致：`data` 含 `affectedPages` 与 `publishTaskId`；仅 `status='published'` 的页面进入发布队列。
+> 产品/案例的 `pageId` 是**保存即自动建页**（不是可选项），因此新建接口的响应里 `pageId` 必定非空。
 
 ## 4. 关键接口要点
 
