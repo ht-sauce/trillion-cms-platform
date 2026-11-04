@@ -160,7 +160,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`maintenance/fix-prisma-migrations-meta-table.sql`](../apps/server/prisma/maintenance/fix-prisma-migrations-meta-table.sql) —— **一次性环境修复（不是迁移）**：旧版 Prisma CLI 建出的 `_prisma_migrations` 台账 `applied_steps_count` 无 DEFAULT，会让 `migrate deploy` 报「Field 'applied_steps_count' doesn't have a default value」而整体失败；本脚本为其补默认值，幂等，用 `prisma db execute --file` 执行（见 10-launch-runbook §4.2）
 - [`maintenance/fix-table-name-case.sql`](../apps/server/prisma/maintenance/fix-table-name-case.sql) —— **一次性环境修复（不是迁移）**：Windows MySQL（`lower_case_table_names=1`）导库会把表名落到小写，Linux 默认区分大小写、Prisma 模型未写 `@@map`，于是报「The table `AdminUser` does not exist」；本脚本按映射把 21 张业务表改回大驼峰（`_prisma_migrations` 保持小写），幂等、仅改表名不动数据行、含外键自动改写与前后核对（见 10-launch-runbook §11）
 - [`seed.ts`](../apps/server/prisma/seed.ts) —— 种子数据：内置角色（`admin` / `site_admin`）与角色菜单授权、平台管理员（绑定 `admin` 角色）、后台菜单（站点管理目录：站点列表 / 新闻资讯 / 高频问答；内容管理下六页：页面 / 编辑器 / 块库 / 块模板 / 导航 / 素材 + 系统设置四个子页）、默认模板、示例站点/栏目/页面、内置块定义（若 `prisma/blocks/*.vue` 存在则写入**模板库** `siteId = 0`，目录缺失时跳过）与示例站点的**块副本**（ADR-035）
-- **`blocks/*.vue`（41 个，块唯一真源）** —— 公共块模板代码（`defineBlock` 字段声明 + 原型类名 DOM，09 §7.4.1 / ADR-036）。改块必须改这里再 `pnpm db seed` → 站点副本重同步 → `geo blocks:sync`；直接改数据库或只改 GEO 侧 `Blk*.vue` 会在下次 seed / 构建时被覆盖或产生「块不可用」。`telbar`（尾部预约条）/`vcard-grid`（键值对卡片栅格）在仁爱建站时新增（09 §7.2.2）
+- **`blocks/*.vue`（54 个，块唯一真源）** —— 公共块模板代码（`defineBlock` 字段声明 + 原型类名 DOM，09 §7.4.1 / ADR-036）。改块必须改这里再 `pnpm db seed` → 站点副本重同步 → `geo blocks:sync`；直接改数据库或只改 GEO 侧 `Blk*.vue` 会在下次 seed / 构建时被覆盖或产生「块不可用」。`telbar`（尾部预约条）/`vcard-grid`（键值对卡片栅格）在仁爱建站时新增（09 §7.2.2）；`faq-board`（问答分类页签 + 关键词搜索 + 站内分页，ADR-055）在 forintech 问答改版时新增
 
 ### src/（源码）
 
@@ -189,6 +189,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`utils/geo-check.ts`](../apps/server/src/common/utils/geo-check.ts) —— **发布前 GEO 体检纯函数**：页面级 `checkPageGeo`（标题/摘要/编审/案例禁用字段/canonical/NAP）与站点级 `checkSiteGeo`（实体声明 / llms / robots AI 策略 / robots meta / sitemap 核心 URL / NAP）。纯函数、被 content 与 geo 两个模块共用，故放在 `common/utils`
 - [`utils/site-scope.ts`](../apps/server/src/common/utils/site-scope.ts) —— **站点数据权限**：断言与查询过滤（真正的安全边界）
 - [`utils/json.ts`](../apps/server/src/common/utils/json.ts) —— Prisma JSON 字段读写收窄（`toJsonInput` / `fromJson`）
+- [`utils/article-body.ts`](../apps/server/src/common/utils/article-body.ts) —— **新闻正文结构化块（ADR-053）**：`ArticleBlock`（paragraph / heading / image）+ `normalizeArticleBody` 白名单收口（类型、空块、图片地址只认 `/static`、`/assets`、`http(s)`、块数上限）+ `articleBlocksToText` 纯文本派生 + `resolveArticleBlocks`（有 body 用 body，否则按段落回落）
 - [`utils/datetime.ts`](../apps/server/src/common/utils/datetime.ts) —— 中国时区时间格式化（输出 `YYYY-MM-DD HH:mm:ss`）
 - [`utils/jwt-expiry.ts`](../apps/server/src/common/utils/jwt-expiry.ts) —— JWT 有效期类型收窄（兼容 jsonwebtoken 的 `StringValue`）
 
@@ -230,7 +231,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`news-faq.module.ts`](../apps/server/src/modules/news-faq/news-faq.module.ts) —— 模块定义（依赖 Content / Publish 模块，导出同步服务）
 - [`news-faq.controller.ts`](../apps/server/src/modules/news-faq/news-faq.controller.ts) —— `/news-faq/*` 接口：文章与问答的分页列表（读管理表）、单条详情（`articles/:id/detail` / `faqs/:id/detail` **直读表，不接收 siteId 参数**，按记录归属站点鉴权）、增删改、分类清单
 - [`news-faq.service.ts`](../apps/server/src/modules/news-faq/news-faq.service.ts) —— 管理面 CRUD（**表驱动**：`NewsArticle` / `FaqItem` 为管理源）：列表/详情直读表 → 写表 → 委托同步服务创建或补建 kind=detail 发布产物页（保存即发布、slug 自动生成；**slug 创建后不可改**）、按 `pageId` 弱关联挂接失联产物 → 重算派生块 → 自动触发**页面级**发布（响应携带 `affectedPages` 与 `publishTaskId`）
-- [`news-faq-sync.service.ts`](../apps/server/src/modules/news-faq/news-faq-sync.service.ts) —— **派生块同步（核心）**：`loadDetailTemplate(siteId, section)` 取该栏目最早创建的 detail 页登记为模板，`buildArticleDetailBlocks` / `buildFaqDetailBlocks` 在模板上只做字段覆盖（h1 / lead / chips / 正文段落），块顺序与固定文案全沿用模板；详情数据装载 `loadNewsDetails` / `loadFaqDetails` **直读管理表**（表是唯一事实来源）；`/news` 列表（post-list 按发布日期倒序、hero chips 置空、移除独立 pager）、`/faq` 列表（eyebrow/anchor-bar/hot-faq/分类分组 section-head+faq-index 整体重算）、同分类详情页 related-faq 重算；Prisma 事务写回并重算内容指纹（块实例 id 同 key 顺序复用，常规编辑下指纹稳定）
+- [`news-faq-sync.service.ts`](../apps/server/src/modules/news-faq/news-faq-sync.service.ts) —— **派生块同步（核心）**：`loadDetailTemplate(siteId, section)` 取该栏目最早创建的 detail 页登记为模板，`buildArticleDetailBlocks` / `buildFaqDetailBlocks` 在模板上只做字段覆盖（h1 / lead / chips / 正文段落），块顺序与固定文案全沿用模板；详情数据装载 `loadNewsDetails` / `loadFaqDetails` **直读管理表**（表是唯一事实来源）；`/news` 列表（post-list 按发布日期倒序、hero chips 置空、移除独立 pager）、`/faq` 列表（hero chips + 分类 `faq-list` 只填上架问答 + `faq-board` 填全量问答，ADR-055）、同分类详情页 related-faq 重算；Prisma 事务写回并重算内容指纹（块实例 id 同 key 顺序复用，常规编辑下指纹稳定）
 - ~~`news-faq.constants.ts`~~ —— **2026-11-03 已删除**：原文件把仁爱医院站的门诊时间 / 029 电话 / 医学合规声明硬编码在此，换站点即错。现在详情页与列表页的块结构、固定文案一律从站点既有同栏目 detail 页克隆（ADR-052），代码内不含任何站点文案
 - [`dto.ts`](../apps/server/src/modules/news-faq/dto.ts) —— 文章 / 问答入参 DTO（含 `YYYY-MM-DD` 格式与「不早于今天」校验、slug 格式校验；编辑 DTO 不收 slug）
 
@@ -391,11 +392,12 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`DashboardOverview.vue`](../apps/admin/app/components/DashboardOverview.vue) —— GEO 监控工作台仪表盘（PV/UV + AI 抓取 + 发布任务）；**当前未挂载**：根路径 `/` 改为空白占位页（`pages/index.vue`），需要恢复时在页面模板写 `<DashboardOverview />`
 - [`MemberCreateDialog.vue`](../apps/admin/app/components/MemberCreateDialog.vue) —— 新增站点会员弹窗
 - [`PlainTextEditor.vue`](../apps/admin/app/components/PlainTextEditor.vue) —— **纯文本编辑器（wangEditor 封装）**：v-model 只暴露纯文本（初始化 `\n` 段落转 `<p>`、onchange 用 `editor.getText()` 输出段落间 `\n` 的纯文本）；工具栏精简为标题 + 基础强调按钮；编辑器实例 `shallowRef` 持有、组件销毁时 `destroy()`；外部值变化（编辑异步回显）经 watch 用 `setHtml` 同步
-- [`NewsDialog.vue`](../apps/admin/app/components/NewsDialog.vue) —— 新闻新建/编辑弹窗（标题 / URL 片段（仅创建，留空自动生成）/ 发布日期 / 摘要 / 正文 `PlainTextEditor`；编辑打开时拉单条详情回显正文）
+- [`NewsDialog.vue`](../apps/admin/app/components/NewsDialog.vue) —— 新闻新建/编辑弹窗（标题 / 发布日期 / 摘要 / 封面图 `ImageField` / 正文 `NewsBodyEditor`（结构化块）+ 编辑打开时拉单条详情回显正文）
+- [`NewsBodyEditor.vue`](../apps/admin/app/components/NewsBodyEditor.vue) —— **新闻正文编辑器（wangEditor + 结构化块，ADR-053 / ADR-054）**：v-model 暴露 `ArticleBlock[]`，`@on-change` 把编辑器 HTML 解析成块（段落 / 小标题 / 图片 / 表格 / 视频）再回写；块内保留**受限行内格式**（加粗 / 斜体 / 下划线 / 删除线 / 行内代码 + span 的 color / background-color / font-size），对齐解析成 `block.align`，列表按「· 项 / 1. 项」逐条转段落，表格存 `rows: string[][]`；工具栏「小标题 / 字号 / 文字色 / 背景色 / B I U S / 左中右对齐 / 有序无序列表 / 表格 / 上传图片 / 上传视频 / 清格式 / 撤销重做」；图片与视频都走素材库 `filesApi.upload`（库里存 `/static/...`，编辑器内用 `resolveMediaUrl` 显示，上传带 `source` 来源标签）；粘贴的 base64 图片先入库再替换；外链 iframe 播放器不支持（提示改用上传）
 - [`ProductDialog.vue`](../apps/admin/app/components/ProductDialog.vue) —— **产品新建/编辑弹窗（2026-11-03）**：两个页签——「基础信息」（名称 / 中文名 / 系列 / 行业分组多选（必填，空则 warning）/ 卡片说明 / 特性标签（逗号分隔）/ 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（系统说明 `{k,v}`、系统构造 `{role,product,thickness,desc,code}`、系统特点 `{title,desc,icon}`、色卡 `{name,hex}` 带色块预览、常见问题 `{q,a}`；均可留空 = 该区块不输出）
 - [`IndustryDialog.vue`](../apps/admin/app/components/IndustryDialog.vue) —— **产品行业分组弹窗（2026-11-03）**：分组名称 / 分组说明（textarea 200 字）/ 更多文案 / 排序
 - [`CaseDialog.vue`](../apps/admin/app/components/CaseDialog.vue) —— **案例新建/编辑弹窗（2026-11-03）**：两个页签——「基础信息」（标题 / 行业 / 地点 / 面积 / 年份 / 使用体系 / 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（项目信息行 `{k,v,sub}` 支持「按卡片字段带入」一键填充、案例正文 `PlainTextEditor`、项目画面 `{img,caption,note,alt}` 带缩略预览）
-- [`FaqDialog.vue`](../apps/admin/app/components/FaqDialog.vue) —— 高频问筷新建/编辑弹窗（问题 / 分类（allow-create 可输入新分类）/ 答案 `PlainTextEditor`；编辑打开时拉单条详情回显答案）
+- [`FaqDialog.vue`](../apps/admin/app/components/FaqDialog.vue) —— 高频问答新建/编辑弹窗（问题 / 分类（allow-create 可输入新分类）/ 上架展示开关（默认开）/ 答案 `PlainTextEditor`；编辑打开时拉单条详情回显答案）
 - [`MenuFormDialog.vue`](../apps/admin/app/components/MenuFormDialog.vue) —— 菜单新建/编辑弹窗（上级菜单树选择 + 环路排除）
 - [`RoleFormDialog.vue`](../apps/admin/app/components/RoleFormDialog.vue) —— 角色新建/编辑弹窗（内置角色标识与状态受保护）
 - [`RoleMenusDialog.vue`](../apps/admin/app/components/RoleMenusDialog.vue) —— 角色菜单授权弹窗（勾选子级自动含上级）
@@ -429,14 +431,14 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`sites/products.vue`](../apps/admin/app/pages/sites/products.vue) —— **产品体系管理（2026-11-03）**：左侧 260px「行业分组」面板（组名 / 产品数 / 说明摘要 + 编辑、删除、加分组；`productCount > 0` 时前端直接 warning 阻止删除，与服务端 400 口径一致）+ 右侧产品表格（缩略图 + 名称、系列、行业标签、访问路径、状态、操作；筛选 keyword / 系列 / 行业；分页）。弹窗 `ProductDialog`（两页签）+ `IndustryDialog`
 - [`sites/cases.vue`](../apps/admin/app/pages/sites/cases.vue) —— **成功案例管理（2026-11-03）**：按站点隔离 + 关键词 / 行业筛选；表格列案例（缩略图 + 标题）/ 行业 / 地点 / 面积·年份 / 使用体系 / 访问路径 / 状态 / 操作；弹窗 `CaseDialog`（两页签，项目信息行支持「按卡片字段带入」快捷填充）
 - [`sites/news.vue`](../apps/admin/app/pages/sites/news.vue) —— 新闻资讯管理（按站点隔离：站点切换 + 关键词搜索；表格列标题 / 访问路径 / 发布日期 / 发布状态徽标；操作编辑、删除（删除与保存均由服务端自动触发站点构建）；弹窗 `NewsDialog`）
-- [`sites/faqs.vue`](../apps/admin/app/pages/sites/faqs.vue) —— 高频问答管理（按站点隔离：站点切换 + 关键词搜索 + 分类筛选（选项来自分类接口，清空 = 全部）；表格列问题 / 分类 / 访问路径 / 发布状态徽标；操作编辑、删除；弹窗 `FaqDialog`，新分类保存后刷新分类清单）
+- [`sites/faqs.vue`](../apps/admin/app/pages/sites/faqs.vue) —— 高频问答管理（按站点隔离：站点切换 + 关键词搜索 + 分类筛选（选项来自分类接口，清空 = 全部）+ 上架状态筛选（全部 / 只看上架 / 只看未上架）；表格列问题 / 分类 / 访问路径 / 上架开关（行内即时生效，只影响列表页展示，详情页保留，ADR-055）/ 发布状态徽标；操作编辑、删除；弹窗 `FaqDialog`，新分类保存后刷新分类清单）
 - [`content/index.vue`](../apps/admin/app/pages/content/index.vue) —— 页面列表（状态三态、GEO 分、提交审核与发布）
 - [`content/[id].vue`](../apps/admin/app/pages/content/%5Bid%5D.vue) —— 页面编辑器（模板 + 结构化 Block 表单 + 右侧 GEO 体检）
 - [`content/editor.vue`](../apps/admin/app/pages/content/editor.vue) —— **站点内容编辑器工作台**（09 §6.2）：工具条（站点切换 + **构建状态**（未构建 / 排队中 / 构建中 / 构建成功 / 构建失败 + 时间或已运行时长，失败可悬停看原因；进行中每 3 秒轮询并在结束时刷新左树与徽标 + 提示结果）+ **增量发布**（带 `?` 说明）+ **整站重建** / **GEO 索引更新**（接通既有 `/publish/site`、`/publish/repair` 接口，三个动作各带 `?` 说明，问号统一由 `TermHint` 渲染；**进行中三个按钮全部禁用**，增量发布与整站重建转圈）+ 刷新）、左列可搜索内容树（目录/页面/块 + 发布徽标，点目录即打开其下第一个页面）、右侧预览 iframe 占满一屏（走 `/preview/ticket`，头部展示预览态标记 + 页面**访问地址**可复制）、「页面 / 块 / 发布」改为右侧抽屉（页面：草稿字段 + SEO + 编审 + JSON-LD 双模式；块：实例清单（块标识下列出**块名称与用途说明**，定义批量预取）+ 动态数据表单 + 「编辑代码」新标签页打开块代码；发布：状态 + 发布/回退 + GEO 体检）
 - [`blocks/index.vue`](../apps/admin/app/pages/blocks/index.vue) —— **块库（本站块）**：本站块 + 公共模板（归属筛选 / 「已引入」标记 / 未引入可「引入本站」）；操作：使用位置、编辑代码（新标签页）、引入本站、回退上一版
 - [`blocks/templates.vue`](../apps/admin/app/pages/blocks/templates.vue) —— **块模板库**（平台级）：公共模板（`siteId=0`）的新建 / 编辑代码（新标签页）/ 回退上一版；模板只作初始代码，改模板不影响已引入的站点（ADR-035）
 - [`blocks/[key].vue`](../apps/admin/app/pages/blocks/%5Bkey%5D.vue) —— 块代码编辑器（源码 textarea + 行号 gutter + 错误行标红；右侧只读字段声明表；下方使用位置；`siteId=0` 编模板、其余编本站块，未引入时提示「保存会复制一份到本站」；由列表以新标签页打开）
-- [`files.vue`](../apps/admin/app/pages/files.vue) —— 素材管理（`static_files` 可视化入口）：站点筛选 + 关键词搜索 + 多选上传、图片缩略预览、复制访问地址、替换（隐藏 file input，accept 限定原文件 MIME，`PUT /files/:id/replace` 替换内容、引用地址不变）、删除；接口早已就绪（上传 / 列表 / 删除），此前仅站点编辑页用了上传
+- [`files.vue`](../apps/admin/app/pages/files.vue) —— 素材管理（`static_files` 可视化入口）：站点筛选 + 关键词搜索（文件名 / 地址 / 来源 / 备注）+ 多选上传（图片 ≤2MB、视频 ≤100MB）、图片缩略预览（视频显示播放标记）、**「上传来源」列**（`source`，标注哪个功能传的）、复制访问地址、**ID 固定宽度单行 + 点击复制**、替换（隐藏 file input，accept 限定原文件 MIME，`PUT /files/:id/replace` 替换内容、引用地址不变）、删除
 - [`navigations.vue`](../apps/admin/app/pages/navigations.vue) —— 导航管理（头部主导航 + 页脚四列分组，条目增删排序、站内页面/外部链接二选一，整组全量覆盖保存）
 - [`members/index.vue`](../apps/admin/app/pages/members/index.vue) —— 站点会员管理
 - [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— GEO 监控（AI 爬虫分布、被抓取页面 Top）
@@ -477,7 +479,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 > **语义化要求**：GEO 侧组件（含全部 Block）必须严格遵循 HTML5 语义化规范（一页仅 1 个 h1、Block 标题从 h2 起、`address`/`time`/`figure`/`dl` 用在该用的地方、表单必须有 `label`），完整清单见 [`spec/03-frontend-architecture.md`](./spec/03-frontend-architecture.md) §4；管理后台豁免该要求。
 
-- [`PageRender.vue`](../apps/geo/app/components/PageRender.vue) —— 页面渲染：加载数据 → 注入 GEO 元数据（meta/JSON-LD/canonical，统一经 `useHead` 注入，模板内禁止写 `<script>`）→ 渲染 Block（页面唯一 `h1` 与 `time` 发布时间在此）
+- [`PageRender.vue`](../apps/geo/app/components/PageRender.vue) —— 页面渲染：加载数据 → 注入 GEO 元数据（meta/JSON-LD/canonical，统一经 `useHead` 注入，模板内禁止写 `<script>`）→ 渲染 Block（`time` 发布时间在此；页头 `h1` 只在「无首屏块且首块非 section-head」时兜底渲染，判定见 `utils/page-title.ts`，ADR-056）
 - [`MemberBadge.client.vue`](../apps/geo/app/components/MemberBadge.client.vue) —— 会员入口（客户端 island：静态站登录后由浏览器调用 member API；登录表单含 `label` 绑定）
 - [`blocks/BlockRenderer.vue`](../apps/geo/app/components/blocks/BlockRenderer.vue) —— Block 分发渲染器：`import.meta.glob('./Blk*.vue')` 构建期收集块组件表，按 `Blk<PascalCase(key)>` 动态解析（不用 `resolveComponent`，缺失块渲染为显式占位而非静默空白），跳过停用块，输出 `data-block-id`
 - [`blocks/Blk*.vue`（41 个，构建期由 `scripts/sync-blocks.mjs` 落盘，gitignore）](../apps/geo/app/components/blocks/) —— 内容块组件。**HTML 结构复用设计稿原型类名（09 §7.4.1，ADR-036）**：`BlkAnchorBar` `BlkArticleBody` `BlkArticleMeta` `BlkCaseCard` `BlkCertGrid` `BlkDataTable` `BlkDeviceRow` `BlkDoctorCard` `BlkEntityBanner` `BlkEnvGrid` `BlkFaqDetail` `BlkFaqIndex` `BlkFaqList` `BlkFeatureCards` `BlkFlowChain` `BlkGallery` `BlkGlassCard` `BlkHeroDark` `BlkHeroPanel` `BlkHotFaq` `BlkIndexList` `BlkJobList` `BlkLegalDoc` `BlkListRows` `BlkNapGrid` `BlkNotice` `BlkPager` `BlkPathCards` `BlkPostList` `BlkRelatedFaq` `BlkRouteRows` `BlkSectionHead` `BlkServiceCard` `BlkSideNews` `BlkSourceGrid` `BlkStatBar` `BlkStepTimeline` `BlkTagline` `BlkTermCards` `BlkTrustGrid` `BlkVisitCards`
@@ -501,6 +503,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`api-base.ts`](../apps/geo/app/utils/api-base.ts) —— 服务端 API 基址读取（缺失即报错，统一出口，不再内置默认地址；客户端在回环基址下按浏览器主机名自适应，便于同局域网访问）；`LOOPBACK_HOSTS` 转发自 `@trillion/shared`（唯一实现在 `shared/utils/geo-url.ts`，本工程不另立清单）
 - [`theme.ts`](../apps/geo/app/utils/theme.ts) —— 站点主题令牌 → CSS 变量：`DEFAULT_THEME_TOKENS`（设计稿基线）、`themeStyle`（供 `:style` 绑定）、`themeRootCss`（注入 `:root` 的 `<style>` 文本）；**默认值必须与设计稿 `theme-b.css` 及后台/服务端默认值三处一致**（AGENTS.md §7，09 §7.4）
 - [`block-context.ts`](../apps/geo/app/utils/block-context.ts) —— 块渲染上下文装配（`context.site / page / channel / block / items / entities / now / locale`，见 09 §5）
+- [`page-title.ts`](../apps/geo/app/utils/page-title.ts) —— **H1 归属判定（ADR-056）**：`resolveTitleSource(blocks)` 返回 `hero` / `section-head` / `fallback` 与担任主标题的块 id，`PageRender`（是否补页头）与 `BlockRenderer`（注入 `context.pageTitle`）、`section-head` 块（渲 h1 还是 h2）共用这一份结论
 - [`head-extra.ts`](../apps/geo/app/utils/head-extra.ts) —— 站点级 head 扩展解析与净化（`parseHeadExtra` / `toHeadGroups`，服务端已剔除脚本）
 
 ### public/（设计稿资产直出，2026-10-08 新增）

@@ -212,6 +212,12 @@ export interface BlockContext {
    * 供首屏 chips 等元素与下方区块做页内联动（标题互含即视为命中）。
    */
   anchors?: Record<string, string>
+  /**
+   * 本块是否担任当前页面的主标题（BlockRenderer 注入，ADR-056）。
+   * 页面没有首屏块（hero-dark / scene-hero）时，第一个 section-head 兼任页面 H1：
+   * 它渲染 `<h1>`，布局层不再补通用页头，避免同一条标题在页面上出现两次。
+   */
+  pageTitle?: boolean
   entities: BlockEntityRef[]
   /** 构建期/请求期日期（YYYY-MM-DD） */
   now: string

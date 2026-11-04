@@ -49,6 +49,8 @@ model FaqItem {
   slug String @db.VarChar(120)
   /// 状态：published=已发布 / draft=草稿（保存即发布口径，默认 published）
   status String @default("published") @db.VarChar(20)
+  /// 是否在问答列表页「上架展示」：true=展示在分类区块与全部问题列表；false=仅保留详情页（页面仍可访问，不进列表）
+  featured Boolean @default(true) @map("featured")
   /// 发布产物页面 ID（Page 表弱引用，未建外键；页面缺失时编辑会自动补建）
   pageId String? @map("page_id") @db.VarChar(36)
   /// 创建时间

@@ -235,7 +235,7 @@ const submit = debounce(() => {
             <el-input v-model="form.tagsText" placeholder="用逗号分隔，如：耐冲洗, 耐腐蚀" />
           </el-form-item>
           <el-form-item label="卡片图片">
-            <ImageField v-model="form.img" placeholder="/static/... 或点击上传" />
+            <ImageField v-model="form.img" source="产品 · 卡片图片" placeholder="/static/... 或点击上传" />
           </el-form-item>
 
           <el-divider content-position="left">详情页头部（留空则回落卡片字段）</el-divider>
@@ -257,7 +257,7 @@ const submit = debounce(() => {
             </el-col>
             <el-col :span="12">
               <el-form-item label="头部大图">
-                <ImageField v-model="form.bgImage" placeholder="留空用卡片图片" />
+                <ImageField v-model="form.bgImage" source="产品 · 详情大图" placeholder="留空用卡片图片" />
               </el-form-item>
             </el-col>
           </el-row>

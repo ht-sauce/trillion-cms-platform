@@ -15,10 +15,10 @@
  * 一个 `[...slug].vue` 按路径取数据、由 Block 数组驱动渲染——
  * 这正是块架构的意义：改版改的是块，不是 24 份模板。
  */
-import type { BlockInstance } from '@trillion/shared'
 import { usePage } from '../composables/usePage'
 import { useSite } from '../composables/useSite'
 import { buildBlockContext } from '../utils/block-context'
+import { resolveTitleSource } from '../utils/page-title'
 
 const props = defineProps<{ path: string }>()
 
@@ -34,17 +34,12 @@ const context = computed(() =>
 )
 
 /**
- * H1 全页唯一：由 hero-dark 等首屏块提供（设计稿硬要求）。
- * 若页面没有首屏块（纯列表 / 法务页），这里兜底渲染一次，避免出现无 H1 的页面。
+ * H1 全页唯一：由首屏块（hero-dark / scene-hero）或「担任页面主标题的 section-head」提供。
+ * 判定逻辑收口在 utils/page-title.ts，BlockRenderer 与 section-head 块共用同一份结论；
+ * 只有两者都不存在时（纯列表 / 法务页）才在此兜底渲染页头，避免出现无 H1 的页面，
+ * 也避免「页头 + 区块标题」把同一条标题渲染两遍（问答详情页历史问题）。
  */
-function hasHeroBlock(blocks: BlockInstance[] | undefined): boolean {
-  /**
-   * 承载 H1 的首屏块清单：`hero-dark`（通用首屏）与 `scene-hero`（场景首屏，ADR-048）。
-   * 漏了后者会在首屏上方多渲染一条页面标题栏，且出现两个 H1（检查项 `h1-unique` 会直接失败）。
-   */
-  const HERO_BLOCKS = ['hero-dark', 'scene-hero']
-  return (blocks || []).some((block) => HERO_BLOCKS.includes(block.key) && block.enabled !== false)
-}
+const titleSource = computed(() => resolveTitleSource(page.value?.blocks))
 
 /** 从服务端生成的 meta 标签串里取出 content（服务端给的是完整标签，useSeoMeta 需要值） */
 function robotsContent(): string {
@@ -96,7 +91,7 @@ useHead({
     />
 
     <template v-if="page">
-      <header v-if="!hasHeroBlock(page.blocks)" class="page-head">
+      <header v-if="titleSource.source === 'fallback'" class="page-head">
         <h1 class="page-title">{{ page.title }}</h1>
         <p v-if="page.summary" class="page-summary">{{ page.summary }}</p>
       </header>

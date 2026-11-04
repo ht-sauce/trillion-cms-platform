@@ -14,11 +14,26 @@ import type { AuthUser } from '../../common/decorators/current-user.decorator'
 import { siteIdWhere } from '../../common/utils/site-scope'
 import { PAGE_DEFAULT, PAGE_SIZE_DEFAULT } from '../../common/constants'
 
-/** 允许上传的 MIME 类型白名单（素材库仅收常用图片格式，与 admin 端 IMAGE_ACCEPT 口径一致） */
-const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml', 'image/x-icon']
+/** 允许上传的 MIME 类型白名单：常用图片 + 正文可嵌入的视频（与 admin 端 IMAGE_ACCEPT / VIDEO_ACCEPT 口径一致） */
+const ALLOWED_MIME = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/svg+xml',
+  'image/x-icon',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime'
+]
 
-/** 单文件最大体积 1MB */
-const MAX_SIZE = 1024 * 1024
+/** 图片单文件最大体积 2MB */
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024
+/** 视频单文件最大体积 100MB（超出请先压缩，或改用外部视频） */
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024
+
+/** 按 MIME 归类：视频 / 图片 */
+const isVideoMime = (mime: string) => mime.startsWith('video/')
 
 @Injectable()
 export class StaticFilesService {
@@ -33,14 +48,19 @@ export class StaticFilesService {
    * @param file multer 文件对象
    * @param siteId 归属站点，可空表示平台级公共文件
    * @param caption 图片备注（可选，标识素材引用位置）
+   * @param source 上传来源（可选，如「新闻正文 · 某篇标题」「站点设置 · 站点图标」）
    */
-  async upload(user: AuthUser, file: Express.Multer.File, siteId?: string, caption?: string) {
+  async upload(user: AuthUser, file: Express.Multer.File, siteId?: string, caption?: string, source?: string) {
     if (!file) throw new BadRequestException('未接收到文件')
     if (!ALLOWED_MIME.includes(file.mimetype)) {
       throw new BadRequestException(`不支持的文件类型：${file.mimetype}`)
     }
-    if (file.size > MAX_SIZE) {
-      throw new BadRequestException('文件超过 1MB 上限')
+    const video = isVideoMime(file.mimetype)
+    const limit = video ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
+    if (file.size > limit) {
+      throw new BadRequestException(
+        video ? '视频超过 100MB 上限，请先压缩或改用外部视频' : '图片超过 2MB 上限，请压缩后再上传'
+      )
     }
 
     const uploadDir = this.config.get<string>('upload.dir') || 'uploads'
@@ -68,6 +88,7 @@ export class StaticFilesService {
         width: null,
         height: null,
         caption: caption?.trim() || null,
+        source: source?.trim() || null,
         uploadedBy: user?.id ?? null
       }
     })
@@ -76,7 +97,14 @@ export class StaticFilesService {
   /** 静态文件列表 */
   async list(user: AuthUser, siteId?: string, keyword?: string, page = PAGE_DEFAULT, pageSize = PAGE_SIZE_DEFAULT) {
     const where: Record<string, unknown> = { ...siteIdWhere(user, siteId) }
-    if (keyword) where.OR = [{ originalName: { contains: keyword } }, { publicUrl: { contains: keyword } }]
+    if (keyword) {
+      where.OR = [
+        { originalName: { contains: keyword } },
+        { publicUrl: { contains: keyword } },
+        { source: { contains: keyword } },
+        { caption: { contains: keyword } }
+      ]
+    }
 
     const [list, total] = await Promise.all([
       this.prisma.staticFile.findMany({
@@ -94,7 +122,7 @@ export class StaticFilesService {
    * 替换文件内容：保持 StaticFile 记录与 publicUrl（物理路径名）不变，
    * 仅覆盖物理文件并更新 sizeBytes / originalName / mimeType 等字段。
    * 新文件 MIME 必须与原记录一致（URL 对外承诺的文件类型不能悄悄变化），
-   * 白名单与 10MB 上限沿用上传口径。
+   * 白名单与体积上限沿用上传口径（图片 2MB / 视频 100MB）。
    */
   async replace(user: AuthUser, id: string, file: Express.Multer.File) {
     if (!file) throw new BadRequestException('未接收到文件')
@@ -104,8 +132,11 @@ export class StaticFilesService {
     if (!ALLOWED_MIME.includes(file.mimetype)) {
       throw new BadRequestException(`不支持的文件类型：${file.mimetype}`)
     }
-    if (file.size > MAX_SIZE) {
-      throw new BadRequestException('文件超过 1MB 上限')
+    const limit = isVideoMime(file.mimetype) ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
+    if (file.size > limit) {
+      throw new BadRequestException(
+        isVideoMime(file.mimetype) ? '视频超过 100MB 上限，请先压缩' : '图片超过 2MB 上限，请压缩后再上传'
+      )
     }
     if (file.mimetype !== record.mimeType) {
       throw new BadRequestException(`文件类型不一致：原文件为 ${record.mimeType}，新文件为 ${file.mimetype}`)

@@ -54,6 +54,12 @@ function blocksToText(blocks: ArticleBlock[]): string {
 /** 编辑对象（打开后不再变化，供提交分支判断） */
 const editing = computed(() => props.article)
 
+/** 素材上传来源标签：带上文章标题前 24 字，素材库里能看出是哪篇的图 */
+const editorSource = computed(() => {
+  const title = form.title.trim().slice(0, 24)
+  return title ? `新闻正文 · ${title}` : '新闻正文'
+})
+
 /** 每次打开重置表单；编辑时拉单条详情回显（列表行不含正文，按表记录 id 寻址） */
 watch(visible, (open) => {
   if (!open) return
@@ -120,7 +126,7 @@ const submit = debounce(() => {
 </script>
 
 <template>
-  <el-dialog v-model="visible" :title="editing ? '编辑新闻' : '新建新闻'" width="720px" :close-on-click-modal="false">
+  <el-dialog v-model="visible" :title="editing ? '编辑新闻' : '新建新闻'" width="960px" :close-on-click-modal="false">
     <el-form v-loading="isLoading('detail')" label-width="88px" size="small">
       <el-form-item label="标题" required>
         <el-input v-model="form.title" maxlength="120" placeholder="新闻标题" />
@@ -146,10 +152,15 @@ const submit = debounce(() => {
         />
       </el-form-item>
       <el-form-item label="封面图">
-        <ImageField v-model="form.cover" placeholder="上传或粘贴素材库地址（详情页首屏背景）" />
+        <ImageField v-model="form.cover" source="新闻 · 封面图" placeholder="上传或粘贴素材库地址（详情页首屏背景）" />
       </el-form-item>
       <el-form-item label="正文内容">
-        <NewsBodyEditor v-model="form.body" placeholder="请输入正文，可用工具栏「图片」上传内文图片" />
+        <NewsBodyEditor
+          v-model="form.body"
+          :height="440"
+          :source="editorSource"
+          placeholder="请输入正文，可用工具栏插入字号 / 颜色 / 表格 / 图片 / 视频"
+        />
       </el-form-item>
     </el-form>
     <template #footer>

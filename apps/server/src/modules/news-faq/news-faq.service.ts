@@ -50,6 +50,8 @@ interface FaqRow {
   question: string
   category: string
   status: string
+  /** 是否在列表页上架展示（false = 仅保留详情页） */
+  featured: boolean
   pageId: string | null
 }
 
@@ -275,14 +277,26 @@ export class NewsFaqService {
 
   // ---------------- 高频问答 ----------------
 
-  /** 问答分页列表（读 FaqItem 表，按 slug 倒序——新增序号最大恒排最前；keyword 模糊匹配问题，支持分类过滤） */
-  async listFaqs(user: AuthUser, siteId: string, page: number, pageSize: number, keyword?: string, category?: string) {
+  /**
+   * 问答分页列表（读 FaqItem 表，按 slug 倒序——新增序号最大恒排最前）
+   * keyword 模糊匹配问题，支持分类过滤与上架状态过滤（featured 传 undefined 表示不限）
+   */
+  async listFaqs(
+    user: AuthUser,
+    siteId: string,
+    page: number,
+    pageSize: number,
+    keyword?: string,
+    category?: string,
+    featured?: boolean
+  ) {
     const id = siteId
     assertSiteAccess(user, id)
 
     const where: Record<string, unknown> = { siteId: id }
     if (keyword) where.question = { contains: keyword }
     if (category) where.category = category
+    if (typeof featured === 'boolean') where.featured = featured
 
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.faqItem.findMany({
@@ -300,6 +314,7 @@ export class NewsFaqService {
       question: row.question,
       category: row.category,
       status: row.status,
+      featured: row.featured,
       pageId: row.pageId
     }))
 
@@ -336,6 +351,7 @@ export class NewsFaqService {
       question: row.question,
       category: row.category,
       status: row.status,
+      featured: row.featured,
       slug: row.slug,
       answer: row.answer
     }
@@ -360,6 +376,8 @@ export class NewsFaqService {
         category: dto.category,
         answer: dto.answer,
         slug,
+        /** 列表页上架展示：缺省 true（新建即进列表，与改动前口径一致） */
+        featured: dto.featured ?? true,
         /** 管理端保存免审核：直接发布态 */
         status: 'published'
       }
@@ -403,10 +421,11 @@ export class NewsFaqService {
     const question = dto.question ?? row.question
     const category = dto.category ?? row.category
     const answer = dto.answer !== undefined ? dto.answer : row.answer
+    const featured = dto.featured ?? row.featured
 
     await this.prisma.faqItem.update({
       where: { id: row.id },
-      data: { question, category, answer }
+      data: { question, category, answer, featured }
     })
 
     const paragraphs = splitParagraphs(answer)
@@ -446,6 +465,25 @@ export class NewsFaqService {
     const affectedPages = await this.sync.syncAfterFaqChange(row.siteId, [pageId], categories)
     const publishTaskId = await this.publishAffected(user, row.siteId, affectedPages)
     return { id: row.id, pageId, affectedPages, publishTaskId }
+  }
+
+  /**
+   * 上架状态切换（列表页开关专用）：只改 featured 列 → 重算 /faq 列表页 → 发布
+   * 与 updateFaq 的区别：不重写详情页（问题/分类/答案未变），页面上该问答仍可访问，
+   * 只是从「分类区块 + 全部问题列表」里收起来。分类未变，related-faq 也无需重算。
+   */
+  async setFaqFeatured(user: AuthUser, id: string, featured: boolean) {
+    const row = await this.prisma.faqItem.findUnique({ where: { id } })
+    if (!row) throw new NotFoundException('问答不存在')
+    assertSiteAccess(user, row.siteId)
+
+    if (row.featured !== featured) {
+      await this.prisma.faqItem.update({ where: { id: row.id }, data: { featured } })
+    }
+
+    const affectedPages = await this.sync.syncAfterFaqChange(row.siteId, [], [])
+    const publishTaskId = await this.publishAffected(user, row.siteId, affectedPages)
+    return { id: row.id, featured, affectedPages, publishTaskId }
   }
 
   /** 删除问答：删关联 Page（发布产物）→ 删表记录 → 重算列表页与该分类 related-faq → 自动发布 */

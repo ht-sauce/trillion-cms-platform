@@ -62,7 +62,11 @@ function onPick(which: 'logo' | 'favicon' | 'license') {
     const file = input.files?.[0]
     if (!file) return
     return run(async () => {
-      const uploaded = await filesApi.upload(file, isNew.value ? undefined : String(route.params.id))
+      const labels = { logo: '站点设置 · 站点图标', favicon: '站点设置 · 浏览器图标', license: '站点设置 · 营业执照' }
+      const uploaded = await filesApi.upload(file, {
+        siteId: isNew.value ? undefined : String(route.params.id),
+        source: labels[which]
+      })
       if (which === 'logo') {
         form.value.logoFileId = uploaded.id
         logoUrl.value = uploaded.publicUrl

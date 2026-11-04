@@ -24,20 +24,30 @@ export interface NewsArticleItem {
   cover?: string | null
 }
 
-/** 新闻正文块（段落 / 小标题 / 图片，ADR-053；服务端白名单收口同口径） */
+/** 新闻正文块（段落 / 小标题 / 图片 / 表格 / 视频，ADR-053 / ADR-054；服务端白名单收口同口径） */
 export interface ArticleBlock {
   /** 块类型 */
-  kind: 'paragraph' | 'heading' | 'image'
-  /** 段落 / 小标题文本 */
+  kind: 'paragraph' | 'heading' | 'image' | 'table' | 'video'
+  /** 段落 / 小标题文本（纯文本，服务端由 html 派生，GEO 与摘要读它） */
   text?: string
-  /** 图片地址（素材库 publicUrl，/static/... 形态） */
+  /** 段落 / 小标题的行内富文本（b/strong/i/em/u/s/del/code/br + 受控 span 样式，服务端白名单化） */
+  html?: string
+  /** 段落 / 小标题 / 表格对齐 */
+  align?: 'left' | 'center' | 'right'
+  /** 图片 / 视频地址（素材库 publicUrl，/static/... 形态） */
   src?: string
   /** 图片替代文本 */
   alt?: string
-  /** 图片说明（渲染为图注） */
+  /** 图片 / 视频说明（渲染为图注） */
   caption?: string
   /** 小标题层级（2~4，缺省 2） */
   level?: number
+  /** 表格内容：二维数组，单元格为白名单化行内 html */
+  rows?: string[][]
+  /** 表格首行是否为表头（缺省 true） */
+  header?: boolean
+  /** 视频封面（可选） */
+  poster?: string
 }
 
 /** 新闻文章详情（含正文，编辑回显用） */
@@ -73,6 +83,8 @@ export interface FaqItem {
   question: string
   category: string
   status: string
+  /** 是否在问答列表页上架展示（false = 仅保留详情页，不进分类区块与全部问题列表） */
+  featured: boolean
 }
 
 /** 高频问答详情（含答案，编辑回显用） */
@@ -86,6 +98,8 @@ export interface FaqPayload {
   question: string
   category: string
   answer?: string
+  /** 是否在列表页上架展示 */
+  featured?: boolean
 }
 
 export const newsFaqApi = {
@@ -108,7 +122,15 @@ export const newsFaqApi = {
   },
 
   // ---------------- 高频问答 ----------------
-  faqList(params: { siteId: string; page?: number; pageSize?: number; keyword?: string; category?: string }) {
+  faqList(params: {
+    siteId: string
+    page?: number
+    pageSize?: number
+    keyword?: string
+    category?: string
+    /** 上架状态筛选：'1' 只看上架 / '0' 只看未上架 / 不传为全部 */
+    featured?: '1' | '0'
+  }) {
     return get<Paged<FaqItem>>('/news-faq/faqs', params as Record<string, unknown>)
   },
   /** 站点下已有问答分类（去重后的字符串清单，筛选下拉与表单下拉共用） */
@@ -124,6 +146,10 @@ export const newsFaqApi = {
   },
   updateFaq(id: string, payload: Partial<FaqPayload>) {
     return patch<FaqItem>(`/news-faq/faqs/${id}`, payload)
+  },
+  /** 上架状态切换（只影响问答列表页展示，详情页保留；服务端重算列表页并触发发布） */
+  setFaqFeatured(id: string, featured: boolean) {
+    return patch<{ id: string; featured: boolean }>(`/news-faq/faqs/${id}/featured`, { featured })
   },
   removeFaq(id: string) {
     return del<{ id: string }>(`/news-faq/faqs/${id}`)

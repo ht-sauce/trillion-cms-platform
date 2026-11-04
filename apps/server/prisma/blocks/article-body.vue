@@ -7,36 +7,85 @@
  * 原型 DOM 对应 99-blocks.html `blk-artmeta / artbody`，以及 news/*.html：
  *   .artbody > p*(段落) ＋ .cmpl > b + 合规声明
  *
- * 数据字段：blocks[{kind:'paragraph', text}] / [{kind:'heading', text, level}] /
- *          [{kind:'image', src, alt, caption}] / disclaimer
- * 2026-11-04（ADR-053）：正文由「只有段落」扩展为段落 / 小标题 / 图片按顺序排列的块数组，
- * 图片走素材库 publicUrl（/static/...）；`kind` 缺省按段落渲染，历史页面零迁移成本。
+ * 数据字段（ADR-053 / ADR-054）：
+ *   blocks[{kind:'paragraph', text, html?, align?}] / [{kind:'heading', text, html?, align?, level}] /
+ *   [{kind:'image', src, alt?, caption?}] / [{kind:'table', rows, header?, align?}] /
+ *   [{kind:'video', src, poster?, caption?}] / disclaimer
+ *
+ * - 段落 / 小标题的 `html` 是**服务端白名单化后的行内标记**（b/strong/i/em/u/s/del/code/br + 受控 span 样式），
+ *   因此可以安全 v-html；无 html 时把纯文本转义后输出。
+ * - 表格单元格同样存白名单化行内 html；视频只接受素材库 / 外链地址，用原生 video 播放。
+ * - `kind` 缺省按段落渲染，历史页面零迁移成本。
  * 设计稿硬约束（09 §7.2 ⑥）：`disclaimer` 必填，为发布前置。
  */
 import { computed } from 'vue'
 import type { BlockContext } from '@trillion/shared'
 
+/** 渲染用正文块（html 补齐、空块过滤后） */
+interface RenderBlock {
+  kind: string
+  html?: string
+  text?: string
+  align?: 'left' | 'center' | 'right'
+  level?: number
+  src?: string
+  alt?: string
+  caption?: string
+  poster?: string
+  rows?: string[][]
+  header?: boolean
+  /** 表格去掉表头行后的正文行 */
+  bodyRows?: string[][]
+}
+
 const props = defineProps<{ data: Record<string, any>; context: BlockContext }>()
 
-/** 正文块（只保留已知 kind，图片块必须有地址） */
-const blocks = computed<{ kind: string; text?: string; src?: string; alt?: string; caption?: string; level?: number }[]>(
-  () =>
-    (Array.isArray(props.data?.blocks) ? props.data.blocks : [])
-      .filter((block: any) => block && typeof block === 'object')
-      .map((block: any) => ({
-        kind: String(block.kind ?? 'paragraph'),
-        text: typeof block.text === 'string' ? block.text : undefined,
-        src: typeof block.src === 'string' ? block.src : undefined,
-        alt: typeof block.alt === 'string' ? block.alt : undefined,
-        caption: typeof block.caption === 'string' ? block.caption : undefined,
-        level: Number(block.level) || 2
-      }))
-      .filter((block) => (block.kind === 'image' ? Boolean(block.src) : Boolean(block.text)))
-)
-
+/** 纯文本 → 可安全 v-html 的片段（转义尖括号与 &） */
 function escapeHtml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
+
+/** 对齐 → 行内样式（缺省不输出，交给站点样式） */
+function alignStyle(align?: string) {
+  return align ? { textAlign: align as 'left' | 'center' | 'right' } : undefined
+}
+
+const blocks = computed<RenderBlock[]>(() => {
+  const list = Array.isArray(props.data?.blocks) ? props.data.blocks : []
+  return list
+    .filter((block: any) => block && typeof block === 'object')
+    .map((block: any): RenderBlock => {
+      const kind = String(block.kind ?? 'paragraph')
+      const rows: string[][] = Array.isArray(block.rows)
+        ? block.rows.map((row: any) => (Array.isArray(row) ? row.map((cell: any) => String(cell ?? '')) : []))
+        : []
+      const header = block.header !== false
+      return {
+        kind,
+        text: typeof block.text === 'string' ? block.text : undefined,
+        html:
+          typeof block.html === 'string'
+            ? block.html
+            : typeof block.text === 'string'
+              ? escapeHtml(block.text)
+              : undefined,
+        align: block.align === 'left' || block.align === 'center' || block.align === 'right' ? block.align : undefined,
+        level: Number(block.level) || 2,
+        src: typeof block.src === 'string' ? block.src : undefined,
+        alt: typeof block.alt === 'string' ? block.alt : undefined,
+        caption: typeof block.caption === 'string' ? block.caption : undefined,
+        poster: typeof block.poster === 'string' ? block.poster : undefined,
+        rows,
+        header,
+        bodyRows: header ? rows.slice(1) : rows
+      }
+    })
+    .filter((block) => {
+      if (block.kind === 'image' || block.kind === 'video') return Boolean(block.src)
+      if (block.kind === 'table') return Boolean(block.rows?.length)
+      return Boolean(block.text)
+    })
+})
 
 const disclaimerHtml = computed(() => {
   const raw = props.data?.disclaimer
@@ -49,7 +98,7 @@ const disclaimerHtml = computed(() => {
 defineBlock({
   key: 'article-body',
   name: '文章正文',
-  hint: '正文段落 / 小标题 / 图片 + 合规声明（声明必填）',
+  hint: '正文段落 / 小标题 / 图片 / 表格 / 视频 + 合规声明（声明必填）',
   fields: [
     {
       key: 'blocks',
@@ -58,12 +107,14 @@ defineBlock({
       item: {
         type: 'group',
         fields: [
-          { key: 'kind', label: '类型', type: 'select', options: ['paragraph', 'heading', 'image'] },
+          { key: 'kind', label: '类型', type: 'select', options: ['paragraph', 'heading', 'image', 'table', 'video'] },
           { key: 'text', label: '文本', type: 'textarea', hint: '段落 / 小标题文本' },
           { key: 'level', label: '标题层级', type: 'number', hint: '小标题用：2 / 3 / 4，缺省 2' },
-          { key: 'src', label: '图片', type: 'file', hint: '图片块用：素材库地址（/static/...）' },
+          { key: 'align', label: '对齐', type: 'select', options: ['', 'left', 'center', 'right'] },
+          { key: 'src', label: '图片 / 视频地址', type: 'file', hint: '素材库地址（/static/...）' },
           { key: 'alt', label: '图片替代文本', type: 'text' },
-          { key: 'caption', label: '图片说明', type: 'text', hint: '显示在图片下方的图注' }
+          { key: 'caption', label: '说明', type: 'text', hint: '显示在图片 / 视频下方的图注' },
+          { key: 'poster', label: '视频封面', type: 'file', hint: '视频块可选的封面图' }
         ]
       }
     },
@@ -85,8 +136,43 @@ defineBlock({
         <img :src="block.src" :alt="block.alt || ''" loading="lazy" decoding="async" />
         <figcaption v-if="block.caption">{{ block.caption }}</figcaption>
       </figure>
-      <h2 v-else-if="block.kind === 'heading'" :class="['art-h', `art-h${block.level}`]">{{ block.text }}</h2>
-      <p v-else>{{ block.text }}</p>
+
+      <figure v-else-if="block.kind === 'video'" class="art-video">
+        <video
+          :src="block.src"
+          :poster="block.poster || undefined"
+          controls
+          playsinline
+          preload="metadata"
+        />
+        <figcaption v-if="block.caption">{{ block.caption }}</figcaption>
+      </figure>
+
+      <div
+        v-else-if="block.kind === 'table'"
+        class="art-table"
+        :style="alignStyle(block.align)"
+      >
+        <table>
+          <thead v-if="block.header && block.rows?.length">
+            <tr>
+              <!-- eslint-disable-next-line vue/no-v-html -- 单元格 html 已在服务端白名单化 -->
+              <th v-for="(cell, ci) in block.rows[0]" :key="ci" v-html="cell" />
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, ri) in block.bodyRows" :key="ri">
+              <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
+              <td v-for="(cell, ci) in row" :key="ci" v-html="cell" />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- eslint-disable-next-line vue/no-v-html -- html 已在服务端白名单化（仅行内标记） -->
+      <h2 v-else-if="block.kind === 'heading'" :class="['art-h', `art-h${block.level}`]" :style="alignStyle(block.align)" v-html="block.html || block.text" />
+      <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
+      <p v-else :style="alignStyle(block.align)" v-html="block.html || block.text" />
     </template>
   </div>
   <div v-if="disclaimerHtml" class="cmpl" v-html="disclaimerHtml" />

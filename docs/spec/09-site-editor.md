@@ -447,6 +447,11 @@ flowchart LR
 
 > **块定义变更（2026-10-14，新闻去分类）**：`post-list` 去 `ptag` / `category` 字段，新增 `pageSize` 字段（默认 10）+ **客户端分页**——`onMounted` 解析 `?page=`（SSG / SSR 首屏恒第 1 页），渲染原型 `.pager` 结构（`?page=N` 相对链接、原生 `<a>` 整页跳转，当前页 `.on`），`total ≤ pageSize` 不渲染 pager；`article-meta` 去 `category` 字段。公共模板更新后，已引入站点按 §4.5 块隔离口径经 **`PUT /blocks/:key`（site 维度，服务端自动写入本站副本）** 显式同步——本次即照此执行（替代脚本重同步路径）并整站重发；未同步前站点线上仍渲染旧版块代码。
 
+> **块定义变更（2026-11-04 · ADR-055）**：
+> - 新增 `faq-board`（FAQ 分类页签）：`{ title?, pageSize(默认 10), items: [{ cat, q, a, href }] }`；页签 = `items` 里 `cat` 的去重序列，支持关键词模糊搜索（问题 + 答案摘要 + 分类，多词 AND）与站内分页，状态写地址栏 `?fcat&fp&fq&fsp`（`history.replaceState`，刷新 / 分享可还原）；所有分类面板**全量渲染进 HTML**（非当前页签用 `.fq-off` 收起），静态产物可抓、与 FAQPage 结构化数据一致
+> - `post-list` 新增 `searchable`（switch，默认关）：开启后在列表上方给关键词搜索（标题 + 摘要，多词 AND）；分页从「原生 `<a>` 整页跳转」改为**站内切换**（`@click.prevent` + `?page&q` 同步 + 翻页后 `scrollIntoView` 回列表顶部，`scroll-margin-top: 92px` 避开吸顶头）；`href` 保留作无 JS 兜底
+> - `faq-list`（大分类展示）数据侧只填 `featured=true` 的问答（见 [`06`](./06-publish-and-geo.md) §8），块字段未变
+
 字段清单与约束以设计稿 `design/xara-bdf-site/99-blocks.html`（块元素对照总表）为准，其中**必须落实的硬约束**：
 
 1. `stat-bar` 的 `source` 字段**必填**（每个数字标注统计口径与日期）
@@ -753,6 +758,8 @@ GEO 文档类型：`GeoDoc { mode: 'auto_append' | 'override', custom: string }`
 ### 11.4 语义化要求（渲染引擎强制）
 
 唯一 H1、层级不跳级、`article/section/figure/address/time/dl/small` 用在正确位置、图片有 `alt`、结构化数据只经 `useHead` 注入（禁止在 SFC 模板写 `<script>`）。
+
+> **H1 归属（ADR-056）**：唯一 H1 由「首屏块（`hero-dark` / `scene-hero` / `hero-panel`）→ 第一个启用块为 `section-head` 时由它兼任 → 都没有才由布局层补通用页头」这条单一规则决定，判定收口在 `apps/geo/app/utils/page-title.ts`，`PageRender` 与 `BlockRenderer` 共用；兼任主标题的 `section-head` 由 BlockRenderer 注入 `context.pageTitle`，渲染 `<h1>` 并加 `.sec-head--page-title` 类。
 
 ---
 

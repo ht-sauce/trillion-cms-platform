@@ -197,7 +197,7 @@ const submit = debounce(() => {
             </el-col>
           </el-row>
           <el-form-item label="卡片图片">
-            <ImageField v-model="form.img" placeholder="/static/... 或点击上传" />
+            <ImageField v-model="form.img" source="案例 · 卡片图片" placeholder="/static/... 或点击上传" />
           </el-form-item>
 
           <el-divider content-position="left">详情页头部（留空则按卡片字段派生）</el-divider>
@@ -212,7 +212,7 @@ const submit = debounce(() => {
             </el-col>
             <el-col :span="12">
               <el-form-item label="头部大图">
-                <ImageField v-model="form.bgImage" placeholder="留空用卡片图片" />
+                <ImageField v-model="form.bgImage" source="案例 · 详情大图" placeholder="留空用卡片图片" />
               </el-form-item>
             </el-col>
           </el-row>
@@ -261,7 +261,7 @@ const submit = debounce(() => {
               </el-button>
             </div>
             <div v-for="(item, index) in images" :key="`im-${index}`" class="row-item">
-              <ImageField v-model="item.img" placeholder="图片地址或上传" class="row-img" />
+              <ImageField v-model="item.img" source="案例 · 项目画面" placeholder="图片地址或上传" class="row-img" />
               <el-input v-model="item.caption" placeholder="图注" style="width: 160px" />
               <el-input v-model="item.note" placeholder="角标说明" style="width: 110px" />
               <el-button link type="danger" size="small" @click="images.splice(index, 1)">删除</el-button>

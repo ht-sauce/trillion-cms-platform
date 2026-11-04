@@ -1,8 +1,10 @@
 <script setup lang="ts">
 /**
- * 高频问答管理：按站点隔离的问答列表 + 关键词/分类筛选 + 新建/编辑/删除
+ * 高频问答管理：按站点隔离的问答列表 + 关键词/分类/上架状态筛选 + 新建/编辑/删除
  * 问答以独立数据表为管理源（id 寻址，pageId 仅表示关联页面），保存后由服务端自动触发站点构建
  * 分类下拉选项来自分类接口（去重清单），新建问答可输入新分类，保存后刷新分类
+ * 「上架」开关只决定是否进问答列表页的分类区块与全部问题列表（ADR-055）：
+ * 关闭后详情页仍在、仍可访问，只是不在列表页优先展示——条目过百时用它收敛版面。
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { newsFaqApi, sitesApi, type FaqItem, type SiteItem } from '~/config/api'
@@ -19,6 +21,8 @@ const list = ref<FaqItem[]>([])
 const total = ref(0)
 const keyword = ref('')
 const category = ref('')
+/** 上架状态筛选：'all' = 不限（用非空哨兵值，否则 el-select 会把空串当未选择而显示 placeholder） */
+const featured = ref<'all' | '1' | '0'>('all')
 const categories = ref<string[]>([])
 const page = ref(1)
 const pageSize = ref(PAGE_SIZE_DEFAULT)
@@ -47,6 +51,7 @@ async function load() {
       siteId: siteId.value,
       keyword: keyword.value || undefined,
       category: category.value || undefined,
+      featured: featured.value === 'all' ? undefined : featured.value,
       page: page.value,
       pageSize: pageSize.value
     })
@@ -87,9 +92,32 @@ async function onSaved() {
   await loadCategories()
 }
 
+/**
+ * 上架开关（el-switch 在 change 时已完成本地翻转，失败要翻回去）
+ * 只重算问答列表页，不重写详情页——详情页仍然可访问
+ * 不加时间防抖：逐行开关是独立意图，按行 key 互斥即可，防抖窗口会误吞相邻行的切换
+ */
+function onToggleFeatured(row: FaqItem, next: boolean) {
+  return runKeyed(`featured:${row.id}`, async () => {
+    try {
+      await newsFaqApi.setFaqFeatured(row.id, next)
+      ElMessage.success(next ? '已上架，站点正在重新构建' : '已下架（详情页保留），站点正在重新构建')
+      await load()
+    } catch {
+      row.featured = !next
+    }
+  })
+}
+
 /** 发布状态徽标（published / pending / missing / draft，未知值兜底 info） */
 function statusMeta(status: string) {
   return BADGE_META[status] ?? { label: status, type: 'info' as const }
+}
+
+/** 筛选条件变化：回到第 1 页再查（页码已在前端复位时可跳过，避免重复请求） */
+function applyFilter() {
+  if (page.value === 1) void load()
+  else page.value = 1
 }
 
 watch([page, pageSize], load)
@@ -118,8 +146,8 @@ onMounted(async () => {
         placeholder="搜索问题"
         style="width: 180px"
         clearable
-        @keyup.enter="load"
-        @clear="load"
+        @keyup.enter="applyFilter"
+        @clear="applyFilter"
       />
       <el-select
         v-model="category"
@@ -128,9 +156,14 @@ onMounted(async () => {
         clearable
         filterable
         style="width: 140px"
-        @change="load"
+        @change="applyFilter"
       >
         <el-option v-for="item in categories" :key="item" :label="item" :value="item" />
+      </el-select>
+      <el-select v-model="featured" size="small" style="width: 120px" @change="applyFilter">
+        <el-option label="全部展示" value="all" />
+        <el-option label="只看上架" value="1" />
+        <el-option label="只看未上架" value="0" />
       </el-select>
       <span class="spacer" />
       <el-button type="primary" size="small" @click="openCreate">新建</el-button>
@@ -143,6 +176,17 @@ onMounted(async () => {
         <template #header><TermHint term="pageAddress" /></template>
         <template #default="{ row }">
           <span class="mono">{{ row.path }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="上架" width="80" align="center">
+        <template #header><TermHint term="faqFeatured" /></template>
+        <template #default="{ row }">
+          <el-switch
+            v-model="row.featured"
+            size="small"
+            :loading="isLoading(`featured:${row.id}`)"
+            @change="(value: boolean) => onToggleFeatured(row, value)"
+          />
         </template>
       </el-table-column>
       <el-table-column label="状态" width="90">

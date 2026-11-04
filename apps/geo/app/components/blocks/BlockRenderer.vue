@@ -15,6 +15,7 @@
  */
 import type { BlockContext, BlockInstance } from '@trillion/shared'
 import { blockKeyToPascal } from '@trillion/shared'
+import { resolveTitleSource } from '../../utils/page-title'
 
 const props = defineProps<{
   blocks: BlockInstance[]
@@ -67,6 +68,7 @@ const SECTION_OF: Record<string, 'none' | 'plain' | 'alt' | 'head' | 'plain-flus
   'faq-detail': 'plain',
   'faq-index': 'plain',
   'faq-list': 'plain',
+  'faq-board': 'plain',
   'hot-faq': 'plain',
   'related-faq': 'plain',
   'anchor-bar': 'plain',
@@ -139,6 +141,12 @@ function componentOf(key: string): unknown {
 }
 
 /**
+ * 页面主标题来源（H1 归谁）：与布局层 `PageRender` 共用同一判定，
+ * 页面无首屏块时由第一个 section-head 兼任 H1（见 utils/page-title.ts）
+ */
+const titleSource = computed(() => resolveTitleSource(props.blocks))
+
+/**
  * 首屏双栏归并（ADR-036 补充）：
  *   设计稿里首页 Hero 是「左文案 + 右 372px 玻璃面板」的两栏网格（`.hero-in`），
  *   但 CMS 中 hero-dark 与 hero-panel 是两个块、序列化后是并列节点，无法共用父网格。
@@ -185,7 +193,13 @@ const items = computed(() => {
   const contextFor = (block: (typeof source)[number], data: Record<string, any>): BlockContext => ({
     ...props.context,
     block: { id: block.id, key: block.key, enabled: block.enabled !== false },
-    items: (data.items as unknown[]) ?? undefined
+    items: (data.items as unknown[]) ?? undefined,
+    /**
+     * 页面主标题标记（ADR-056）：页面没有首屏块时，第一个 section-head 兼任页面 H1，
+     * 由它渲染 `<h1>`，布局层就不再补通用页头——否则同一条标题会在页面上出现两次。
+     * 判定逻辑与 `PageRender` 共用 utils/page-title，避免两处规则漂移。
+     */
+    pageTitle: titleSource.value.source === 'section-head' && block.id === titleSource.value.blockId
   })
 
   const units: Unit[] = []

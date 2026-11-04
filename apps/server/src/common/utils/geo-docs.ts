@@ -135,6 +135,7 @@ export function entityId(domain: string, entityPath: string, businessType?: stri
  *
  * 支持三种块形态（同一页面可能叠加）：
  *   - `faq-list`   ：{ items: [{ q, a }] }  —— 答案完整可读的问答列表
+ *   - `faq-board`  ：{ items: [{ cat, q, a, href }] } —— 分类页签 + 搜索 + 分页的全量问答
  *   - `faq-detail` ：{ question, paragraphs } —— 问答详情页（问题 + 分点答案）
  *   - `faq-index` / `hot-faq`：{ items: [{ q, a }] } —— 列表页的问答索引（答案给摘要）
  * 详情页与列表页都可能成为 FAQPage 的载体，因此不能只认 `faq-list`。
@@ -155,7 +156,7 @@ function collectFaq(blocks: { key: string; data?: Record<string, unknown> }[]) {
       continue
     }
 
-    if (block.key === 'faq-list' || block.key === 'faq-index' || block.key === 'hot-faq') {
+    if (block.key === 'faq-list' || block.key === 'faq-board' || block.key === 'faq-index' || block.key === 'hot-faq') {
       const items = (data.items || []) as { q?: string; a?: string }[]
       for (const item of items) {
         if (item?.q && item?.a) {
@@ -204,7 +205,7 @@ function breadcrumbNode(context: GeoContext) {
 function pageNodeType(context: GeoContext): string | string[] {
   if (!context.page) return 'WebPage'
   const hasFaq = context.page.blocks.some((block) =>
-    ['faq-list', 'faq-detail', 'faq-index', 'hot-faq'].includes(block.key)
+    ['faq-list', 'faq-board', 'faq-detail', 'faq-index', 'hot-faq'].includes(block.key)
   )
   /** 科普 / 新闻正文页含 article-body 块，按文章处理（Article） */
   const hasArticle = context.page.blocks.some((block) => block.key === 'article-body')

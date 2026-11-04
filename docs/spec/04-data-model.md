@@ -121,7 +121,9 @@ stateDiagram-v2
 - 物理路径：`uploads/yyyy/mm/{uuid}.{ext}`
 - 对外 URL：`/static/yyyy/mm/{uuid}.{ext}`
 - 业务表只存 `fileId` 引用，**将来切对象存储只需改 URL 生成规则 + 迁移脚本，业务零改动**
-- 上传约束：MIME 白名单、单文件 ≤ 10MB
+- 上传约束（ADR-054）：MIME 白名单（6 种图片 + `video/mp4` / `video/webm` / `video/quicktime`），**图片 ≤ 2MB、视频 ≤ 100MB**
+- `source`（可空，160）：**上传来源**——哪个功能、哪个页面传的（如「新闻正文 · 携手新加坡Trumarine…」「产品 · 卡片图片」「站点设置 · 站点图标」「素材库 · 手动上传」），素材库列表展示，可按关键词搜到
+- `caption` 仍是人工备注（引用位置说明），与 `source` 分开：`source` 由调用方自动写入，运营改不了
 
 ### 3.4 `TrackEvent` / `AiCrawlEvent`（监控数据面）
 
@@ -255,14 +257,15 @@ apps/server/prisma/
 | 表 | 字段 | 关键约束 |
 | -- | ---- | -------- |
 | `NewsArticle` 新闻文章 | `siteId` / `title`(200) / `summary`(500，缺省取正文首段截断) / `content`(**Text 纯文本**，`body` 的派生列) / `body`(**JSON 结构化正文块**：段落 / 小标题 / 图片，可空) / `cover`(300，封面图，可空) / `publishDate`(10，`YYYY-MM-DD`，创建时不允许早于今天) / `slug`(120) / `status`(20，默认 `published`) / `pageId`(String?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId])` |
-| `FaqItem` 问答条目 | `siteId` / `question`(200) / `category`(100) / `answer`(**Text 纯文本，\n 分段**) / `slug`(120，形态 `q{三位序号}`) / `status`(20，默认 `published`) / `pageId`(Int?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId, category])` |
+| `FaqItem` 问答条目 | `siteId` / `question`(200) / `category`(100) / `answer`(**Text 纯文本，\n 分段**) / `slug`(120，形态 `q{三位序号}`) / `status`(20，默认 `published`) / `featured`(Boolean，默认 `true`，「上架展示」开关) / `pageId`(Int?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId, category])` |
 
 设计口径：
 
+- **`featured` = 列表页「上架展示」开关（ADR-055）**：只控制该问答是否进入问答列表页的分类区块与全部问题列表；`false` 时**详情页仍然存在、仍可访问、仍在 sitemap 与 JSON-LD 里**，只是不在列表页铺开。默认 `true`（存量行为不变），条目过百后由运营逐条收敛。
 - **`pageId` 为 `Page` 弱引用（不建外键）**：与「发布产物可被站点编辑器独立删除」的现实一致；引用完整性由业务层保障——编辑时 `pageId` 为空或页面缺失会按 slug **补建/挂接**页面。
 - **`slug` 创建后不可修改**（编辑 DTO 不收 slug），访问地址 `path = /news/{slug}`、`/faq/{slug}` 由 slug 拼出，保证 URL 稳定性（GEO 前提）。
 - **问答正文是纯文本按 `\n` 分段**（REQUIREMENTS 禁项：不引入富文本）；发布时拆为 `faq-detail` 段落。
-- **新闻正文是结构化块数组 `body`**（ADR-053）：`[{kind:'paragraph'|'heading'|'image'}]`，发布时直接写入 `article-body.blocks`；`content` 是块的段落文本派生列（摘要、meta description、检索、GEO 取文读它），历史数据 `body=null` 时回落按 `content` 分行拆段落。图片 `src` 只认 `/static/`（素材库）、`/assets/`、`http(s)`，其余在 `common/utils/article-body.ts` 白名单里丢弃。
+- **新闻正文是结构化块数组 `body`**（ADR-053）：`[{kind:'paragraph'|'heading'|'image'}]`，发布时直接写入 `article-body.blocks`；`content` 是块的段落文本派生列（摘要、meta description、检索、GEO 取文读它），历史数据 `body=null` 时回落按 `content` 分行拆段落。段落 / 小标题可带受限的行内 `html`（b/strong/i/em/u/s/del/code/br，服务端先整体转义再还原白名单标签）。图片 `src` 只认 `/static/`（素材库）、`/assets/`、`http(s)`，其余在 `common/utils/article-body.ts` 白名单里丢弃。
 - **时间字段**：`createdAt` / `updatedAt` 走 `@db.DateTime(0)` 惯例，接口输出经 `formatDateTime`（中国时区）；`publishDate` 是业务日期字符串（`VarChar 10`），不走 DATETIME。
 - 管理面「保存即发布」：`status` 恒为 `published`，编辑 DTO 不收 `status`。
 

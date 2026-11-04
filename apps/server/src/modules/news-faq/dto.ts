@@ -2,7 +2,7 @@
  * 新闻/问答管理模块 DTO
  *
  * 管理源是 NewsArticle / FaqItem 独立数据表，本模块的字段即表字段的写入投影：
- * 文章 = title/summary/publishDate/content/body，问答 = question/category/answer；
+ * 文章 = title/summary/publishDate/content/body，问答 = question/category/answer/featured；
  * 问答正文一律为纯文本按换行拆段落；文章正文以结构化块 body（段落/小标题/图片）为准，
  * content 是它的纯文本派生列（历史数据仍只读 content）。slug 创建后不可修改（编辑 DTO 不收 slug）。
  */
@@ -10,6 +10,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { Type } from 'class-transformer'
 import {
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -49,15 +50,23 @@ export class PublishDateNotBeforeTodayConstraint implements ValidatorConstraintI
  * common/utils/article-body 的 normalizeArticleBody 里二次收口
  */
 export class ArticleBlockDto {
-  @ApiProperty({ description: '块类型：paragraph=段落 / heading=小标题 / image=图片' })
-  @IsIn(['paragraph', 'heading', 'image'])
-  kind: 'paragraph' | 'heading' | 'image'
+  @ApiProperty({ description: '块类型：paragraph / heading / image / table / video' })
+  @IsIn(['paragraph', 'heading', 'image', 'table', 'video'])
+  kind: 'paragraph' | 'heading' | 'image' | 'table' | 'video'
 
-  @ApiPropertyOptional({ description: '段落或小标题文本' })
+  @ApiPropertyOptional({ description: '段落或小标题文本（纯文本；与 html 二选一，服务端以 html 派生为准）' })
   @IsOptional()
   @IsString()
   @MaxLength(5000)
   text?: string
+
+  @ApiPropertyOptional({
+    description: '段落或小标题的行内富文本（仅 b/strong/i/em/u/s/del/code/br，服务端白名单化）'
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(8000)
+  html?: string
 
   @ApiPropertyOptional({ description: '图片地址（素材库 publicUrl，/static/... 形态）' })
   @IsOptional()
@@ -81,6 +90,26 @@ export class ArticleBlockDto {
   @IsOptional()
   @IsInt()
   level?: number
+
+  @ApiPropertyOptional({ description: '段落 / 小标题 / 表格对齐：left/center/right' })
+  @IsOptional()
+  @IsIn(['left', 'center', 'right'])
+  align?: 'left' | 'center' | 'right'
+
+  @ApiPropertyOptional({ description: '表格内容（table 块）：二维数组，单元格为白名单化行内 html' })
+  @IsOptional()
+  @IsArray()
+  rows?: string[][]
+
+  @ApiPropertyOptional({ description: '表格首行是否为表头（table 块，缺省 true）' })
+  @IsOptional()
+  header?: boolean
+
+  @ApiPropertyOptional({ description: '视频封面地址（video 块，可选）' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(400)
+  poster?: string
 }
 
 export class CreateArticleDto {
@@ -191,6 +220,11 @@ export class CreateFaqDto {
   @IsString()
   @MinLength(1)
   answer: string
+
+  @ApiPropertyOptional({ description: '是否在列表页上架展示（缺省 true；关闭后仅保留详情页）' })
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean
 }
 
 export class UpdateFaqDto {
@@ -213,4 +247,16 @@ export class UpdateFaqDto {
   @IsString()
   @MinLength(1)
   answer?: string
+
+  @ApiPropertyOptional({ description: '是否在列表页上架展示（false = 仅保留详情页，不进列表页）' })
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean
+}
+
+/** 上架状态切换（列表页开关专用载荷） */
+export class SetFaqFeaturedDto {
+  @ApiProperty({ description: '是否在列表页上架展示' })
+  @IsBoolean()
+  featured: boolean
 }

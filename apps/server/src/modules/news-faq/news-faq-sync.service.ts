@@ -10,8 +10,8 @@
  * 因此同一套代码对任何站点成立，代码里不含任何站点文案（原医院站硬编码已移除）。
  *
  *   1) /news 列表页：post-list.items = 全部新闻按发布日期倒序；其余块（hero/chips/telbar）不动
- *   2) /faq 列表页：每个 faq-list 块按自身 category 重填 items（保留标题与列数）；
- *      hero-dark.chips 与分类清单对齐；post-list（核心问题详解）= 已有详情页的问答，按序号倒序
+ *   2) /faq 列表页：每个 faq-list 块按自身 category 重填 items（保留标题与列数，只填上架问答）；
+ *      hero-dark.chips 与上架出现的分类对齐；faq-board（分类页签 + 搜索 + 分页）填全量问答
  *   3) 问答详情页：受影响分类下所有详情页的 faq-list（相关问答）= 同分类其它问答
  *
  * 块实例 id 按「同 key 顺序复用旧 id」分配（withStableIds），结构不变时内容指纹保持稳定。
@@ -60,6 +60,8 @@ export interface FaqDetail {
   question: string
   category: string
   paragraphs: string[]
+  /** 是否在列表页上架展示（false = 只保留详情页，不进分类区块与全部问题列表） */
+  featured: boolean
   /** 更新时间（YYYY-MM-DD，列表页 post-list 的展示日期） */
   updatedDate: string
 }
@@ -258,7 +260,16 @@ export class NewsFaqSyncService {
   async loadFaqDetails(siteId: string): Promise<FaqDetail[]> {
     const rows = await this.prisma.faqItem.findMany({
       where: { siteId, status: 'published' },
-      select: { id: true, pageId: true, slug: true, question: true, category: true, answer: true, updatedAt: true }
+      select: {
+        id: true,
+        pageId: true,
+        slug: true,
+        question: true,
+        category: true,
+        answer: true,
+        featured: true,
+        updatedAt: true
+      }
     })
     return rows
       .map((row) => ({
@@ -269,6 +280,7 @@ export class NewsFaqSyncService {
         question: row.question,
         category: row.category,
         paragraphs: splitParagraphs(row.answer),
+        featured: row.featured,
         updatedDate: toDateString(row.updatedAt)
       }))
       .sort((a, b) => a.seq - b.seq)
@@ -350,19 +362,31 @@ export class NewsFaqSyncService {
 
   /**
    * 重建 /faq 列表页块数组（原位改数据，不增删块）：
-   * - 每个 faq-list 块按自身 category（缺省取标题）重填 items，保留标题/列数
-   * - hero-dark.chips 与列表出现的分类对齐
-   * - post-list（核心问题详解）= 已有详情页的问答，按序号倒序
+   * - 每个 faq-list 块按自身 category（缺省取标题）重填 items，保留标题/列数；
+   *   **只填 featured=true 的问答**（ADR-055：分类区块是「按需展示」的橱窗，
+   *   条目过百后全铺开会把页面撑成流水账；未上架的问答仍保留详情页）
+   * - hero-dark.chips 与上架出现的分类对齐
+   * - faq-board（分类页签 + 搜索 + 分页）填**全量已发布问答**，每条带 cat 供前端分组
+   * - post-list（旧版「核心问题详解」）兼容分支只填上架问答
    * 分类在页面上没有对应 faq-list 块时不新造分组（分组结构由站点编辑器维护）。
    */
   private rebuildFaqListBlocks(oldBlocks: unknown, details: FaqDetail[]) {
     const instances = normalizeBlockInstances(oldBlocks)
+    const shown = details.filter((detail) => detail.featured)
+
+    /** 页签顺序跟页面里分类区块的先后一致（块没写分类时退回标题），剩余分类按出现顺序补在末尾 */
     const categories: string[] = []
-    for (const detail of details) {
+    for (const inst of instances) {
+      if (inst.key !== 'faq-list') continue
+      const key = String(inst.data?.category ?? '').trim() || String(inst.data?.title ?? '').trim()
+      const matched = shown.find((detail) => detail.category === key || String(inst.data?.title ?? '') === detail.category)
+      if (matched && !categories.includes(matched.category)) categories.push(matched.category)
+    }
+    for (const detail of shown) {
       if (detail.category && !categories.includes(detail.category)) categories.push(detail.category)
     }
 
-    const withDetail = details
+    const withDetail = shown
       .filter((detail) => detail.pageId != null)
       .sort((a, b) => b.seq - a.seq)
       .map((detail) => ({
@@ -372,6 +396,19 @@ export class NewsFaqSyncService {
         publishDate: detail.updatedDate
       }))
 
+    /** 分类页签块的全量条目：按分类出现顺序聚合，分类内按序号倒序（新增恒排最前） */
+    const boardItems: { cat: string; q: string; a: string; href: string }[] = []
+    for (const category of categories) {
+      for (const detail of details.filter((detail) => detail.category === category).sort((a, b) => b.seq - a.seq)) {
+        boardItems.push({
+          cat: category,
+          q: detail.question,
+          a: truncate(detail.paragraphs.join(''), EXCERPT_MAX),
+          href: detail.path
+        })
+      }
+    }
+
     return instances.map((inst) => {
       if (inst.key === 'hero-dark') {
         return { ...inst, data: { ...inst.data, chips: categories } }
@@ -379,13 +416,16 @@ export class NewsFaqSyncService {
       if (inst.key === 'faq-list') {
         /** 分组归属：块上显式写的 category 优先，其次标题（既有页的标题常带「与材料」等修饰） */
         const key = String(inst.data?.category ?? '').trim() || String(inst.data?.title ?? '').trim()
-        const items = details
+        const items = shown
           .filter((detail) => detail.category === key || (inst.data?.title ?? '') === detail.category)
           .map((detail) => ({
             q: detail.question,
             a: truncate(detail.paragraphs.join(''), EXCERPT_MAX)
           }))
         return { ...inst, data: { ...inst.data, items } }
+      }
+      if (inst.key === 'faq-board') {
+        return { ...inst, data: { ...inst.data, items: boardItems } }
       }
       if (inst.key === 'post-list') {
         return { ...inst, data: { ...inst.data, items: withDetail } }

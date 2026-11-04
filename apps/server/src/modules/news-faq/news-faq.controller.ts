@@ -8,11 +8,12 @@
  *   POST   /news-faq/articles            新建文章（保存即发布）
  *   PATCH  /news-faq/articles/:id        编辑文章（slug 创建后不可改）
  *   DELETE /news-faq/articles/:id        删除文章
- *   GET    /news-faq/faqs                问答分页列表（支持分类过滤）
+ *   GET    /news-faq/faqs                问答分页列表（支持分类 / 上架状态过滤）
  *   GET    /news-faq/categories          问答分类清单（FaqItem.category 去重）
  *   GET    /news-faq/faqs/:id/detail     单条问答详情（纯读，直读表，不接收 siteId 参数）
  *   POST   /news-faq/faqs                新建问答
  *   PATCH  /news-faq/faqs/:id            编辑问答（slug 创建后不可改）
+ *   PATCH  /news-faq/faqs/:id/featured   上架状态切换（详情页保留，只影响列表页展示）
  *   DELETE /news-faq/faqs/:id            删除问答
  *
  * 增删改均会：写管理表 → 派生/补建详情页与列表页块 → 自动触发页面级发布，
@@ -21,7 +22,7 @@
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { NewsFaqService } from './news-faq.service'
-import { CreateArticleDto, CreateFaqDto, UpdateArticleDto, UpdateFaqDto } from './dto'
+import { CreateArticleDto, CreateFaqDto, SetFaqFeaturedDto, UpdateArticleDto, UpdateFaqDto } from './dto'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { normalizePage, normalizePageSize } from '../../common/constants'
@@ -80,16 +81,27 @@ export class NewsFaqController {
   }
 
   @Get('faqs')
-  @ApiOperation({ summary: '问答分页列表（读 FaqItem 表，按 slug 升序，支持 keyword / category 过滤）' })
+  @ApiOperation({ summary: '问答分页列表（读 FaqItem 表，按 slug 倒序，支持 keyword / category / featured 过滤）' })
   listFaqs(
     @CurrentUser() user: AuthUser,
     @Query('siteId') siteId: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @Query('keyword') keyword?: string,
-    @Query('category') category?: string
+    @Query('category') category?: string,
+    @Query('featured') featured?: string
   ) {
-    return this.service.listFaqs(user, siteId, normalizePage(page), normalizePageSize(pageSize), keyword, category)
+    /** featured 三态：缺省/空 = 不限；'1' = 只看上架；'0' = 只看未上架 */
+    const featuredFilter = featured === '1' ? true : featured === '0' ? false : undefined
+    return this.service.listFaqs(
+      user,
+      siteId,
+      normalizePage(page),
+      normalizePageSize(pageSize),
+      keyword,
+      category,
+      featuredFilter
+    )
   }
 
   @Get('faqs/:id/detail')
@@ -108,6 +120,16 @@ export class NewsFaqController {
   @ApiOperation({ summary: '编辑问答（slug 不可改；重算新旧分类的列表页/相关问答并触发页面级发布）' })
   updateFaq(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateFaqDto) {
     return this.service.updateFaq(user, id, dto)
+  }
+
+  @Patch('faqs/:id/featured')
+  @ApiOperation({ summary: '上架状态切换（只改列表页展示，详情页保留；重算列表页并触发页面级发布）' })
+  setFaqFeatured(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetFaqFeaturedDto
+  ) {
+    return this.service.setFaqFeatured(user, id, dto.featured)
   }
 
   @Delete('faqs/:id')

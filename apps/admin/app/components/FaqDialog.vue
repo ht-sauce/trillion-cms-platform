@@ -26,7 +26,8 @@ const { loading: saving, run, isLoading, runKeyed } = useLoading()
 const form = reactive({
   question: '',
   category: '',
-  answer: ''
+  answer: '',
+  featured: true
 })
 
 /** 编辑对象（打开后不再变化，供提交分支判断） */
@@ -38,12 +39,14 @@ watch(visible, (open) => {
   form.question = props.faq?.question ?? ''
   form.category = props.faq?.category ?? ''
   form.answer = ''
+  form.featured = props.faq?.featured ?? true
   if (props.faq) {
     void runKeyed('detail', async () => {
       const detail = await newsFaqApi.faqDetail(props.faq!.id)
       form.question = detail.question ?? form.question
       form.category = detail.category ?? form.category
       form.answer = detail.answer ?? ''
+      form.featured = detail.featured ?? form.featured
     })
   }
 })
@@ -66,7 +69,8 @@ const submit = debounce(() => {
   const payload = {
     question: form.question.trim(),
     category: form.category.trim(),
-    answer: form.answer
+    answer: form.answer,
+    featured: form.featured
   }
 
   return run(async () => {
@@ -100,6 +104,10 @@ const submit = debounce(() => {
           <el-option v-for="item in props.categories" :key="item" :label="item" :value="item" />
         </el-select>
       </el-form-item>
+      <el-form-item label="上架展示">
+        <el-switch v-model="form.featured" size="small" />
+        <span class="c-mute switch-hint">关闭后不进问答列表页的分类区块与全部问题列表，详情页仍可访问</span>
+      </el-form-item>
       <el-form-item label="答案">
         <PlainTextEditor v-model="form.answer" placeholder="请输入答案" />
       </el-form-item>
@@ -110,3 +118,10 @@ const submit = debounce(() => {
     </template>
   </el-dialog>
 </template>
+
+<style scoped lang="scss">
+.switch-hint {
+  margin-left: $sp-1;
+  font-size: 12px;
+}
+</style>

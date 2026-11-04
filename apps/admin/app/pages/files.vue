@@ -1,16 +1,20 @@
 <script setup lang="ts">
 /**
  * 素材管理：static_files 表的可视化入口（服务端上传 / 列表 / 删除接口早已就绪，此前仅站点编辑页用了上传）
- * 按站点隔离：素材挂 siteId，切换站点即切换素材范围；仅支持常用图片格式上传；
- * 支持关键词搜索、多选上传、点击预览大图、复制访问地址、替换（引用地址不变）与删除
+ * 按站点隔离：素材挂 siteId，切换站点即切换素材范围；支持常用图片 + 正文视频（mp4/webm/mov，100MB 内）；
+ * 支持关键词搜索、多选上传、点击预览大图 / 播放视频、复制访问地址 / 复制 ID、替换（引用地址不变）与删除
+ * 每条素材记录「上传来源」（哪个功能、哪个页面传的），便于运营反查引用位置
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   filesApi,
   sitesApi,
   resolveFileUrl,
-  IMAGE_ACCEPT,
+  MEDIA_ACCEPT,
   IMAGE_MIMES,
+  VIDEO_MIMES,
+  MAX_IMAGE_BYTES,
+  MAX_VIDEO_BYTES,
   type SiteItem,
   type StaticFileItem
 } from '~/config/api'
@@ -60,32 +64,37 @@ async function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || [])
   input.value = ''
-  const images = files.filter((file) => IMAGE_MIMES.includes(file.type))
-  if (files.length && !images.length) {
-    ElMessage.warning('仅支持上传图片：jpg / png / webp / gif / svg / ico')
+  /** 图片与视频分开校验体积（图片 2MB / 视频 100MB，与服务端一致） */
+  const accepted = files.filter((file) => {
+    if (IMAGE_MIMES.includes(file.type)) return file.size <= MAX_IMAGE_BYTES
+    if (VIDEO_MIMES.includes(file.type)) return file.size <= MAX_VIDEO_BYTES
+    return false
+  })
+  if (files.length && !accepted.length) {
+    ElMessage.warning('仅支持 jpg/png/webp/gif/svg/ico 图片（≤2MB）与 mp4/webm/mov 视频（≤100MB）')
     return
   }
-  if (images.length < files.length) {
-    ElMessage.warning('已跳过非支持格式的文件')
+  if (accepted.length < files.length) {
+    ElMessage.warning(`已跳过 ${files.length - accepted.length} 个格式不符或超出体积上限的文件`)
   }
-  if (!images.length || !siteId.value) return
+  if (!accepted.length || !siteId.value) return
   /** 整批备注（可空）：上传前一次性填写，标识这批素材的引用位置；取消即放弃本次上传 */
   let caption: string | undefined
   try {
     const { value } = await ElMessageBox.prompt(
-      `将为 ${images.length} 个文件统一填写备注，用于标识素材引用在页面哪些位置`,
-      '图片备注（可选）',
-      { inputPlaceholder: '如：就诊环境页环境图' }
+      `将为 ${accepted.length} 个文件统一填写备注，用于标识素材引用在页面哪些位置`,
+      '素材备注（可选）',
+      { inputPlaceholder: '如：新闻详情页内文配图' }
     )
     caption = value.trim() || undefined
   } catch {
     return
   }
   await run(async () => {
-    for (const file of images) {
-      await filesApi.upload(file, siteId.value, caption)
+    for (const file of accepted) {
+      await filesApi.upload(file, { siteId: siteId.value, caption, source: '素材库 · 手动上传' })
     }
-    ElMessage.success(`已上传 ${images.length} 个文件`)
+    ElMessage.success(`已上传 ${accepted.length} 个文件`)
     page.value = 1
     await loadFiles()
   })
@@ -112,12 +121,33 @@ async function editCaption(row: StaticFileItem) {
 async function copyUrl(row: StaticFileItem) {
   try {
     await navigator.clipboard.writeText(resolveFileUrl(row.publicUrl))
-    copiedId.value = row.id
+    copiedId.value = `url:${row.id}`
     ElMessage.success('访问地址已复制')
     setTimeout(() => (copiedId.value = undefined), 1500)
   } catch {
     ElMessage.warning('复制失败，请手动选中地址复制')
   }
+}
+
+/** 复制素材 ID（uuid 太长，列表里截断展示，点一下复制完整值） */
+async function copyId(row: StaticFileItem) {
+  try {
+    await navigator.clipboard.writeText(row.id)
+    copiedId.value = `id:${row.id}`
+    ElMessage.success('ID 已复制')
+    setTimeout(() => (copiedId.value = undefined), 1500)
+  } catch {
+    ElMessage.warning('复制失败，请手动选中 ID 复制')
+  }
+}
+
+/**
+ * 列表里的 ID 展示：取**末 8 位**而不是头 8 位——uuid(7) 前段是时间戳，
+ * 同批上传的记录前 8 位几乎一样（01a1a0fb…），取尾部随机段才能肉眼区分。
+ * 完整值走 tooltip + 点击复制。
+ */
+function shortId(id: string): string {
+  return id.length > 8 ? id.slice(-8) : id
 }
 
 /**
@@ -204,14 +234,25 @@ onMounted(async () => {
       />
       <span class="spacer" />
       <el-button type="primary" size="small" :loading="isLoading('upload')" @click="pickFiles">上传</el-button>
-      <input ref="fileInput" type="file" multiple :accept="IMAGE_ACCEPT" class="upload-input" @change="onFileChange" />
+      <input
+        ref="fileInput"
+        type="file"
+        multiple
+        :accept="MEDIA_ACCEPT"
+        class="upload-input"
+        @change="onFileChange"
+      />
       <input ref="replaceInput" type="file" class="upload-input" @change="onReplaceChange" />
     </div>
 
     <el-table v-loading="isLoading('load')" :data="list" border size="small" style="width: 100%" empty-text="暂无素材">
-      <el-table-column label="ID" width="70">
+      <el-table-column label="ID" width="104">
         <template #default="{ row }">
-          <span class="mono">#{{ row.id }}</span>
+          <el-tooltip :content="`${row.id}（点击复制）`" placement="top" :show-after="400">
+            <button type="button" class="id-cell mono" @click="copyId(row)">
+              {{ copiedId === `id:${row.id}` ? '已复制' : shortId(row.id) }}
+            </button>
+          </el-tooltip>
         </template>
       </el-table-column>
       <el-table-column label="预览" width="64" align="center">
@@ -226,10 +267,17 @@ onMounted(async () => {
             class="thumb"
             :alt="row.originalName"
           />
+          <span v-else-if="row.mimeType?.startsWith('video/')" class="thumb thumb-video" title="视频">▶</span>
           <span v-else class="c-mute">—</span>
         </template>
       </el-table-column>
       <el-table-column prop="originalName" label="文件名" min-width="180" show-overflow-tooltip />
+      <el-table-column label="上传来源" min-width="170" show-overflow-tooltip>
+        <template #default="{ row }">
+          <span v-if="row.source">{{ row.source }}</span>
+          <span v-else class="c-mute">—</span>
+        </template>
+      </el-table-column>
       <el-table-column label="备注" min-width="150" show-overflow-tooltip>
         <template #default="{ row }">
           <span v-if="row.caption">{{ row.caption }}</span>
@@ -255,7 +303,7 @@ onMounted(async () => {
       <el-table-column label="操作" width="180" fixed="right" class-name="ops-col">
         <template #default="{ row }">
           <el-button link size="small" @click="copyUrl(row)">
-            {{ copiedId === row.id ? '已复制' : '复制地址' }}
+            {{ copiedId === `url:${row.id}` ? '已复制' : '复制地址' }}
           </el-button>
           <el-button link size="small" :loading="isLoading(`caption:${row.id}`)" @click="editCaption(row)">
             备注
@@ -306,6 +354,37 @@ onMounted(async () => {
   cursor: zoom-in;
   border-radius: $radius-sm;
   border: 1px solid $c-border-soft;
+}
+
+/** 视频素材：不加载画面（避免列表里拉一堆视频），只给个可识别的播放标记 */
+.thumb-video {
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: $c-primary;
+  background: $c-elevated;
+  cursor: default;
+}
+
+/** 素材 ID：固定宽度单行截断（uuid 太长，完整值走 tooltip + 点击复制） */
+.id-cell {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.6;
+  color: $c-text-sub;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+
+  &:hover {
+    color: $c-primary;
+  }
 }
 
 .pager {

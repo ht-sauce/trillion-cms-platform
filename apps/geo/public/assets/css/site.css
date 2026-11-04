@@ -262,6 +262,17 @@ a, button, summary, [onclick],
 .artbody .art-fig{margin:22px 0}
 .artbody .art-fig img{width:100%;height:auto;display:block;border-radius:var(--r-md);border:1px solid var(--line);background:#F1F5F9}
 .artbody .art-fig figcaption{margin-top:8px;font-size:12.4px;color:var(--ink-3);text-align:center;line-height:1.7}
+/* 正文视频（2026-11-04，ADR-054）：原生播放器，宽度跟随正文栏 */
+.artbody .art-video{margin:22px 0}
+.artbody .art-video video{width:100%;height:auto;display:block;border-radius:var(--r-md);border:1px solid var(--line);background:#0B1524}
+.artbody .art-video figcaption{margin-top:8px;font-size:12.4px;color:var(--ink-3);text-align:center;line-height:1.7}
+/* 正文表格：与数据表同口径（细边、表头浅底、数字等宽） */
+.artbody .art-table{margin:22px 0;overflow-x:auto}
+.artbody .art-table table{width:100%;border-collapse:collapse;font-size:13.2px;line-height:1.75}
+.artbody .art-table th,.artbody .art-table td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+.artbody .art-table th{background:#F5F8FC;color:var(--ink);font-weight:800;white-space:nowrap}
+.artbody .art-table tr:nth-child(even) td{background:#FBFCFE}
+.artbody .art-table p{margin:0}
 
 /* ---------- 上一条 / 下一条 ---------- */
 .pn{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}

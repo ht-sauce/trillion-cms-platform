@@ -31,14 +31,16 @@ export class StaticFilesController {
   constructor(private readonly service: StaticFilesService) {}
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 100 * 1024 * 1024 } }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary' },
-        siteId: { type: 'string' }
+        siteId: { type: 'string' },
+        caption: { type: 'string', description: '素材备注' },
+        source: { type: 'string', description: '上传来源（哪个功能 / 哪个页面）' }
       }
     }
   })
@@ -47,9 +49,10 @@ export class StaticFilesController {
     @CurrentUser() user: AuthUser,
     @UploadedFile() file: Express.Multer.File,
     @Body('siteId') siteId?: string,
-    @Body('caption') caption?: string
+    @Body('caption') caption?: string,
+    @Body('source') source?: string
   ) {
-    return this.service.upload(user, file, siteId || undefined, caption)
+    return this.service.upload(user, file, siteId || undefined, caption, source)
   }
 
   @Get()
@@ -65,7 +68,7 @@ export class StaticFilesController {
   }
 
   @Put(':id/replace')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 1024 * 1024 } }))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 100 * 1024 * 1024 } }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {

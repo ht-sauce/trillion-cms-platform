@@ -3,9 +3,10 @@
  * 图片字段（输入地址 + 上传 + 预览放大）：
  * 产品 / 案例 / 新闻弹窗共用的单图字段。上传走素材库（filesApi.upload，publicUrl 为 /static/...），
  * 上传成功即回填 v-model；预览用 el-image（可点击放大），地址无效时显示加载失败占位。
+ * `source` 用来在素材库里标记「从哪个功能传上来的」（如「新闻 · 封面图」），由各调用点传入。
  */
 import { ElMessage } from 'element-plus'
-import { filesApi, resolveMediaUrl } from '~/config/api'
+import { MAX_IMAGE_BYTES, filesApi, resolveMediaUrl } from '~/config/api'
 import { useLoading } from '~/utils/tool'
 
 const model = defineModel<string>({ required: true })
@@ -16,8 +17,10 @@ const props = withDefaults(
     placeholder?: string
     /** 允许的图片 MIME（缺省常用图片格式） */
     accept?: string
+    /** 上传来源标签（写进素材库 source，便于追溯） */
+    source?: string
   }>(),
-  { placeholder: '/static/... 或点击上传', accept: 'image/jpeg,image/png,image/webp,image/gif' }
+  { placeholder: '/static/... 或点击上传', accept: 'image/jpeg,image/png,image/webp,image/gif', source: '图片字段' }
 )
 
 const { loading: uploading, run } = useLoading()
@@ -35,9 +38,13 @@ async function onFileChange(event: Event) {
   const file = input.files?.[0]
   input.value = ''
   if (!file) return
+  if (file.size > MAX_IMAGE_BYTES) {
+    ElMessage.warning('图片超过 2MB，请压缩后再上传')
+    return
+  }
   await run(async () => {
     try {
-      const item = await filesApi.upload(file)
+      const item = await filesApi.upload(file, { source: props.source })
       model.value = item.publicUrl
       ElMessage.success('已上传到素材库')
     } catch {

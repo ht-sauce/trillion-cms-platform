@@ -100,7 +100,7 @@ apps/geo/sites/<站点slug>/
 | 层  | 目标       | 落地位置                                                                                         | 状态      |
 | --- | ---------- | ------------------------------------------------------------------------------------------------ | --------- |
 | L1  | 数据模型层 | `Page.summary / authorName / seo* / publishedAt`、`Entity` 表、内置 `faq` Block 类型             | ✅        |
-| L2  | 模板渲染层 | 语义化 HTML（article/main/section）、唯一 H1、唯一 H1 由 `Page.title` 渲染、Block 组件不跳级标题 | ✅        |
+| L2  | 模板渲染层 | 语义化 HTML（article/main/section）、唯一 H1、H1 归属按「首屏块 → 首块 section-head → 页头兜底」单一判定（ADR-056）、Block 组件不跳级标题 | ✅        |
 | L3  | 构建产物层 | `robots.txt`（默认放行 AI 爬虫）、`sitemap.xml`、`llms.txt`、每页 JSON-LD、发布前体检            | ✅        |
 | L4  | 监测运营层 | `AiCrawlEvent` 记录抓取、AI referrer 归因、`/track/ai-overview` 看板                             | 🟡 基础版 |
 
@@ -235,8 +235,9 @@ flowchart LR
 
 - **派生块重算**（只重算派生块，固定文案块不动；块实例 id 同 key 顺序复用，常规编辑下内容指纹稳定）：
   - `/news` 列表页：`post-list.items` = 表内全部新闻按发布日期倒序（无分类字段）；`hero-dark.chips` 置空（新闻去分类）；移除独立 `pager` 块（分页由 `post-list` 客户端分页承担）
-  - `/faq` 列表页：`hero-dark` 的 eyebrow / chips、`anchor-bar`、`hot-faq` 按全量问答重算；每个分类一组 `section-head`（含「共 N 条」）+ `faq-index`
+  - `/faq` 列表页：`hero-dark.chips` 按**上架**问答的分类重算；每个分类的 `faq-list`（大分类展示）只填 `featured=true` 的问答（ADR-055：条目过百后全铺开会把页面撑成流水账）；`faq-board`（分类页签 + 关键词搜索 + 站内分页）填**全量**已发布问答，每条带 `cat` 供前端分组
   - 问答详情页：受影响分类（编辑换分类时含**新旧分类**）下所有详情页的 `related-faq.items` = 同分类其它问答前 8 条
+  - 只改上架开关时走 `PATCH /news-faq/faqs/:id/featured`：**只重算 `/faq` 列表页并发布**，不重写详情页、不动 related-faq（详情页始终保留，`featured=false` 只是从列表里收起来）
 - **自动发布**：受影响页面（详情页 + 列表页 + related-faq 牵连页）作为**页面级**任务入队（系统入口、可排队，受同站点串行与构建互斥约束）；响应携带 `affectedPages` 与 `publishTaskId`（无需发布时为 `null`）；**保存即发布**——表记录 `status` 恒为 `published`，新建详情页直接 `published`（免审核，与站点编辑器保存行为一致）
 - **发布日期**：新闻 `publishDate` 必填、`YYYY-MM-DD` 且**不允许早于今天**（服务端中国时区 `todayInChina()` 强校验 + 管理端弹窗禁选过去日期）；问答无发布日期字段
 - 接口契约见 [`05`](./05-api-contract.md) §3.13，界面落点见 [`03`](./03-frontend-architecture.md) §2.1
