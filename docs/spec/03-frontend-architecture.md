@@ -119,6 +119,7 @@ sequenceDiagram
 | 间距     | `$sp-1..4` = 8 / 16 / 24 / 32px，**密度优先**，拒绝大留白；页面容器/筛选栏/面板标题统一 `$sp-1` |
 | 滚动     | 主功能区（`.content`）**一屏内滚动**：`.main { min-height: 0; overflow: hidden }` + `html, body { overflow: hidden }`，禁止整页滚动 |
 | 组件尺寸 | Element Plus 全局 `size: 'small'`（`plugins/element-plus.ts`），与密度规范一一对应 |
+| 控件高度 | **统一 `$control-height`（28px）**：`.el-input__wrapper` / `.el-select__wrapper` 在 `main.scss` 里显式设高 + `box-sizing: border-box`，**禁止**再给 `.el-input__inner` 单独写 `height`（那会让输入框比下拉框高 4~6px，全后台筛选栏参差，ADR-059） |
 | 分页     | 默认 20 条 / 档位 `[10, 20, 30, 50, 100]`；前端 `config/pagination.ts` 与服务端 `common/constants.ts` 对齐 |
 | 配色     | **亮色主题**：底色 `#F4F6FB`、面板 `#FFFFFF`、边框 `#D8DFEC`、主色 `#2563EB`、高亮 `#0E7490`、文字 `#1F2A44` |
 | 主色梯度 | Element Plus 的 `--el-color-primary-light-3~9` / `dark-2` 由 **`color.mix()`** 从 `$c-primary` 派生（`main.scss` 顶部 `@use 'sass:color'`），换主色只改 `tokens.scss` 一处；**禁止全局 `mix()`**（Dart Sass 1.105 起报 `DEPRECATION WARNING [global-builtin]`，3.0 将移除） |

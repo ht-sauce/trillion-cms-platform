@@ -257,10 +257,12 @@ apps/server/prisma/
 | 表 | 字段 | 关键约束 |
 | -- | ---- | -------- |
 | `NewsArticle` 新闻文章 | `siteId` / `title`(200) / `summary`(500，缺省取正文首段截断) / `content`(**Text 纯文本**，`body` 的派生列) / `body`(**JSON 结构化正文块**：段落 / 小标题 / 图片，可空) / `cover`(300，封面图，可空) / `publishDate`(10，`YYYY-MM-DD`，创建时不允许早于今天) / `slug`(120) / `status`(20，默认 `published`) / `pageId`(String?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId])` |
-| `FaqItem` 问答条目 | `siteId` / `question`(200) / `category`(100) / `answer`(**Text 纯文本，\n 分段**) / `slug`(120，形态 `q{三位序号}`) / `status`(20，默认 `published`) / `featured`(Boolean，默认 `true`，「上架展示」开关) / `pageId`(Int?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId, category])` |
+| `FaqItem` 问答条目 | `siteId` / `question`(200) / `category`(100) / `answer`(**Text 纯文本，\n 分段，由 answerHtml 派生**) / `answerHtml`(**Text 受限富文本：段落 / 有序无序列表 / 行内标记**，可空) / `slug`(120，形态 `q{三位序号}`) / `status`(20，默认 `published`) / `featured`(Boolean，默认 `true`，「上架展示」开关) / `relatedIds`(**JSON，手工指定的关联问题 id 数组**，可空) / `pageId`(Int?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId, category])` |
 
 设计口径：
 
+- **`answerHtml` = 答案的结构化富文本（ADR-058）**：白名单 `p / ol / ul / li / b / strong / i / em / u / s / br`，属性一律丢弃；`answer` 是它的纯文本派生列（JSON-LD、搜索、摘要读 `answer`）。只存纯文本时由 `plainTextToFaqHtml` 按「连续编号 → 有序列表」还原结构。
+- **`relatedIds` = 详情页「关联问题」的手工挑选（ADR-057）**：存同站点 `FaqItem` id 数组，顺序即渲染顺序；为空＝沿用「同分类其它问答前 8 条」自动口径。只影响该条详情页的 `faq-list` 块，不动列表页。
 - **`featured` = 列表页「上架展示」开关（ADR-055）**：只控制该问答是否进入问答列表页的分类区块与全部问题列表；`false` 时**详情页仍然存在、仍可访问、仍在 sitemap 与 JSON-LD 里**，只是不在列表页铺开。默认 `true`（存量行为不变），条目过百后由运营逐条收敛。
 - **`pageId` 为 `Page` 弱引用（不建外键）**：与「发布产物可被站点编辑器独立删除」的现实一致；引用完整性由业务层保障——编辑时 `pageId` 为空或页面缺失会按 slug **补建/挂接**页面。
 - **`slug` 创建后不可修改**（编辑 DTO 不收 slug），访问地址 `path = /news/{slug}`、`/faq/{slug}` 由 slug 拼出，保证 URL 稳定性（GEO 前提）。

@@ -20,7 +20,7 @@
  *   所有分类的面板**全量渲染进 HTML**（非当前页签用 CSS 隐藏），保证静态产物里问答文本完整可抓，
  *   与 FAQPage 结构化数据（geo-docs 从块数据生成）一致；无 JS 时也能看到首个页签的第一页。
  */
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import type { BlockContext } from '@trillion/shared'
 
 interface BoardItem {
@@ -43,7 +43,7 @@ defineBlock({
       key: 'items',
       label: '问答',
       type: 'list',
-      hint: '由后台「高频问答」自动同步：已发布问答全量写入，cat 决定它归到哪个页签',
+      hint: '由后台「常见问题」自动同步：已发布问答全量写入，cat 决定它归到哪个页签',
       item: {
         type: 'group',
         fields: [
@@ -187,6 +187,38 @@ function clearQuery() {
   syncUrl()
 }
 
+/**
+ * 卡片折叠（ADR-058）：固定高度 + 可展开，判定方式与 faq-list 一致（实测 scrollHeight）。
+ * key 用 `cat-index`，切换页签 / 搜索时互不干扰。
+ */
+const openedCards = reactive(new Set<string>())
+const overflowingCards = reactive(new Set<string>())
+
+function isOpenCard(key: string): boolean {
+  return openedCards.has(key)
+}
+
+function toggleCard(key: string) {
+  if (openedCards.has(key)) openedCards.delete(key)
+  else openedCards.add(key)
+  nextTick(() => measureCards())
+}
+
+function measureCards() {
+  const nodes = boardTop.value?.querySelectorAll<HTMLElement>('[data-faq-body]')
+  if (!nodes) return
+  nodes.forEach((el) => {
+    const key = el.dataset.faqBody || ''
+    if (!key || openedCards.has(key)) return
+    /** 面板隐藏时 clientHeight 为 0，不参与判定 */
+    if (!el.clientHeight) return
+    if (el.scrollHeight - el.clientHeight > 4) overflowingCards.add(key)
+    else overflowingCards.delete(key)
+  })
+}
+
+onBeforeUnmount(() => window.removeEventListener('resize', measureCards))
+
 /** 挂载后按地址栏还原状态（SSR 产物只有默认状态，这里不触发任何请求） */
 onMounted(() => {
   const params = new URLSearchParams(window.location.search)
@@ -199,6 +231,13 @@ onMounted(() => {
   if (keyword && keyword.trim()) query.value = keyword.trim()
   page.value = Math.min(Math.max(fp, 1), pageCount.value)
   searchPage.value = Math.min(Math.max(fsp, 1), searchPages.value)
+  void nextTick(measureCards)
+  window.addEventListener('resize', measureCards)
+})
+
+/** 切页签 / 翻页 / 搜索后重新测量（隐藏面板的 clientHeight 为 0，不能提前判定） */
+watch([activeCat, page, query, searchPage], () => {
+  void nextTick(measureCards)
 })
 </script>
 
@@ -244,13 +283,32 @@ onMounted(() => {
         role="tabpanel"
         :aria-label="tab.cat"
       >
-        <article v-for="(item, index) in tab.items" :key="`${tab.cat}-${index}`" class="qa" :class="{ 'fq-off': !inPage(index) }">
+        <article
+          v-for="(item, index) in tab.items"
+          :key="`${tab.cat}-${index}`"
+          class="qa"
+          :class="{
+            'fq-off': !inPage(index),
+            'qa-open': isOpenCard(`${tab.cat}-${index}`),
+            'qa-clip': overflowingCards.has(`${tab.cat}-${index}`)
+          }"
+        >
           <NuxtLink class="qa-link" :to="item.href || '#'">
             <span class="qidx">{{ pad(index + 1) }}</span>
             <span class="qt">{{ item.q }}</span>
             <i class="arw" aria-hidden="true"></i>
           </NuxtLink>
-          <div class="ans">{{ item.a }}</div>
+          <!-- eslint-disable-next-line vue/no-v-html -- h 已在服务端白名单化（仅 p/ol/ul/li/行内标记） -->
+          <div v-if="item.h" class="ans" :data-faq-body="`${tab.cat}-${index}`" v-html="item.h" />
+          <div v-else class="ans" :data-faq-body="`${tab.cat}-${index}`">{{ item.a }}</div>
+          <button
+            v-if="overflowingCards.has(`${tab.cat}-${index}`)"
+            type="button"
+            class="ans-toggle"
+            @click="toggleCard(`${tab.cat}-${index}`)"
+          >
+            {{ isOpenCard(`${tab.cat}-${index}`) ? '收起' : '展开' }}
+          </button>
         </article>
 
         <nav v-if="tab.items.length > pageSize" class="pager" aria-label="分页">
@@ -274,13 +332,28 @@ onMounted(() => {
         匹配 <b>{{ matched.length }}</b> 条问答<span v-if="matched.length">（关键词：{{ query.trim() }}）</span>
       </p>
 
-      <article v-for="(item, index) in pagedMatched" :key="`hit-${index}`" class="qa">
+      <article
+        v-for="(item, index) in pagedMatched"
+        :key="`hit-${index}`"
+        class="qa"
+        :class="{ 'qa-open': isOpenCard(`hit-${index}`), 'qa-clip': overflowingCards.has(`hit-${index}`) }"
+      >
         <NuxtLink class="qa-link" :to="item.href || '#'">
           <span class="qidx">{{ pad((searchPage - 1) * pageSize + index + 1) }}</span>
           <span class="qt">{{ item.q }}<span v-if="item.cat" class="fq-cat">{{ item.cat }}</span></span>
           <i class="arw" aria-hidden="true"></i>
         </NuxtLink>
-        <div class="ans">{{ item.a }}</div>
+        <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
+        <div v-if="item.h" class="ans" :data-faq-body="`hit-${index}`" v-html="item.h" />
+        <div v-else class="ans" :data-faq-body="`hit-${index}`">{{ item.a }}</div>
+        <button
+          v-if="overflowingCards.has(`hit-${index}`)"
+          type="button"
+          class="ans-toggle"
+          @click="toggleCard(`hit-${index}`)"
+        >
+          {{ isOpenCard(`hit-${index}`) ? '收起' : '展开' }}
+        </button>
       </article>
 
       <p v-if="!matched.length" class="fq-empty">没有匹配的问答，换个关键词试试。</p>
@@ -372,6 +445,79 @@ onMounted(() => {
 /* 收起 = 不渲染占位（display:none 仍保留在 HTML 里，爬虫与结构化数据口径一致） */
 .fq-off {
   display: none;
+}
+
+/**
+ * 卡片答案（ADR-058）：固定高度 + 可展开，富文本结构（段落 / 列表）完整保留。
+ * 高度按 3 行取，超出裁掉并底部渐隐；展开后自适应。
+ */
+.fq-board .qa .ans {
+  position: relative;
+  max-height: 5.9em;
+  overflow: hidden;
+  transition: max-height 0.18s ease;
+}
+
+.fq-board .qa.qa-clip:not(.qa-open) .ans::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2.4em;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 78%);
+  pointer-events: none;
+}
+
+.fq-board .qa.qa-open .ans {
+  max-height: none;
+}
+
+
+.fq-board .qa .ans p {
+  margin: 0 0 10px;
+}
+
+.fq-board .qa .ans p:last-child {
+  margin-bottom: 0;
+}
+
+.fq-board .qa .ans ol,
+.fq-board .qa .ans ul {
+  margin: 0 0 10px;
+  padding-left: 1.4em;
+}
+
+.fq-board .qa .ans ol {
+  list-style: decimal;
+}
+
+.fq-board .qa .ans ul {
+  list-style: disc;
+}
+
+.fq-board .qa .ans li {
+  margin-bottom: 6px;
+}
+
+.fq-board .qa .ans li:last-child {
+  margin-bottom: 0;
+}
+
+.ans-toggle {
+  display: block;
+  margin: 8px 20px 14px auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--teal-dk);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ans-toggle:hover {
+  text-decoration: underline;
 }
 
 .fq-hit {

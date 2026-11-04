@@ -32,10 +32,17 @@ import { resolveArticleBlocks, type ArticleBlock } from '../../common/utils/arti
 
 /** 相关问答最多条数 */
 export const RELATED_FAQ_MAX = 8
-/** 列表答案摘要截断长度 */
-export const EXCERPT_MAX = 80
 /** hero-dark lead 截断长度 */
 export const LEAD_MAX = 120
+
+/**
+ * 卡片答案文本：**不截断**（ADR-057 配套改动）。
+ * 段落之间保留换行，块侧用 `white-space: pre-line` 还原分段——
+ * 长答案（施工流程这类分点回答）如果压成一段或截到 80 字，运营会以为「数据没抓全」。
+ */
+export function faqAnswerText(paragraphs: string[]): string {
+  return paragraphs.filter(Boolean).join('\n')
+}
 
 /** 新闻详情投影（从 NewsArticle 表映射；id 为表主键） */
 export interface NewsDetail {
@@ -60,8 +67,12 @@ export interface FaqDetail {
   question: string
   category: string
   paragraphs: string[]
+  /** 答案受限富文本（段落 / 列表；卡片与详情页按它渲染结构，为空则回落 paragraphs） */
+  answerHtml: string
   /** 是否在列表页上架展示（false = 只保留详情页，不进分类区块与全部问题列表） */
   featured: boolean
+  /** 手工指定的关联问题 id（空 = 走「同分类其它问答」自动口径） */
+  relatedIds: string[]
   /** 更新时间（YYYY-MM-DD，列表页 post-list 的展示日期） */
   updatedDate: string
 }
@@ -192,7 +203,14 @@ export class NewsFaqSyncService {
    * 模板没有的块不会被凭空创建，只按模板骨架替换内容。
    */
   buildFaqDetailBlocks(
-    input: { question: string; category: string; paragraphs: string[]; related: FaqDetail[] },
+    input: {
+      question: string
+      category: string
+      paragraphs: string[]
+      /** 答案富文本（有则作为单一 rich 块渲染，保住段落与列表结构） */
+      answerHtml?: string
+      related: FaqDetail[]
+    },
     template: BlockInstanceInput[],
     oldBlocks?: unknown
   ): BlockInstanceInput[] {
@@ -210,13 +228,17 @@ export class NewsFaqSyncService {
 
     const relatedItems = input.related.slice(0, RELATED_FAQ_MAX).map((item) => ({
       q: item.question,
-      a: truncate(item.paragraphs.join(''), EXCERPT_MAX)
+      a: faqAnswerText(item.paragraphs)
     }))
 
     /** 详情页正文块：优先 article-body（长文），其次 faq-detail（短答） */
     const overrides: Record<string, Record<string, unknown> | null> = {
       'hero-dark': hero,
-      'article-body': { blocks: input.paragraphs.map((text) => ({ kind: 'paragraph', text })) },
+      'article-body': {
+        blocks: input.answerHtml
+          ? [{ kind: 'rich', html: input.answerHtml }]
+          : input.paragraphs.map((text) => ({ kind: 'paragraph', text }))
+      },
       'faq-detail': { cat: input.category, question: input.question, paragraphs: input.paragraphs },
       'faq-list': { items: relatedItems }
     }
@@ -226,10 +248,36 @@ export class NewsFaqSyncService {
     if (firstHead >= 0) {
       next[firstHead] = {
         ...next[firstHead],
-        data: { ...next[firstHead].data, title: input.question, desc: `高频问答 · ${input.category}` }
+        data: { ...next[firstHead].data, title: input.question, desc: `常见问题 · ${input.category}` }
       }
     }
+    /** 关联问题区块补标题（模板里没写时才补，运营自定义过的不动） */
+    for (const block of next) {
+      if (block.key !== 'faq-list') continue
+      if (String(block.data?.title ?? '').trim()) continue
+      block.data = { ...block.data, title: '关联问题' }
+      break
+    }
     return withStableIds(next, oldBlocks)
+  }
+
+  /**
+   * 详情页「关联问题」取数（ADR-057）：
+   *   手工指定的 relatedIds 优先（按保存顺序，只取已发布、非自身、丢失的记录自动跳过）；
+   *   没指定（或指定的全部失效）时回落到「同分类其它问答」——即改动前的自动口径。
+   */
+  resolveRelated(
+    detail: { id: string; category: string; relatedIds: string[] },
+    all: FaqDetail[]
+  ): FaqDetail[] {
+    const manual: FaqDetail[] = []
+    for (const id of detail.relatedIds) {
+      const hit = all.find((item) => item.id === id && item.id !== detail.id)
+      if (hit && !manual.some((picked) => picked.id === hit.id)) manual.push(hit)
+    }
+    if (manual.length) return manual.slice(0, RELATED_FAQ_MAX)
+
+    return all.filter((item) => item.category === detail.category && item.id !== detail.id)
   }
 
   // ---------------- 详情数据装载（表驱动：管理表是唯一事实来源） ----------------
@@ -267,7 +315,9 @@ export class NewsFaqSyncService {
         question: true,
         category: true,
         answer: true,
+        answerHtml: true,
         featured: true,
+        relatedIds: true,
         updatedAt: true
       }
     })
@@ -280,7 +330,12 @@ export class NewsFaqSyncService {
         question: row.question,
         category: row.category,
         paragraphs: splitParagraphs(row.answer),
+        answerHtml: row.answerHtml ?? '',
         featured: row.featured,
+        /** relatedIds 为 JSON 列：只认字符串数组，脏数据按「未指定」处理 */
+        relatedIds: Array.isArray(row.relatedIds)
+          ? row.relatedIds.filter((id): id is string => typeof id === 'string')
+          : [],
         updatedDate: toDateString(row.updatedAt)
       }))
       .sort((a, b) => a.seq - b.seq)
@@ -318,8 +373,8 @@ export class NewsFaqSyncService {
   }
 
   /**
-   * 问答增删改后的同步：重算 /faq 列表页（分类分组 items / hero 分类 / 核心问题详解）
-   * 与受影响分类下所有详情页的相关问答
+   * 问答增删改后的同步：重算 /faq 列表页（分类区块 / hero 分类 / 分类页签）
+   * 与受影响分类下所有详情页的关联问题（手工指定优先，见 resolveRelated）
    * @param ownPageIds 参与本次变更的问答详情页 id（删除时为空）
    * @param categories 受影响分类（编辑换分类时传旧 + 新两个）
    */
@@ -337,17 +392,16 @@ export class NewsFaqSyncService {
       affected.add(listPage.id)
     }
 
-    /** 受影响分类的所有详情页重算相关问答（同分类其它问答前 8 条；页面缺失的行跳过） */
+    /** 受影响分类的所有详情页重算关联问题（页面缺失的行跳过） */
     const changed = new Set(categories.filter(Boolean))
     for (const detail of all) {
       if (!changed.has(detail.category)) continue
       if (detail.pageId == null) continue
       const page = await this.prisma.page.findUnique({ where: { id: detail.pageId }, select: { id: true, blocks: true } })
       if (!page) continue
-      const items = all
-        .filter((item) => item.category === detail.category && item.id !== detail.id)
+      const items = this.resolveRelated(detail, all)
         .slice(0, RELATED_FAQ_MAX)
-        .map((item) => ({ q: item.question, a: truncate(item.paragraphs.join(''), EXCERPT_MAX) }))
+        .map((item) => ({ q: item.question, a: faqAnswerText(item.paragraphs), h: item.answerHtml }))
       const next = normalizeBlockInstances(page.blocks).map((inst) =>
         inst.key === 'faq-list' ? { ...inst, data: { ...inst.data, items } } : inst
       )
@@ -397,13 +451,14 @@ export class NewsFaqSyncService {
       }))
 
     /** 分类页签块的全量条目：按分类出现顺序聚合，分类内按序号倒序（新增恒排最前） */
-    const boardItems: { cat: string; q: string; a: string; href: string }[] = []
+    const boardItems: { cat: string; q: string; a: string; h: string; href: string }[] = []
     for (const category of categories) {
       for (const detail of details.filter((detail) => detail.category === category).sort((a, b) => b.seq - a.seq)) {
         boardItems.push({
           cat: category,
           q: detail.question,
-          a: truncate(detail.paragraphs.join(''), EXCERPT_MAX),
+          a: faqAnswerText(detail.paragraphs),
+          h: detail.answerHtml,
           href: detail.path
         })
       }
@@ -420,7 +475,8 @@ export class NewsFaqSyncService {
           .filter((detail) => detail.category === key || (inst.data?.title ?? '') === detail.category)
           .map((detail) => ({
             q: detail.question,
-            a: truncate(detail.paragraphs.join(''), EXCERPT_MAX)
+            a: faqAnswerText(detail.paragraphs),
+            h: detail.answerHtml
           }))
         return { ...inst, data: { ...inst.data, items } }
       }

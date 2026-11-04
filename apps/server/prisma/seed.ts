@@ -221,7 +221,7 @@ async function main() {
   const sitesProducts = await upsertMenu({ title: '产品体系', parentId: sitesRoot.id, path: '/sites/products', sort: 12 })
   const sitesCases = await upsertMenu({ title: '成功案例', parentId: sitesRoot.id, path: '/sites/cases', sort: 14 })
   const sitesNews = await upsertMenu({ title: '新闻资讯', parentId: sitesRoot.id, path: '/sites/news', sort: 20 })
-  const sitesFaqs = await upsertMenu({ title: '高频问答', parentId: sitesRoot.id, path: '/sites/faqs', sort: 30 })
+  const sitesFaqs = await upsertMenu({ title: '常见问题', parentId: sitesRoot.id, path: '/sites/faqs', sort: 30 })
   /** 内容域父菜单（容器，本身不可点击）：让「内容 / 页面」与「块库」等同级并列 */
   const contentRoot = await upsertMenu({ title: '内容管理', parentId: null, path: null, sort: 3 })
   const members = await upsertMenu({ title: '会员管理', parentId: null, path: '/members', sort: 4 })

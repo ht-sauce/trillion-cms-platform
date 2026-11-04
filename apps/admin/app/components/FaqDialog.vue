@@ -1,9 +1,10 @@
 <script setup lang="ts">
 /**
- * 高频问答弹窗（新建 / 编辑）
+ * 常见问题弹窗（新建 / 编辑）
  * 规范：弹窗一律独立组件，defineModel 控显隐、emit('saved') 通知父页面刷新
  * 分类下拉可搜可建（allow-create），选项来自父页面传入的分类清单
  * 列表接口不返回答案，编辑打开时拉单条详情回显
+ * 答案用受限富文本编辑器（ADR-058）：保留段落与有序/无序列表结构，前台按结构渲染
  */
 import { ElMessage } from 'element-plus'
 import { newsFaqApi, type FaqItem } from '~/config/api'
@@ -26,9 +27,39 @@ const { loading: saving, run, isLoading, runKeyed } = useLoading()
 const form = reactive({
   question: '',
   category: '',
-  answer: '',
+  /** 答案受限富文本（段落 / 列表 / 行内标记） */
+  answerHtml: '',
   featured: true
 })
+
+/** 富文本 → 纯文本（提交时一并带上，供 JSON-LD / 搜索用；服务端还会再派生一次兜底） */
+function htmlToPlain(html: string): string {
+  return String(html || '')
+    .replace(/<\/(p|li)>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** 历史数据只有纯文本时，回显成段落 HTML（编辑一次即转为结构化） */
+function plainToHtml(text: string): string {
+  const paragraphs = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  return paragraphs.length ? paragraphs.map((line) => `<p>${escapeHtml(line)}</p>`).join('') : ''
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
 /** 编辑对象（打开后不再变化，供提交分支判断） */
 const editing = computed(() => props.faq)
@@ -38,14 +69,15 @@ watch(visible, (open) => {
   if (!open) return
   form.question = props.faq?.question ?? ''
   form.category = props.faq?.category ?? ''
-  form.answer = ''
+  form.answerHtml = ''
   form.featured = props.faq?.featured ?? true
   if (props.faq) {
     void runKeyed('detail', async () => {
       const detail = await newsFaqApi.faqDetail(props.faq!.id)
       form.question = detail.question ?? form.question
       form.category = detail.category ?? form.category
-      form.answer = detail.answer ?? ''
+      /** 有富文本用富文本；历史数据只有纯文本时按段落拆成 HTML */
+      form.answerHtml = detail.answerHtml || plainToHtml(detail.answer ?? '')
       form.featured = detail.featured ?? form.featured
     })
   }
@@ -66,10 +98,17 @@ const submit = debounce(() => {
     return
   }
 
+  const answer = htmlToPlain(form.answerHtml)
+  if (!answer.trim()) {
+    ElMessage.warning('请输入答案')
+    return
+  }
+
   const payload = {
     question: form.question.trim(),
     category: form.category.trim(),
-    answer: form.answer,
+    answer,
+    answerHtml: form.answerHtml,
     featured: form.featured
   }
 
@@ -109,7 +148,7 @@ const submit = debounce(() => {
         <span class="c-mute switch-hint">关闭后不进问答列表页的分类区块与全部问题列表，详情页仍可访问</span>
       </el-form-item>
       <el-form-item label="答案">
-        <PlainTextEditor v-model="form.answer" placeholder="请输入答案" />
+        <FaqAnswerEditor v-model="form.answerHtml" placeholder="输入答案；分点内容用编号列表，前台会按结构展示" />
       </el-form-item>
     </el-form>
     <template #footer>

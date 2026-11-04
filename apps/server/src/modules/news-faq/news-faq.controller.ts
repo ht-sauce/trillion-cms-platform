@@ -1,7 +1,7 @@
 /**
  * 新闻 / 问答管理接口（news-faq，表驱动）
  *
- * 管理面对「新闻资讯」（NewsArticle 表）与「高频问答」（FaqItem 表）的 CRUD 入口，
+ * 管理面对「新闻资讯」（NewsArticle 表）与「常见问题」（FaqItem 表）的 CRUD 入口，
  * Page（/news/*、/faq/q* 详情页）是发布产物，由服务端随保存自动派生与发布：
  *   GET    /news-faq/articles            文章分页列表
  *   GET    /news-faq/articles/:id/detail 单条文章详情（纯读，直读表，不接收 siteId 参数）
@@ -14,15 +14,24 @@
  *   POST   /news-faq/faqs                新建问答
  *   PATCH  /news-faq/faqs/:id            编辑问答（slug 创建后不可改）
  *   PATCH  /news-faq/faqs/:id/featured   上架状态切换（详情页保留，只影响列表页展示）
+ *   GET    /news-faq/faqs/:id/related    关联问题读取（未手工指定时返回自动口径命中的那组）
+ *   PUT    /news-faq/faqs/:id/related    关联问题保存（空数组 = 恢复自动口径）
  *   DELETE /news-faq/faqs/:id            删除问答
  *
  * 增删改均会：写管理表 → 派生/补建详情页与列表页块 → 自动触发页面级发布，
  * 响应携带 affectedPages（受影响页面）与 publishTaskId（发布任务标识）。
  */
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common'
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { NewsFaqService } from './news-faq.service'
-import { CreateArticleDto, CreateFaqDto, SetFaqFeaturedDto, UpdateArticleDto, UpdateFaqDto } from './dto'
+import {
+  CreateArticleDto,
+  CreateFaqDto,
+  SetFaqFeaturedDto,
+  SetFaqRelatedDto,
+  UpdateArticleDto,
+  UpdateFaqDto
+} from './dto'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { normalizePage, normalizePageSize } from '../../common/constants'
@@ -72,7 +81,7 @@ export class NewsFaqController {
     return this.service.removeArticle(user, id)
   }
 
-  // ---------------- 高频问答 ----------------
+  // ---------------- 常见问题 ----------------
 
   @Get('categories')
   @ApiOperation({ summary: '问答分类清单（FaqItem 表 category 去重）' })
@@ -130,6 +139,22 @@ export class NewsFaqController {
     @Body() dto: SetFaqFeaturedDto
   ) {
     return this.service.setFaqFeatured(user, id, dto.featured)
+  }
+
+  @Get('faqs/:id/related')
+  @ApiOperation({ summary: '关联问题读取（auto=true 表示当前走同分类自动口径）' })
+  getFaqRelated(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.service.getFaqRelated(user, id)
+  }
+
+  @Put('faqs/:id/related')
+  @ApiOperation({ summary: '关联问题保存（按 id 顺序展示；空数组＝恢复同分类自动口径；只重算该详情页并发布）' })
+  setFaqRelated(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetFaqRelatedDto
+  ) {
+    return this.service.setFaqRelated(user, id, dto.ids)
   }
 
   @Delete('faqs/:id')

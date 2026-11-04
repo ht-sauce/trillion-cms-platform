@@ -7,7 +7,7 @@
  * 摘要、检索、GEO 断言依旧只读 `text`（由 html 去标签派生），因此富文本不会污染结构化数据。
  *
  * 白名单收口（入参一律来自管理面，全部在这里过一遍）：
- * - kind 只认 paragraph / heading / image / table / video
+ * - kind 只认 paragraph / heading / image / table / video / rich
  * - 行内只认 b / strong / i / em / u / s / del / code / br，span 仅保留 color / background-color / font-size
  * - 图片与视频地址只认站内静态轨（/static/、/assets/）或 http(s) 外链，data: / javascript: 一律丢弃
  * - 空文本块、无地址图片、无内容的表格直接丢掉
@@ -15,7 +15,7 @@
  * **安全口径**：行内 html 的处理方式是「先整体转义，再把白名单标签还原」，顺序不能反——
  * 先还原再转义等于没做。属性一律丢弃（span 的 style 重新拼装，只保留白名单声明）。
  */
-export type ArticleBlockKind = 'paragraph' | 'heading' | 'image' | 'table' | 'video'
+export type ArticleBlockKind = 'paragraph' | 'heading' | 'image' | 'table' | 'video' | 'rich'
 
 /** 段落 / 小标题 / 表格单元格的对齐方式 */
 export type ArticleAlign = 'left' | 'center' | 'right'
@@ -225,6 +225,18 @@ export function normalizeArticleBody(input: unknown): ArticleBlock[] {
       continue
     }
 
+    /**
+     * rich：块级受限 HTML（段落 / 有序无序列表 / 行内格式）。
+     * 问答答案用它保持「1. 2. 3.」这类分点结构（ADR-058）；
+     * 白名单与 `faq-answer.ts` 同一套（p / ol / ul / li / b / strong / i / em / u / s / br）。
+     */
+    if (kind === 'rich') {
+      const html = sanitizeRichBlockHtml(item.html)
+      if (!html) continue
+      blocks.push({ kind: 'rich', html, text: richHtmlToText(html) })
+      continue
+    }
+
     if (kind !== 'paragraph' && kind !== 'heading') continue
     const inline = readInlineBlock(item)
     if (!inline) continue
@@ -255,6 +267,53 @@ export function articleBlocksToText(blocks: ArticleBlock[]): string {
       if (block.kind === 'image' || block.kind === 'video') return ''
       return block.text || ''
     })
+    .filter(Boolean)
+    .join('\n')
+}
+
+/** 块级富文本白名单标签（与 faq-answer.ts 保持一致） */
+const RICH_BLOCK_TAGS = 'p|ol|ul|li'
+const RICH_INLINE_TAGS = 'b|strong|i|em|u|s'
+/** 单块富文本上限 */
+const RICH_HTML_MAX = 20000
+
+/**
+ * 块级富文本白名单化（rich 块专用）：先整体转义、再还原白名单标签，属性全部丢弃。
+ * 与 `faq-answer.ts#sanitizeFaqAnswerHtml` 同一口径——两处规则必须同步维护。
+ */
+export function sanitizeRichBlockHtml(raw: unknown): string {
+  const text = String(raw ?? '').slice(0, RICH_HTML_MAX)
+  if (!text.trim()) return ''
+  const normalized = text
+    .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(new RegExp(`<(?!\\/?(?:${RICH_BLOCK_TAGS}|${RICH_INLINE_TAGS})\\b)[^>]*>`, 'gi'), '')
+    .replace(new RegExp(`<(\\/?)(?:${RICH_BLOCK_TAGS}|${RICH_INLINE_TAGS})\\b[^>]*>`, 'gi'), '<$1$2>')
+  const escaped = normalized.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const restored = escaped.replace(
+    new RegExp(`&lt;(\\/?)((?:${RICH_BLOCK_TAGS})|(?:${RICH_INLINE_TAGS}))&gt;`, 'gi'),
+    (_all, slash: string, tag: string) => `<${slash}${tag.toLowerCase()}>`
+  )
+  return restored
+    .replace(/<li>\s*<\/li>/gi, '')
+    .replace(/<p>\s*<\/p>/gi, '')
+    .replace(/<(ol|ul)>\s*<\/(ol|ul)>/gi, '')
+    .replace(/\n/g, '<br>')
+    .trim()
+}
+
+/** 富文本块取文（列表项 / 段落各占一行） */
+export function richHtmlToText(html: string): string {
+  return String(html ?? '')
+    .replace(/<\/(p|li)>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
     .filter(Boolean)
     .join('\n')
 }

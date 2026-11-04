@@ -10,7 +10,10 @@
  * 数据字段（ADR-053 / ADR-054）：
  *   blocks[{kind:'paragraph', text, html?, align?}] / [{kind:'heading', text, html?, align?, level}] /
  *   [{kind:'image', src, alt?, caption?}] / [{kind:'table', rows, header?, align?}] /
- *   [{kind:'video', src, poster?, caption?}] / disclaimer
+ *   [{kind:'video', src, poster?, caption?}] / [{kind:'rich', html}] / disclaimer
+ *
+ *   `rich` 是块级受限 HTML（段落 + 有序/无序列表），给问答答案这类自带分点结构的内容用（ADR-058）；
+ *   它只有 html、没有 text，过滤空块时必须单独放行，否则整块会被丢掉（正文变空白）。
  *
  * - 段落 / 小标题的 `html` 是**服务端白名单化后的行内标记**（b/strong/i/em/u/s/del/code/br + 受控 span 样式），
  *   因此可以安全 v-html；无 html 时把纯文本转义后输出。
@@ -83,6 +86,8 @@ const blocks = computed<RenderBlock[]>(() => {
     .filter((block) => {
       if (block.kind === 'image' || block.kind === 'video') return Boolean(block.src)
       if (block.kind === 'table') return Boolean(block.rows?.length)
+      /** rich 块没有 text（结构全在 html 里），漏了这一行整块会被当成空块丢掉 */
+      if (block.kind === 'rich') return Boolean(block.html)
       return Boolean(block.text)
     })
 })
@@ -98,7 +103,7 @@ const disclaimerHtml = computed(() => {
 defineBlock({
   key: 'article-body',
   name: '文章正文',
-  hint: '正文段落 / 小标题 / 图片 / 表格 / 视频 + 合规声明（声明必填）',
+  hint: '正文段落 / 小标题 / 图片 / 表格 / 视频 / 富文本块 + 合规声明（声明必填）',
   fields: [
     {
       key: 'blocks',
@@ -107,7 +112,12 @@ defineBlock({
       item: {
         type: 'group',
         fields: [
-          { key: 'kind', label: '类型', type: 'select', options: ['paragraph', 'heading', 'image', 'table', 'video'] },
+          {
+            key: 'kind',
+            label: '类型',
+            type: 'select',
+            options: ['paragraph', 'heading', 'image', 'table', 'video', 'rich']
+          },
           { key: 'text', label: '文本', type: 'textarea', hint: '段落 / 小标题文本' },
           { key: 'level', label: '标题层级', type: 'number', hint: '小标题用：2 / 3 / 4，缺省 2' },
           { key: 'align', label: '对齐', type: 'select', options: ['', 'left', 'center', 'right'] },
@@ -169,6 +179,10 @@ defineBlock({
         </table>
       </div>
 
+      <!-- rich：块级受限 HTML（段落 + 有序/无序列表，ADR-058 问答答案用），服务端已白名单化 -->
+      <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
+      <div v-else-if="block.kind === 'rich'" class="art-rich" v-html="block.html" />
+
       <!-- eslint-disable-next-line vue/no-v-html -- html 已在服务端白名单化（仅行内标记） -->
       <h2 v-else-if="block.kind === 'heading'" :class="['art-h', `art-h${block.level}`]" :style="alignStyle(block.align)" v-html="block.html || block.text" />
       <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
@@ -181,5 +195,40 @@ defineBlock({
 <style>
 .artbody + .cmpl {
   margin-top: 20px;
+}
+
+/**
+ * rich 块版式（ADR-058）：问答答案这类自带分点结构的内容
+ * 列表要有缩进与行距，否则「1. 2. 3.」读起来仍是挤在一起。
+ */
+.artbody .art-rich p {
+  margin: 0 0 14px;
+}
+
+.artbody .art-rich p:last-child {
+  margin-bottom: 0;
+}
+
+.artbody .art-rich ol,
+.artbody .art-rich ul {
+  margin: 0 0 14px;
+  padding-left: 1.5em;
+}
+
+.artbody .art-rich ol {
+  list-style: decimal;
+}
+
+.artbody .art-rich ul {
+  list-style: disc;
+}
+
+.artbody .art-rich li {
+  margin-bottom: 8px;
+  line-height: 1.9;
+}
+
+.artbody .art-rich li:last-child {
+  margin-bottom: 0;
 }
 </style>

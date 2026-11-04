@@ -1,10 +1,10 @@
 /**
- * 新闻资讯 / 高频问答接口（news-faq 模块）
+ * 新闻资讯 / 常见问题接口（news-faq 模块）
  * 两类内容以独立数据表为管理源：列表 / 详情直接读表，增删改都按表记录 id 寻址；
  * pageId 为关联页面 id（可空，仅供展示关联关系），保存后由服务端自动触发站点构建
  * 列表接口不返回正文，编辑回显走各单条详情接口（articleDetail / faqDetail，不传 siteId）
  */
-import { get, post, patch, del, type Paged } from './http'
+import { get, post, patch, put, del, type Paged } from './http'
 
 /** 新闻文章列表项 */
 export interface NewsArticleItem {
@@ -73,7 +73,7 @@ export interface NewsArticlePayload {
   slug?: string
 }
 
-/** 高频问答列表项 */
+/** 常见问题列表项 */
 export interface FaqItem {
   /** 表记录 ID（问答管理源定位，增删改都按它寻址） */
   id: string
@@ -87,17 +87,31 @@ export interface FaqItem {
   featured: boolean
 }
 
-/** 高频问答详情（含答案，编辑回显用） */
+/** 常见问题详情（含答案，编辑回显用） */
 export interface FaqDetail extends FaqItem {
-  /** 答案纯文本（段落间 \n 分隔） */
+  /** 答案纯文本（段落间 \n 分隔；JSON-LD / 搜索用） */
   answer: string
+  /** 答案受限富文本（段落 / 有序无序列表 / 行内标记；编辑回显与前台结构展示用，历史数据可能为空） */
+  answerHtml: string
 }
 
-/** 高频问答保存载荷（发布日期为新闻资讯专属，问答无此字段） */
+/** 关联问题回显（auto=true 表示当前走「同分类其它问答」自动口径） */
+export interface FaqRelatedInfo {
+  id: string
+  auto: boolean
+  /** 按展示顺序排列的关联问答 id */
+  ids: string[]
+  items: { id: string; question: string; category: string }[]
+}
+
+/** 常见问题保存载荷（发布日期为新闻资讯专属，问答无此字段） */
 export interface FaqPayload {
   question: string
   category: string
+  /** 答案纯文本（由富文本去标签派生；服务端在只收到 answerHtml 时也会自己派生） */
   answer?: string
+  /** 答案受限富文本（服务端白名单化后才入库） */
+  answerHtml?: string
   /** 是否在列表页上架展示 */
   featured?: boolean
 }
@@ -121,7 +135,7 @@ export const newsFaqApi = {
     return del<{ id: string }>(`/news-faq/articles/${id}`)
   },
 
-  // ---------------- 高频问答 ----------------
+  // ---------------- 常见问题 ----------------
   faqList(params: {
     siteId: string
     page?: number
@@ -137,7 +151,7 @@ export const newsFaqApi = {
   faqCategories(siteId: string) {
     return get<{ list: string[] }>('/news-faq/categories', { siteId })
   },
-  /** 高频问答单条详情（列表不含答案，编辑弹窗回显用；按表记录 id 寻址） */
+  /** 常见问题单条详情（列表不含答案，编辑弹窗回显用；按表记录 id 寻址） */
   faqDetail(id: string) {
     return get<FaqDetail>(`/news-faq/faqs/${id}/detail`)
   },
@@ -150,6 +164,14 @@ export const newsFaqApi = {
   /** 上架状态切换（只影响问答列表页展示，详情页保留；服务端重算列表页并触发发布） */
   setFaqFeatured(id: string, featured: boolean) {
     return patch<{ id: string; featured: boolean }>(`/news-faq/faqs/${id}/featured`, { featured })
+  },
+  /** 关联问题读取（未手工指定时返回自动口径实际命中的那组） */
+  getFaqRelated(id: string) {
+    return get<FaqRelatedInfo>(`/news-faq/faqs/${id}/related`)
+  },
+  /** 关联问题保存（按数组顺序展示；传空数组 = 恢复自动口径） */
+  setFaqRelated(id: string, ids: string[]) {
+    return put<{ id: string; ids: string[]; auto: boolean }>(`/news-faq/faqs/${id}/related`, { ids })
   },
   removeFaq(id: string) {
     return del<{ id: string }>(`/news-faq/faqs/${id}`)

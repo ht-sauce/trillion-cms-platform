@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * 高频问答管理：按站点隔离的问答列表 + 关键词/分类/上架状态筛选 + 新建/编辑/删除
+ * 常见问题（问答）管理：按站点隔离的问答列表 + 关键词/分类/上架状态筛选 + 新建/编辑/关联问题/删除
  * 问答以独立数据表为管理源（id 寻址，pageId 仅表示关联页面），保存后由服务端自动触发站点构建
  * 分类下拉选项来自分类接口（去重清单），新建问答可输入新分类，保存后刷新分类
  * 「上架」开关只决定是否进问答列表页的分类区块与全部问题列表（ADR-055）：
@@ -30,6 +30,9 @@ const pageSize = ref(PAGE_SIZE_DEFAULT)
 /** 弹窗状态：editing 为 null 表示新建 */
 const dialogVisible = ref(false)
 const editing = ref<FaqItem | null>(null)
+/** 关联问题弹窗（详情页底部「关联问题」的手工挑选） */
+const relatedVisible = ref(false)
+const relatedFaq = ref<FaqItem | null>(null)
 
 async function loadSites() {
   const result = await sitesApi.list({ pageSize: 100 })
@@ -68,6 +71,11 @@ function openCreate() {
 function openEdit(row: FaqItem) {
   editing.value = row
   dialogVisible.value = true
+}
+
+function openRelated(row: FaqItem) {
+  relatedFaq.value = row
+  relatedVisible.value = true
 }
 
 const onRemove = debounce(
@@ -136,7 +144,7 @@ onMounted(async () => {
 <template>
   <div class="page-wrap">
     <div class="bar">
-      <span class="panel-title">高频问答</span>
+      <span class="panel-title">常见问题</span>
       <el-select v-model="siteId" size="small" placeholder="选择站点" style="width: 200px">
         <el-option v-for="s in sites" :key="s.id" :label="s.name" :value="s.id" />
       </el-select>
@@ -196,8 +204,9 @@ onMounted(async () => {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="100" fixed="right" class-name="ops-col">
+      <el-table-column label="操作" width="160" fixed="right" class-name="ops-col">
         <template #default="{ row }">
+          <el-button link size="small" @click="openRelated(row)">关联问题</el-button>
           <el-button link size="small" type="primary" @click="openEdit(row)">编辑</el-button>
           <el-button link size="small" type="danger" :loading="isLoading(`remove:${row.id}`)" @click="onRemove(row)">
             删除
@@ -218,6 +227,13 @@ onMounted(async () => {
     </div>
 
     <FaqDialog v-model="dialogVisible" :site-id="siteId" :faq="editing" :categories="categories" @saved="onSaved" />
+    <FaqRelatedDialog
+      v-model="relatedVisible"
+      :site-id="siteId"
+      :faq="relatedFaq"
+      :categories="categories"
+      @saved="load"
+    />
   </div>
 </template>
 

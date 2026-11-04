@@ -217,10 +217,12 @@ flowchart LR
 | DELETE | `/news-faq/articles/:id`        | 删除文章（删发布产物页面与表记录）                                        | JWT-A |
 | GET    | `/news-faq/faqs`                | 问答分页列表（读 `FaqItem` 表：`?siteId&page&pageSize&keyword&category&featured`，keyword 模糊匹配 question，按 slug 倒序；`featured=1/0` 只看上架 / 只看未上架，缺省不限；行含 `id, path, question, category, status, featured, pageId`） | JWT-A |
 | GET    | `/news-faq/categories`          | 问答分类清单（`?siteId`，`FaqItem.category` 去重，按首次出现顺序）        | JWT-A |
-| GET    | `/news-faq/faqs/:id/detail`     | 单条问答详情（**直读表，不接收 siteId 参数**；返回 `{ id, pageId, path, question, category, status, featured, slug, answer }`，`answer` 为纯文本答案） | JWT-A |
-| POST   | `/news-faq/faqs`                | 新建问答（`{ siteId, question, category, answer, featured? }`；`path=/faq/q{三位序号}`，取现有最大序号 +1；`featured` 缺省 `true`） | JWT-A |
-| PATCH  | `/news-faq/faqs/:id`            | 编辑问答（`{ question?, category?, answer?, featured? }`；**slug 创建后不可改**；换分类时新旧分类的列表页与 related-faq 都重算；页面缺失自动补建） | JWT-A |
+| GET    | `/news-faq/faqs/:id/detail`     | 单条问答详情（**直读表，不接收 siteId 参数**；返回 `{ id, pageId, path, question, category, status, featured, slug, answer, answerHtml }`，`answer` 纯文本、`answerHtml` 受限富文本（后台编辑器回显用）） | JWT-A |
+| POST   | `/news-faq/faqs`                | 新建问答（`{ siteId, question, category, answer, answerHtml?, featured? }`；`path=/faq/q{三位序号}`，取现有最大序号 +1；`featured` 缺省 `true`；`answerHtml` 服务端白名单化并以它为准派生 `answer`） | JWT-A |
+| PATCH  | `/news-faq/faqs/:id`            | 编辑问答（`{ question?, category?, answer?, answerHtml?, featured? }`；**slug 创建后不可改**；换分类时新旧分类的列表页与 related-faq 都重算；页面缺失自动补建） | JWT-A |
 | PATCH  | `/news-faq/faqs/:id/featured`   | 上架开关（`{ featured: boolean }`；**只改 `featured` + 重算 `/faq` 列表页 + 发布**，不重写详情页、不重算 related-faq） | JWT-A |
+| GET    | `/news-faq/faqs/:id/related`    | 关联问题读取（返回 `{ id, auto, ids, items }`；`auto=true` 表示还没手工指定，`ids/items` 是当下自动口径实际命中的那组） | JWT-A |
+| PUT    | `/news-faq/faqs/:id/related`    | 关联问题保存（`{ ids: string[] }`，按数组顺序展示；**空数组＝恢复自动口径**；校验同站点、排除自身、去重、上限 8；只重算该详情页的 `faq-list` 并发布） | JWT-A |
 | DELETE | `/news-faq/faqs/:id`            | 删除问答（删发布产物页面与表记录）                                        | JWT-A |
 
 > 保存即发布：表记录 `status` 恒为 `published`（管理端保存免审核，与站点编辑器保存行为一致）。

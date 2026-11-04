@@ -26,7 +26,17 @@ import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
 import { articleBlocksToText, normalizeArticleBody } from '../../common/utils/article-body'
 import type { BlockInstanceInput } from '../../common/utils/block-instances'
-import { parseFaqSeq, pad3, splitParagraphs, truncate, NewsFaqSyncService } from './news-faq-sync.service'
+import {
+  RELATED_FAQ_MAX,
+  faqAnswerText,
+  parseFaqSeq,
+  pad3,
+  splitParagraphs,
+  truncate,
+  NewsFaqSyncService
+} from './news-faq-sync.service'
+import { normalizeBlockInstances } from '../../common/utils/content-hash'
+import { resolveFaqAnswer } from '../../common/utils/faq-answer'
 import type { CreateArticleDto, CreateFaqDto, UpdateArticleDto, UpdateFaqDto } from './dto'
 
 /** 新建问答/文章时页面摘要的截断长度（summary 列上限 512） */
@@ -275,7 +285,7 @@ export class NewsFaqService {
     return { id: row.id, pageId: linked?.id ?? null, affectedPages, publishTaskId }
   }
 
-  // ---------------- 高频问答 ----------------
+  // ---------------- 常见问题（问答） ----------------
 
   /**
    * 问答分页列表（读 FaqItem 表，按 slug 倒序——新增序号最大恒排最前）
@@ -353,7 +363,9 @@ export class NewsFaqService {
       status: row.status,
       featured: row.featured,
       slug: row.slug,
-      answer: row.answer
+      answer: row.answer,
+      /** 富文本答案（后台编辑器回显用；为空表示历史数据只有纯文本） */
+      answerHtml: row.answerHtml ?? ''
     }
   }
 
@@ -361,12 +373,15 @@ export class NewsFaqService {
   async createFaq(user: AuthUser, dto: CreateFaqDto) {
     const siteId = dto.siteId
     assertSiteAccess(user, siteId)
-    const channel = await this.resolveSectionChannel(siteId, '/faq', '高频问答')
+    const channel = await this.resolveSectionChannel(siteId, '/faq', '常见问题')
 
     const slug = await this.autoFaqSlug(siteId)
     await this.assertPathFree(siteId, joinPath(channel.path, slug))
 
-    const paragraphs = splitParagraphs(dto.answer)
+    /** 答案结构化：answerHtml 优先（富文本），只给纯文本时按编号规则还原列表结构（ADR-058） */
+    const resolved = resolveFaqAnswer({ answer: dto.answer, answerHtml: dto.answerHtml })
+    if (!resolved.answer.trim()) throw new BadRequestException('答案不能为空')
+    const paragraphs = splitParagraphs(resolved.answer)
     const summary = truncate(paragraphs.join(''), SUMMARY_MAX)
 
     const row = await this.prisma.faqItem.create({
@@ -374,7 +389,8 @@ export class NewsFaqService {
         siteId,
         question: dto.question,
         category: dto.category,
-        answer: dto.answer,
+        answer: resolved.answer,
+        answerHtml: resolved.answerHtml || null,
         slug,
         /** 列表页上架展示：缺省 true（新建即进列表，与改动前口径一致） */
         featured: dto.featured ?? true,
@@ -383,18 +399,20 @@ export class NewsFaqService {
       }
     })
 
-    const related = (await this.sync.loadFaqDetails(siteId)).filter(
-      (item) => item.category === dto.category && item.id !== row.id
+    /** 新建问答还没有手工关联，走「同分类其它问答」自动口径 */
+    const related = this.sync.resolveRelated(
+      { id: row.id, category: dto.category, relatedIds: [] },
+      await this.sync.loadFaqDetails(siteId)
     )
     const template = await this.sync.loadDetailTemplate(siteId, '/faq')
     const blocks = this.sync.buildFaqDetailBlocks(
-      { question: dto.question, category: dto.category, paragraphs, related },
+      { question: dto.question, category: dto.category, paragraphs, answerHtml: resolved.answerHtml, related },
       template
     )
     const pageId = await this.ensureDetailPage({
       siteId,
       section: '/faq',
-      label: '高频问答',
+      label: '常见问题',
       slug,
       title: dto.question,
       summary,
@@ -420,25 +438,41 @@ export class NewsFaqService {
     const oldCategory = row.category
     const question = dto.question ?? row.question
     const category = dto.category ?? row.category
-    const answer = dto.answer !== undefined ? dto.answer : row.answer
+    /**
+     * 答案结构化（ADR-058）：
+     *   传了 answerHtml → 以它为准派生纯文本；只传 answer（纯文本）→ 按编号规则重新还原结构；
+     *   都没传 → 沿用库里既有值（编辑问题/分类时不动答案）
+     */
+    const resolved = dto.answerHtml !== undefined
+      ? resolveFaqAnswer({ answerHtml: dto.answerHtml })
+      : dto.answer !== undefined
+        ? resolveFaqAnswer({ answer: dto.answer })
+        : { answer: row.answer, answerHtml: row.answerHtml ?? '' }
+    const answer = resolved.answer
     const featured = dto.featured ?? row.featured
 
     await this.prisma.faqItem.update({
       where: { id: row.id },
-      data: { question, category, answer, featured }
+      data: { question, category, answer, answerHtml: resolved.answerHtml || null, featured }
     })
 
     const paragraphs = splitParagraphs(answer)
     const summary = truncate(paragraphs.join(''), SUMMARY_MAX)
-    const related = (await this.sync.loadFaqDetails(row.siteId)).filter(
-      (item) => item.category === category && item.id !== row.id
+    /** 关联问题：手工指定的优先，没指定才回落同分类（ADR-057） */
+    const related = this.sync.resolveRelated(
+      { id: row.id, category, relatedIds: this.normalizeRelatedIds(row.relatedIds) },
+      await this.sync.loadFaqDetails(row.siteId)
     )
     const template = await this.sync.loadDetailTemplate(row.siteId, '/faq')
 
     const linked = await this.findLinkedPage(row.pageId, row.siteId, '/faq/')
     let pageId: string
     if (linked) {
-      const blocks = this.sync.buildFaqDetailBlocks({ question, category, paragraphs, related }, template, linked.blocks)
+      const blocks = this.sync.buildFaqDetailBlocks(
+        { question, category, paragraphs, answerHtml: resolved.answerHtml, related },
+        template,
+        linked.blocks
+      )
       /** 答案变化时同步摘要，保持 meta description 与正文一致 */
       await this.prisma.page.update({
         where: { id: linked.id },
@@ -446,11 +480,14 @@ export class NewsFaqService {
       })
       pageId = linked.id
     } else {
-      const blocks = this.sync.buildFaqDetailBlocks({ question, category, paragraphs, related }, template)
+      const blocks = this.sync.buildFaqDetailBlocks(
+        { question, category, paragraphs, answerHtml: resolved.answerHtml, related },
+        template
+      )
       pageId = await this.ensureDetailPage({
         siteId: row.siteId,
         section: '/faq',
-        label: '高频问答',
+        label: '常见问题',
         slug: row.slug,
         title: question,
         summary,
@@ -484,6 +521,87 @@ export class NewsFaqService {
     const affectedPages = await this.sync.syncAfterFaqChange(row.siteId, [], [])
     const publishTaskId = await this.publishAffected(user, row.siteId, affectedPages)
     return { id: row.id, featured, affectedPages, publishTaskId }
+  }
+
+  /**
+   * 关联问题读取（管理端「关联问题」弹窗回显）：
+   * 返回手工指定的 id 列表；未指定时返回当下自动口径实际命中的 id，并标 auto=true，
+   * 运营打开弹窗看到的就是线上那一组，不是空白。
+   */
+  async getFaqRelated(user: AuthUser, id: string) {
+    const row = await this.prisma.faqItem.findUnique({ where: { id } })
+    if (!row) throw new NotFoundException('问答不存在')
+    assertSiteAccess(user, row.siteId)
+
+    const all = await this.sync.loadFaqDetails(row.siteId)
+    const manualIds = this.normalizeRelatedIds(row.relatedIds)
+    const resolved = this.sync.resolveRelated({ id: row.id, category: row.category, relatedIds: manualIds }, all)
+
+    return {
+      id: row.id,
+      /** 是否已手工指定（false = 当前用的是「同分类其它问答」自动口径） */
+      auto: manualIds.length === 0,
+      ids: resolved.slice(0, RELATED_FAQ_MAX).map((item) => item.id),
+      /** 渲染顺序的问答摘要（弹窗右侧已选列表用） */
+      items: resolved.slice(0, RELATED_FAQ_MAX).map((item) => ({
+        id: item.id,
+        question: item.question,
+        category: item.category
+      }))
+    }
+  }
+
+  /**
+   * 关联问题保存：覆盖手工列表（空数组合法＝恢复自动口径）
+   * 校验：必须同站点、排除自身、去重、上限 RELATED_FAQ_MAX；
+   * 保存后只重算**这一条**详情页的 faq-list 并发布（列表页不受影响）。
+   */
+  async setFaqRelated(user: AuthUser, id: string, ids: string[]) {
+    const row = await this.prisma.faqItem.findUnique({ where: { id } })
+    if (!row) throw new NotFoundException('问答不存在')
+    assertSiteAccess(user, row.siteId)
+
+    const unique = [...new Set(ids.filter((value) => value && value !== row.id))]
+    if (unique.length > RELATED_FAQ_MAX) {
+      throw new BadRequestException(`关联问题最多 ${RELATED_FAQ_MAX} 条`)
+    }
+    const owned = await this.prisma.faqItem.findMany({
+      where: { id: { in: unique }, siteId: row.siteId },
+      select: { id: true }
+    })
+    if (owned.length !== unique.length) throw new BadRequestException('包含不属于本站点的问答')
+
+    await this.prisma.faqItem.update({
+      where: { id: row.id },
+      data: { relatedIds: unique.length ? toJsonInput(unique) : Prisma.DbNull }
+    })
+
+    const all = await this.sync.loadFaqDetails(row.siteId)
+    const detail = all.find((item) => item.id === row.id)
+    let affectedPages: string[] = []
+    if (detail?.pageId) {
+      const page = await this.prisma.page.findUnique({ where: { id: detail.pageId }, select: { id: true, blocks: true } })
+      if (page) {
+        const items = this.sync
+          .resolveRelated({ id: row.id, category: row.category, relatedIds: unique }, all)
+          .slice(0, RELATED_FAQ_MAX)
+          .map((item) => ({ q: item.question, a: faqAnswerText(item.paragraphs), h: item.answerHtml }))
+        const next = normalizeBlockInstances(page.blocks).map((inst) =>
+          inst.key === 'faq-list' ? { ...inst, data: { ...inst.data, items } } : inst
+        )
+        await this.prisma.page.update({ where: { id: page.id }, data: { blocks: toJsonInput(next) } })
+        await this.editor.refreshContentHash(page.id)
+        affectedPages = [page.id]
+      }
+    }
+
+    const publishTaskId = await this.publishAffected(user, row.siteId, affectedPages)
+    return { id: row.id, ids: unique, auto: unique.length === 0, affectedPages, publishTaskId }
+  }
+
+  /** relatedIds JSON 列归一化：只认字符串数组，其余（null / 脏数据）视为未指定 */
+  private normalizeRelatedIds(value: unknown): string[] {
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []
   }
 
   /** 删除问答：删关联 Page（发布产物）→ 删表记录 → 重算列表页与该分类 related-faq → 自动发布 */
@@ -557,9 +675,18 @@ export class NewsFaqService {
     const faqs = await this.prisma.faqItem.findMany({ where: { siteId }, orderBy: { slug: 'asc' } })
     for (const row of faqs) {
       const paragraphs = splitParagraphs(row.answer)
-      const related = faqDetails.filter((item) => item.category === row.category && item.id !== row.id)
+      const related = this.sync.resolveRelated(
+        { id: row.id, category: row.category, relatedIds: this.normalizeRelatedIds(row.relatedIds) },
+        faqDetails
+      )
       const linked = await this.findLinkedPage(row.pageId, siteId, '/faq/')
-      const input = { question: row.question, category: row.category, paragraphs, related }
+      const input = {
+        question: row.question,
+        category: row.category,
+        paragraphs,
+        answerHtml: row.answerHtml ?? '',
+        related
+      }
       if (linked) {
         const blocks = this.sync.buildFaqDetailBlocks(input, faqTemplate, linked.blocks)
         await this.prisma.page.update({
@@ -573,7 +700,7 @@ export class NewsFaqService {
         const pageId = await this.ensureDetailPage({
           siteId,
           section: '/faq',
-          label: '高频问答',
+          label: '常见问题',
           slug: row.slug,
           title: row.question,
           summary,

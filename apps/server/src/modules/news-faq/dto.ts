@@ -216,10 +216,16 @@ export class CreateFaqDto {
   @MaxLength(100)
   category: string
 
-  @ApiProperty({ description: '答案纯文本，按换行拆分为段落' })
+  @ApiProperty({ description: '答案（纯文本；未传 answerHtml 时按它还原结构）' })
   @IsString()
   @MinLength(1)
   answer: string
+
+  @ApiPropertyOptional({ description: '答案受限富文本（段落 / 有序无序列表 / 加粗斜体下划线删除线，服务端白名单化）' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  answerHtml?: string
 
   @ApiPropertyOptional({ description: '是否在列表页上架展示（缺省 true；关闭后仅保留详情页）' })
   @IsOptional()
@@ -242,11 +248,17 @@ export class UpdateFaqDto {
   @MaxLength(100)
   category?: string
 
-  @ApiPropertyOptional({ description: '答案纯文本，按换行拆分为段落' })
+  @ApiPropertyOptional({ description: '答案（纯文本）' })
   @IsOptional()
   @IsString()
   @MinLength(1)
   answer?: string
+
+  @ApiPropertyOptional({ description: '答案受限富文本（服务端白名单化；传了它就以它为准派生 answer）' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20000)
+  answerHtml?: string
 
   @ApiPropertyOptional({ description: '是否在列表页上架展示（false = 仅保留详情页，不进列表页）' })
   @IsOptional()
@@ -259,4 +271,12 @@ export class SetFaqFeaturedDto {
   @ApiProperty({ description: '是否在列表页上架展示' })
   @IsBoolean()
   featured: boolean
+}
+
+/** 关联问题保存载荷（空数组 = 恢复「同分类其它问答」自动口径） */
+export class SetFaqRelatedDto {
+  @ApiProperty({ description: '关联问答 id 数组（按展示顺序）', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  ids: string[]
 }

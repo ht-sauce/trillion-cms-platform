@@ -49,7 +49,7 @@ defineBlock({
           ><span> · {{ data.titleHighlight }}</span></template
         >
       </component>
-      <p v-if="data.desc">{{ data.desc }}</p>
+      <p v-if="data.desc" :class="isPageTitle ? 'sec-head-label' : ''">{{ data.desc }}</p>
     </div>
     <NuxtLink v-if="data.moreLabel && data.moreHref" class="more" :to="data.moreHref">
       {{ data.moreLabel }}
@@ -59,23 +59,41 @@ defineBlock({
 
 <style>
 /**
- * 兼任页面主标题时的字号：按原「兜底页头」的 H1 规格（30px / 600）取值，
- * 让去掉重复页头后的视觉重心不变；其余 section-head 仍是 theme-b.css 的 H2 规格。
+ * 兼任页面主标题时的版式（ADR-056 / 2026-11-04 修正）：
+ *   标题独占一行 —— 覆盖预设里 `.sec-head > div` 的「左标题 + 右说明」两列网格，
+ *   否则长问题会把分类标签挤到标题右侧、标题被压成两行；
+ *   副标题（desc，如「常见问题 · 选型」）降级成标题下方的小标签。
  */
+.sec-head--page-title > div {
+  display: block;
+  width: 100%;
+}
+
 .sec-head--page-title h1 {
   font-size: 30px;
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.01em;
   color: var(--ink);
+  max-width: none;
 }
 
 .sec-head--page-title h1 span {
   color: var(--teal-dk);
 }
 
-.sec-head--page-title p {
-  margin-top: 10px;
+.sec-head--page-title p.sec-head-label {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 4px 13px;
+  border-radius: 99px;
+  background: var(--teal-lt);
+  border: 1px solid #bfe9e3;
+  color: #0b5a54;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  max-width: none;
 }
 
 @media (max-width: 640px) {

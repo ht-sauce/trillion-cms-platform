@@ -149,6 +149,17 @@ a {
   padding: 5px 12px;
 }
 
+/**
+ * 实体按钮与表单控件等高（ADR-059）：
+ * 筛选栏里「新建」这类按钮与右侧下拉/输入框并排，24px 对 28px 会差一条边；
+ * 只约束非 link / 非 text 按钮——表格操作列的 `el-button link` 不受影响。
+ */
+.el-button:not(.is-link):not(.is-text) {
+  height: $control-height;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .el-form-item {
   margin-bottom: $sp-2;
 }
@@ -176,16 +187,35 @@ a {
   padding-bottom: 4px !important;
 }
 
+/**
+ * 表单控件高度统一（ADR-059 配套）：
+ *   旧写法给 `.el-input__inner` 强制 `height: $control-height`，而 `.el-select__wrapper` 走
+ *   Element Plus 自己的尺寸变量（--el-component-size-small）——结果是**输入框比下拉框高 4~6px**，
+ *   全后台所有「站点下拉 + 关键词搜索 + 分类下拉」的筛选栏都参差。这是全局尺寸口径问题，
+ *   只能在组件库覆盖层统一，不能每个页面自己去补。
+ * 规则：wrapper 统一到 $control-height（含边框），内部输入框高度交给 wrapper 管理。
+ */
 .el-input__wrapper,
 .el-select__wrapper {
   background: $c-input;
   box-shadow: 0 0 0 1px #{$c-border} inset;
   padding: 3px 8px;
+  height: $control-height;
+  box-sizing: border-box;
+  align-items: center;
 }
 
 .el-input__inner {
   font-size: $font-size-sm;
-  height: $control-height;
+  height: auto;
+  line-height: normal;
+  color: $c-text;
+}
+
+/** 多行文本域不受限高影响（el-textarea 自有自己的 wrapper） */
+.el-textarea__inner {
+  font-size: $font-size-sm;
+  line-height: 1.7;
   color: $c-text;
 }
 

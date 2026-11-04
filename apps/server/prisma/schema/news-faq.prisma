@@ -43,14 +43,18 @@ model FaqItem {
   question String @db.VarChar(200)
   /// 分类（/faq 列表页按分类分组，related-faq 按同分类派生）
   category String @db.VarChar(100)
-  /// 答案纯文本，按 \n 分段（发布时拆为 faq-detail 段落）
+  /// 答案纯文本，按 \n 分段（由 answerHtml 去标签派生，供 JSON-LD / 搜索 / 摘要读）
   answer String @db.Text
+  /// 答案受限富文本（段落 / 有序无序列表 / 加粗斜体下划线删除线，白名单标签；ADR-058）
+  answerHtml String? @map("answer_html") @db.Text
   /// URL 片段，创建后不可修改（访问地址 /faq/{slug}，自动生成形态为 q{三位序号}）
   slug String @db.VarChar(120)
   /// 状态：published=已发布 / draft=草稿（保存即发布口径，默认 published）
   status String @default("published") @db.VarChar(20)
   /// 是否在问答列表页「上架展示」：true=展示在分类区块与全部问题列表；false=仅保留详情页（页面仍可访问，不进列表）
   featured Boolean @default(true) @map("featured")
+  /// 手工指定的关联问题（FaqItem id 数组，按顺序渲染到详情页「关联问题」区）；为空＝自动取同分类问答
+  relatedIds Json? @map("related_ids")
   /// 发布产物页面 ID（Page 表弱引用，未建外键；页面缺失时编辑会自动补建）
   pageId String? @map("page_id") @db.VarChar(36)
   /// 创建时间

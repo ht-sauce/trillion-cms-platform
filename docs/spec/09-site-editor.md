@@ -451,6 +451,8 @@ flowchart LR
 > - 新增 `faq-board`（FAQ 分类页签）：`{ title?, pageSize(默认 10), items: [{ cat, q, a, href }] }`；页签 = `items` 里 `cat` 的去重序列，支持关键词模糊搜索（问题 + 答案摘要 + 分类，多词 AND）与站内分页，状态写地址栏 `?fcat&fp&fq&fsp`（`history.replaceState`，刷新 / 分享可还原）；所有分类面板**全量渲染进 HTML**（非当前页签用 `.fq-off` 收起），静态产物可抓、与 FAQPage 结构化数据一致
 > - `post-list` 新增 `searchable`（switch，默认关）：开启后在列表上方给关键词搜索（标题 + 摘要，多词 AND）；分页从「原生 `<a>` 整页跳转」改为**站内切换**（`@click.prevent` + `?page&q` 同步 + 翻页后 `scrollIntoView` 回列表顶部，`scroll-margin-top: 92px` 避开吸顶头）；`href` 保留作无 JS 兜底
 > - `faq-list`（大分类展示）数据侧只填 `featured=true` 的问答（见 [`06`](./06-publish-and-geo.md) §8），块字段未变
+> - **2026-11-04 三次修订（ADR-058）**：① `faq-list` / `faq-board` 卡片改为**固定高度 + 展开/收起**，答案按受限富文本渲染（`p` / `ol` / `ul` / `li` / 行内标记），渐变只在「确实超出且未展开」时出现；② `article-body` 新增 `rich` 块类型（块级受限 HTML，问答答案用，注意它没有 `text`，过滤空块时要单独放行）；③ 后台问答答案改为富文本编辑（`FaqAnswerEditor`，工具栏只有粗斜下划删除 + 有序无序列表 + 清格式）
+> - **2026-11-04 二次修订（ADR-057）**：① `faq-list` / `faq-board` 的答案**不再截断**（`white-space: pre-line` 保留分段）；② `section-head` 兼任页面主标题时（`.sec-head--page-title`）标题**独占一行**、desc 降级为标题下方的小胶囊标签——原先沿用预设的两列网格会把标签挤到标题右侧、把标题压成两行；③ 详情页关联问题区块未写标题时自动补「关联问题」
 
 字段清单与约束以设计稿 `design/xara-bdf-site/99-blocks.html`（块元素对照总表）为准，其中**必须落实的硬约束**：
 
