@@ -260,8 +260,22 @@ a, button, summary, [onclick],
 .artbody .art-h3{font-size:16px}
 .artbody .art-h4{font-size:15px}
 .artbody .art-fig{margin:22px 0}
-.artbody .art-fig img{width:100%;height:auto;display:block;border-radius:var(--r-md);border:1px solid var(--line);background:#F1F5F9}
+/* 图片永不放大超过原图（小 logo 不被拉满栏宽变糊，ADR-060）；大图按容器宽度缩放 */
+.artbody .art-fig img{max-width:100%;height:auto;display:block;margin:0 auto;border-radius:var(--r-md);border:1px solid var(--line);background:#F1F5F9}
 .artbody .art-fig figcaption{margin-top:8px;font-size:12.4px;color:var(--ink-3);text-align:center;line-height:1.7}
+/* 整篇 HTML 正文（ADR-060）：排版由内容自身的标签与 style 决定，这里只兜底图片不放大、段落间距正常 */
+.artbody .art-html{line-height:1.9}
+.artbody .art-html img{max-width:100%;height:auto}
+.artbody .art-html figure{margin:22px 0}
+.artbody .art-html figcaption{margin-top:8px;font-size:12.4px;color:var(--ink-3);text-align:center;line-height:1.7}
+.artbody .art-html p{margin:0 0 14px}
+.artbody .art-html p:last-child{margin-bottom:0}
+.artbody .art-html h2,.artbody .art-html h3,.artbody .art-html h4{font-weight:800;color:var(--ink);line-height:1.5;margin:28px 0 12px}
+.artbody .art-html h2{font-size:18px}
+.artbody .art-html h3{font-size:16px}
+.artbody .art-html h4{font-size:15px}
+.artbody .art-html ul,.artbody .art-html ol{margin:0 0 14px;padding-left:1.5em}
+.artbody .art-html li{margin-bottom:8px}
 /* 正文视频（2026-11-04，ADR-054）：原生播放器，宽度跟随正文栏 */
 .artbody .art-video{margin:22px 0}
 .artbody .art-video video{width:100%;height:auto;display:block;border-radius:var(--r-md);border:1px solid var(--line);background:#0B1524}

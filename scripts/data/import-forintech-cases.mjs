@@ -47,6 +47,8 @@ const readArg = (name) => {
 const APPLY = hasFlag('--apply')
 const AUDIT_ONLY = hasFlag('--audit-industry')
 const NORMALIZE_INDUSTRY = hasFlag('--normalize-industry')
+/** --show <关键词>：dry-run 时打印该案例解析出的正文 HTML（调试版式用） */
+const SHOW = readArg('--show')
 const SITE_SLUG = readArg('--site') || 'forintech'
 const APP_ENV = readArg('--env') || 'development'
 
@@ -109,16 +111,20 @@ function decodeEntities(text) {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&middot;/g, '·')
+    .replace(/&reg;/g, '®')
+    .replace(/&copy;/g, '©')
+    .replace(/&trade;/g, '™')
     .replace(/&#x?[0-9a-f]+;/gi, ' ')
 }
 
-/** 去标签取可见文本（保留换行） */
+/** 去标签取可见文本（保留换行；零宽字符与不换行空格一并清理，避免「​项目画廊」这类串漏过噪音规则） */
 function toText(html) {
   return decodeEntities(
     String(html ?? '')
-      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<br\b[^>]*>/gi, '\n')
       .replace(/<[^>]+>/g, '')
   )
+    .replace(/[\u200b-\u200d\ufeff]/g, '')
     .replace(/[ \t\u00a0]+/g, ' ')
     .split('\n')
     .map((line) => line.trim())
@@ -164,65 +170,306 @@ function parseList(html) {
   return order
 }
 
+/** 站点页脚 / 轮播控件等固定噪音，不属于案例正文 */
+const DETAIL_NOISE = [
+  /^上一(页)?$/,
+  /^下一(页)?$/,
+  /^上一页下一页$/,
+  /^项目画廊$/,
+  /^画廊$/,
+  /^top of page$/i,
+  /^Forintech[-－]\s/,
+  /^关注我们$/,
+  /^菜单$/,
+  /^接触$/,
+  /^设计者/,
+  /^福林科技/,
+  /^版权所有/,
+  /^​$/,
+  /^\d{1,3}$/
+]
+
+/** 正文区终点标记：只认页脚（原站「上一页 / 下一页」是轮播控件，可能出现在正文中间，交给噪音清单处理） */
+const DETAIL_END_MARKS = ['关注我们', '版权所有', '设计者']
+
+/** 页面导航 / Wix 编辑器残留的特征词：一段文本命中 ≥2 个即判为 chrome，丢弃 */
+const NAV_WORDS = [
+  '网站首页',
+  '关于我们',
+  '产品体系',
+  '解决方案',
+  '关于地坪',
+  '成功案例',
+  '新闻中心',
+  '常见问题',
+  '联络我们',
+  'Use tab'
+]
+
+function isNavNoise(text) {
+  return NAV_WORDS.filter((word) => text.includes(word)).length >= 2
+}
+
 /**
- * 解析详情页：按文档顺序产出 token 流（text / image），
- * 再切成「标题 / 副标题或导语 / 正文段落 / 内容图」。
- * 只保留案例内容图（ecd1b0_ 前缀），原图地址去掉 Wix 的 /v1/fill 变换参数。
+ * 从 img 标签取**最高分辨率**候选地址（srcSet 里取 w_ 数值最大的），
+ * 并去掉 Wix 的 /v1/ 变换段得到原图——小图不会被站点放大导致发糊。
+ */
+function readImgUrl(tag) {
+  const candidates = []
+  const srcSet = /(?:^|\s)srcSet="([^"]+)"/i.exec(tag)
+  if (srcSet) {
+    for (const item of srcSet[1].split(',')) {
+      const url = item.trim().split(/\s+/)[0]
+      const width = Number((/w_(\d+)/i.exec(url) || [])[1] || 0)
+      if (url) candidates.push({ url, width })
+    }
+  }
+  const src = /(?:^|\s)src="([^"]+)"/i.exec(tag)
+  if (src) candidates.push({ url: src[1], width: Number((/w_(\d+)/i.exec(src[1]) || [])[1] || 0) })
+
+  const best = candidates
+    .map((item) => ({ ...item, url: decodeURIComponent(item.url) }))
+    .filter((item) => item.url.includes(CONTENT_IMAGE_PREFIX))
+    .sort((a, b) => b.width - a.width)[0]
+  return best ? best.url.replace(/\/v1\/.*$/i, '') : ''
+}
+
+/** 图片替代文本 */
+function readImgAlt(tag) {
+  const alt = /(?:^|\s)alt="([^"]*)"/i.exec(tag)
+  return alt ? decodeEntities(alt[1]).trim().slice(0, 120) : ''
+}
+
+/** 行内保留标签（服务端还会再过一次白名单，这里只做减负） */
+const INLINE_KEEP = new Set(['span', 'b', 'strong', 'i', 'em', 'u', 's', 'del', 'code', 'br', 'a'])
+/** span 允许保留的样式声明（与 article-html.ts 同口径的子集） */
+const SPAN_STYLE_KEYS = new Set(['color', 'background-color', 'font-size', 'font-weight'])
+
+/** 单个标签 → 只留行内白名单与受控 style，其余标签拆壳只留内容 */
+function cleanInlineTag(match, name, closing) {
+  const tag = name.toLowerCase()
+  if (!INLINE_KEEP.has(tag)) return ''
+  if (closing) return `</${tag}>`
+  if (tag === 'br') return '<br>'
+  if (tag === 'span') {
+    const style = /style="([^"]*)"/i.exec(match)
+    if (!style) return '<span>'
+    const kept = []
+    for (const part of style[1].split(';')) {
+      const index = part.indexOf(':')
+      if (index <= 0) continue
+      const key = part.slice(0, index).trim().toLowerCase()
+      const value = part.slice(index + 1).trim()
+      if (SPAN_STYLE_KEYS.has(key)) kept.push(`${key}:${value}`)
+    }
+    return kept.length ? `<span style="${kept.join(';')}">` : '<span>'
+  }
+  if (tag === 'a') {
+    const href = /href="([^"]*)"/i.exec(match)
+    const safe = href && /^(https?:\/\/|\/)/i.test(href[1]) ? ` href="${href[1]}"` : ''
+    return `<a${safe}>`
+  }
+  return `<${tag}>`
+}
+
+/** 富文本 HTML 收口：只留行内标记与受控 span 样式 */
+function cleanInline(html) {
+  return String(html ?? '')
+    .replace(/<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g, (match, slash, name) =>
+      cleanInlineTag(match, name, slash === '/')
+    )
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** 富文本 HTML → 纯文本（脚本侧派生 body 列） */
+function stripToText(html) {
+  return toText(
+    String(html ?? '')
+      .replace(/<br\b[^>]*>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+  )
+}
+
+/** 行内 HTML 里的最大字号（Wix 用小标题用 20px+ 的 span） */
+function maxFontSize(inner) {
+  let size = 0
+  for (const match of String(inner ?? '').matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/gi)) {
+    size = Math.max(size, Number(match[1]))
+  }
+  return size
+}
+
+/**
+ * 解析详情页：以「案例标题首次出现」为正文起点、页脚 / 翻页控件为终点，
+ * 在区间内按 `<img>` 切分 HTML，**产出保留原文排版的 HTML**（ADR-060）：
+ * - 顺序：段落与图片按原站顺序，不再「段落全在前、图片堆在后」
+ * - 格式：段落保留行内标记（加粗 / 颜色 / 字号）；整块被一个 `<h2>` 包住时按 `<br>` 拆行，
+ *   字号 ≥ 20px 的短行视为小标题（h2），其余为段落（不产出 h1）
+ * - 图片：取最高分辨率原图，`figure > img + figcaption`
+ * - 双列：`图 + 短说明` 交替或「两图 + 两段短说明」并列时用 grid 两列容器
  */
 function parseDetail(html, expectedTitle) {
-  const tokens = []
-  const tokenRe =
-    /data-testid="richTextElement"[^>]*>([\s\S]*?)<\/(?:div|h[1-6]|p|span)>|<img\b[^>]*(?:src|srcSet|data-src)="(https:\/\/static\.wixstatic\.com\/media\/[^"']+?)"/g
-  let match
-  while ((match = tokenRe.exec(html))) {
-    if (match[1]) {
-      const text = toText(match[1]).replace(/\n+/g, '\n')
-      if (text) tokens.push({ type: 'text', text })
-      continue
-    }
-    const url = decodeURIComponent(match[2])
-    if (!url.includes(CONTENT_IMAGE_PREFIX)) continue
-    const original = url.replace(/\/v1\/.*$/i, '')
-    if (!tokens.some((token) => token.type === 'image' && token.url === original)) {
-      tokens.push({ type: 'image', url: original })
-    }
+  const titleAt = html.indexOf(expectedTitle)
+  const start = titleAt >= 0 ? titleAt : 0
+  let end = html.length
+  for (const mark of DETAIL_END_MARKS) {
+    const at = html.indexOf(mark, start + expectedTitle.length)
+    if (at >= 0 && at < end) end = at
   }
 
-  /** 站点页脚等固定文案，不属于案例正文 */
-  const NOISE = [/^关注我们$/, /^菜单$/, /^接触$/, /^设计者/, /^福林科技/, /^版权所有/, /^上一/, /^下一页$/, /^​$/]
+  /** 正文区（去掉脚本 / 样式，避免把 CSS、JS 当正文） */
+  const region = html
+    .slice(start, end)
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+
+  /** 封面：标题上方的首图（原站 hero 大图），缺失时回落正文第一张 */
+  const preImages = (html.slice(0, start).match(/<img\b[^>]*>/gi) || []).map(readImgUrl).filter(Boolean)
+  const coverFallback = preImages.length ? preImages[preImages.length - 1] : ''
 
   const titleNorm = normalizeTitle(expectedTitle)
-  const paragraphs = []
-  const images = []
-  let subtitle = ''
   let titleSeen = false
+  let subtitle = ''
+  let cover = coverFallback
 
-  for (const token of tokens) {
-    if (token.type === 'image') {
-      images.push(token.url)
-      continue
+  /** 线性 token：{type:'image', src, alt} | {type:'html', html, text} */
+  const tokens = []
+
+  /** 一个文本块 → 若干 token：按 <br> 拆行，再按字号判小标题 / 段落 */
+  const pushHtmlChunk = (chunk) => {
+    for (const piece of String(chunk ?? '').split(/<br\b[^>]*>/gi)) {
+      const inner = cleanInline(piece)
+      const text = stripToText(inner)
+      if (!text || DETAIL_NOISE.some((re) => re.test(text)) || isNavNoise(text)) continue
+      if (!titleSeen && (normalizeTitle(text) === titleNorm || text === expectedTitle)) {
+        titleSeen = true
+        continue
+      }
+      if (!subtitle && !tokens.length && text.length <= 60) {
+        subtitle = text
+        continue
+      }
+      const isHeading = maxFontSize(inner) >= 20 && text.length <= 60
+      tokens.push({
+        type: 'html',
+        html: isHeading ? `<h2>${inner}</h2>` : `<p>${inner}</p>`,
+        text,
+        heading: isHeading
+      })
     }
-    const text = token.text.trim()
-    if (!text || NOISE.some((re) => re.test(text))) continue
-    /** 第一个与列表标题一致的文本就是详情页标题，跳过 */
-    if (!titleSeen && (normalizeTitle(text) === titleNorm || text === expectedTitle)) {
-      titleSeen = true
-      continue
-    }
-    /** 紧跟标题的短句视为副标题（详情页 hero 下方一行） */
-    if (!subtitle && !paragraphs.length && text.length <= 40 && images.length <= 1) {
-      subtitle = text
-      continue
-    }
-    paragraphs.push(text)
-    if (paragraphs.length >= 40) break
   }
 
-  const [cover, ...rest] = images
-  return { cover: cover || '', subtitle, paragraphs, images: rest }
+  const imgRe = /<img\b[^>]*>/gi
+  let last = 0
+  let match
+  while ((match = imgRe.exec(region))) {
+    pushHtmlChunk(region.slice(last, match.index))
+    const src = readImgUrl(match[0])
+    if (src) {
+      if (!cover) cover = src
+      const alt = readImgAlt(match[0])
+      const dup = tokens.some((token) => token.type === 'image' && token.src === src)
+      if (!dup) tokens.push({ type: 'image', src, alt })
+    }
+    last = match.index + match[0].length
+  }
+  pushHtmlChunk(region.slice(last))
+
+  /** 双列还原：两种原站常见形态都转成 grid 两列（logo 并排 + 各自说明） */
+  const isShortText = (token) => token && token.type === 'html' && token.text.length <= 120
+  const merged = []
+  let index = 0
+  while (index < tokens.length) {
+    const current = tokens[index]
+    /** 形态一：图, 文, 图, 文（交替） */
+    const pairs = []
+    let cursor = index
+    while (cursor + 1 < tokens.length && tokens[cursor].type === 'image' && isShortText(tokens[cursor + 1])) {
+      pairs.push({ image: tokens[cursor], caption: tokens[cursor + 1] })
+      cursor += 2
+    }
+    if (pairs.length >= 2) {
+      merged.push(buildColumns(pairs))
+      index = cursor
+      continue
+    }
+    /** 形态二：图, 图, 文, 文（两图并排、说明各随其后） */
+    if (
+      current?.type === 'image' &&
+      tokens[index + 1]?.type === 'image' &&
+      isShortText(tokens[index + 2]) &&
+      isShortText(tokens[index + 3])
+    ) {
+      merged.push(
+        buildColumns([
+          { image: tokens[index], caption: tokens[index + 2] },
+          { image: tokens[index + 1], caption: tokens[index + 3] }
+        ])
+      )
+      index += 4
+      continue
+    }
+    merged.push(current)
+    index += 1
+  }
+
+  const parts = []
+  for (const token of merged) {
+    if (token.type === 'image') {
+      parts.push(`<figure><img src="${token.src}"${token.alt ? ` alt="${escapeAttrHtml(token.alt)}"` : ''}></figure>`)
+    } else if (token.html) {
+      parts.push(token.html)
+    }
+  }
+
+  const bodyHtml = parts.join('')
+  return {
+    cover: cover || '',
+    subtitle,
+    bodyHtml,
+    plain: stripToText(bodyHtml),
+    paragraphCount: merged.filter((token) => token.type === 'html' && !/<img /.test(token.html || '')).length,
+    imageCount: merged.reduce((sum, token) => {
+      if (token.type === 'image') return sum + 1
+      return sum + (String(token.html ?? '').match(/<img /g) || []).length
+    }, 0)
+  }
+}
+
+/** 两列容器：每列「图 + 说明」 */
+function buildColumns(pairs) {
+  const cells = pairs
+    .map(
+      (item) =>
+        `<div><img src="${item.image.src}"${item.image.alt ? ` alt="${escapeAttrHtml(item.image.alt)}"` : ''}>${item.caption.html}</div>`
+    )
+    .join('')
+  return {
+    type: 'html',
+    html: `<div style="display:grid;grid-template-columns:repeat(${pairs.length},1fr);gap:24px">${cells}</div>`,
+    text: pairs.map((item) => item.caption.text).join(' ')
+  }
 }
 
 // ---------------- 落库 ----------------
+
+/** 文本转义（HTML 内容） */
+function escapeTextHtml(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+/** 属性值转义 */
+function escapeAttrHtml(text) {
+  return String(text ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+}
 
 /** 图片扩展名与 MIME 推断 */
 const MIME_BY_EXT = {
@@ -252,8 +499,10 @@ function toDownloadUrl(url) {
 
 /** 下载图片并按 StaticFilesService 规则落盘 + 登记 StaticFile，返回 publicUrl */
 async function downloadImage(prisma, siteId, url, caption, attempt = 0) {
+  /** 按原始文件名判重：同一张源图重跑时复用，不重复下载与重复登记 */
+  const originalName = decodeURIComponent(new URL(url).pathname.split('/').pop() || '')
   const existing = await prisma.staticFile.findFirst({
-    where: { siteId, source: SOURCE_TAG, caption },
+    where: { siteId, source: SOURCE_TAG, originalName },
     select: { publicUrl: true }
   })
   if (existing) return existing.publicUrl
@@ -316,13 +565,6 @@ function slugFromUrl(url) {
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 100)
-}
-
-/** 正文块：段落 + 图片按页面顺序 */
-function buildBodyBlocks(paragraphs, imageUrls) {
-  const blocks = paragraphs.map((text) => ({ kind: 'paragraph', text }))
-  for (const src of imageUrls) blocks.push({ kind: 'image', src })
-  return blocks
 }
 
 // ---------------- 主流程 ----------------
@@ -495,7 +737,7 @@ async function main() {
   console.log('')
 
   // ---------------- 计划输出 ----------------
-  const imageCount = plan.reduce((sum, item) => sum + (item.cover ? 1 : 0) + item.images.length, 0)
+  const imageCount = plan.reduce((sum, item) => sum + (item.cover ? 1 : 0) + item.imageCount, 0)
   let updateCount = 0
   let createCount = 0
   console.log('\n[计划] 案例明细：')
@@ -504,13 +746,22 @@ async function main() {
     if (item.existing) updateCount += 1
     else createCount += 1
     console.log(
-      `  ${action} | ${item.title} | 行业=${item.industryName || '未分类'} | 段落=${item.paragraphs.length} | 图=${(item.cover ? 1 : 0) + item.images.length}`
+      `  ${action} | ${item.title} | 行业=${item.industryName || '未分类'} | 段落 ${item.paragraphCount} / 图 ${item.imageCount} | HTML ${item.bodyHtml.length} 字符`
     )
-    if (item.paragraphs.length === 0) console.log('    ⚠ 未解析到正文段落')
+    if (item.paragraphCount === 0) console.log('    ⚠ 未解析到正文段落')
   }
   console.log(
-    `\n[计划] 案例 ${plan.length} 条（更新 ${updateCount} / 新建 ${createCount}）· 图片 ${imageCount} 张 · 正文段落 ${plan.reduce((sum, item) => sum + item.paragraphs.length, 0)} 段`
+    `\n[计划] 案例 ${plan.length} 条（更新 ${updateCount} / 新建 ${createCount}）· 图片 ${imageCount} 张 · 正文段落 ${plan.reduce((sum, item) => sum + item.paragraphCount, 0)} 段`
   )
+
+  if (SHOW) {
+    const target = plan.find((item) => item.title.includes(SHOW))
+    if (!target) console.log(`\n[调试] 没有标题包含「${SHOW}」的案例`)
+    else {
+      console.log(`\n[调试] ${target.title} 的正文 HTML（${target.bodyHtml.length} 字符）：`)
+      console.log(target.bodyHtml.replace(/></g, '>\n<'))
+    }
+  }
 
   if (!APPLY) {
     console.log('\n[DRY-RUN] 未写库、未下载图片。确认无误后加 --apply 执行。')
@@ -530,15 +781,21 @@ async function main() {
       cover = await downloadImage(prisma, siteId, item.cover, `${item.title} · 封面`)
       await sleep(300)
     }
-    const bodyImageUrls = []
-    for (const [imageIndex, url] of item.images.entries()) {
-      bodyImageUrls.push(await downloadImage(prisma, siteId, url, `${item.title} · 正文图 ${imageIndex + 1}`))
+
+    /** 正文 HTML 里的远端图片逐个入库，并原地替换为素材库地址 */
+    const remoteImages = [...new Set([...item.bodyHtml.matchAll(/<img[^>]+src="([^"]+)"/g)].map((m) => m[1]))]
+    const localBySource = new Map()
+    for (const url of remoteImages) {
+      localBySource.set(url, await downloadImage(prisma, siteId, url, `${item.title} · 正文图`))
       await sleep(300)
     }
-
-    const bodyBlocks = buildBodyBlocks(item.paragraphs, bodyImageUrls)
-    const body = item.paragraphs.join('\n')
-    const lead = item.subtitle || item.paragraphs[0] || ''
+    const bodyHtml = item.bodyHtml.replace(/(<img[^>]+src=")([^"]+)(")/g, (_all, head, url, tail) => {
+      const local = localBySource.get(url)
+      return local ? `${head}${local}${tail}` : `${head}${url}${tail}`
+    })
+    const body = item.plain
+    const lead = item.subtitle || body.split('\n')[0] || ''
+    const bodyImageUrls = [...new Set([...bodyHtml.matchAll(/<img[^>]+src="([^"]+)"/g)].map((m) => m[1]))]
 
     const shared = {
       industryId: item.industryId,
@@ -547,7 +804,7 @@ async function main() {
       img: cover || (item.existing ? undefined : ''),
       bgImage: cover || '',
       body,
-      bodyBlocks,
+      bodyHtml,
       images: bodyImageUrls.map((src, index) => ({ img: src, caption: `项目画面 ${index + 1}` })),
       sourceUrl: item.href
     }

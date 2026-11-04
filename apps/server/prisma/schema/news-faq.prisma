@@ -9,9 +9,11 @@ model NewsArticle {
   title String @db.VarChar(200)
   /// 摘要（缺省由正文首段截断；发布时同步到 Page.summary 供 meta description / llms.txt 复用）
   summary String @default("") @db.VarChar(500)
-  /// 正文纯文本，按 \n 分段（由 body 的段落文本派生，供摘要 / 检索 / GEO 取文；无 body 的历史数据仍以此为准）
+  /// 正文纯文本，按 \n 分段（由 bodyHtml 去标签派生，供摘要 / 检索 / GEO 取文；无 bodyHtml 的历史数据仍以此为准）
   content String @db.Text
-  /// 正文结构化块（段落 / 小标题 / 图片，按顺序渲染为 article-body 的 blocks；可空＝沿用 content 纯文本）
+  /// 正文整篇 HTML（唯一编辑源，渲染时原样输出；服务端 sanitizeArticleHtml 白名单化；可空＝历史数据）
+  bodyHtml String? @map("body_html") @db.Text
+  /// 正文结构化块（历史兼容格式：段落 / 小标题 / 图片；新代码不再写入；bodyHtml 为空时回落渲染）
   body Json?
   /// 封面图（素材库 publicUrl，/static/... 形态）：详情页首屏背景与后台列表缩略图；可空
   cover String? @map("cover") @db.VarChar(300)

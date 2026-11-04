@@ -211,9 +211,9 @@ flowchart LR
 | 方法   | 路径                            | 用途                                                                     | 鉴权  |
 | ------ | ------------------------------- | ------------------------------------------------------------------------ | ----- |
 | GET    | `/news-faq/articles`            | 文章分页列表（读 `NewsArticle` 表：`?siteId&page&pageSize&keyword`，keyword 模糊匹配 title，按发布日期倒序；行含 `id, path, title, summary, publishDate, status, pageId`） | JWT-A |
-| GET    | `/news-faq/articles/:id/detail` | 单条文章详情（**直读表，不接收 siteId 参数**；返回 `{ id, pageId, path, title, summary, publishDate, status, slug, content }`，`content` 为纯文本正文） | JWT-A |
-| POST   | `/news-faq/articles`            | 新建文章（写表 → 建详情页；`{ siteId, title, summary?, publishDate, content, slug? }`；`path=/news/{slug}`，slug 缺省自动生成 `news-YYYYMMDD-序号`，冲突 400；`publishDate` 必填且不允许早于今天） | JWT-A |
-| PATCH  | `/news-faq/articles/:id`        | 编辑文章（`{ title?, summary?, publishDate?, content? }`；**slug 创建后不可改**；页面缺失自动补建） | JWT-A |
+| GET    | `/news-faq/articles/:id/detail` | 单条文章详情（**直读表，不接收 siteId 参数**；返回 `{ id, pageId, path, title, summary, publishDate, status, slug, content, bodyHtml, body }`，`content` 为 `bodyHtml` 派生的纯文本，`body` 为历史块数组（兼容）） | JWT-A |
+| POST   | `/news-faq/articles`            | 新建文章（写表 → 建详情页；`{ siteId, title, summary?, publishDate, content?, bodyHtml?, body?, slug? }`；**正文以 `bodyHtml` 为准**，经 `sanitizeArticleHtml` 白名单化，`content` 由其派生；`body` 仅作历史兼容；`path=/news/{slug}`，slug 缺省自动生成 `news-YYYYMMDD-序号`，冲突 400；`publishDate` 必填且不允许早于今天） | JWT-A |
+| PATCH  | `/news-faq/articles/:id`       | 编辑文章（`{ title?, summary?, publishDate?, content?, bodyHtml? }`；`bodyHtml` 传空串 = 清空正文；**slug 创建后不可改**；页面缺失自动补建） | JWT-A |
 | DELETE | `/news-faq/articles/:id`        | 删除文章（删发布产物页面与表记录）                                        | JWT-A |
 | GET    | `/news-faq/faqs`                | 问答分页列表（读 `FaqItem` 表：`?siteId&page&pageSize&keyword&category&featured`，keyword 模糊匹配 question，按 slug 倒序；`featured=1/0` 只看上架 / 只看未上架，缺省不限；行含 `id, path, question, category, status, featured, pageId`） | JWT-A |
 | GET    | `/news-faq/categories`          | 问答分类清单（`?siteId`，`FaqItem.category` 去重，按首次出现顺序）        | JWT-A |
@@ -247,9 +247,9 @@ flowchart LR
 | PATCH  | `/catalog/products/:id`         | 编辑产品（slug 不可改；有 `pageId` 走页面更新，无则补建；详情字段留空 = 该区块不输出） | JWT-A |
 | DELETE | `/catalog/products/:id`         | 删除产品（删发布产物页面与表记录，重算列表页） | JWT-A |
 | GET    | `/catalog/cases`                | 案例分页列表（`?siteId&page&pageSize&keyword&industry`；行含卡片字段（含 `industryId / client`）+ `path`，**不含详情字段**；响应附带 `industryList`，**来源是行业分类表 `ProductIndustry`**，不再是案例表 distinct） | JWT-A |
-| GET    | `/catalog/cases/:id/detail`     | 单条案例详情（含 `industryId / client / systemNote / bodyBlocks / body / images / sourceUrl`；`infoRows` 由服务端按字段派生，不入库不收参） | JWT-A |
-| POST   | `/catalog/cases`                | 新建案例（`{ siteId, title, industryId?, industry?, client?, location?, area?, year?, system?, systemNote?, img?, lead?, chips?, bgImage?, body?, bodyBlocks?, images?, sourceUrl? }`；**行业只认分类表**：`industryId` 优先，回落 `industry` 名称精确匹配，给了值但未命中返回 400；`bodyBlocks` 经 `normalizeArticleBody` 白名单收口，`body` 由 `articleBlocksToText` 派生；slug 缺省 `case-YYYYMMDD-序号`；落表后立即派生详情页） | JWT-A |
-| PATCH  | `/catalog/cases/:id`            | 编辑案例（字段同 POST 且均可选；`bodyBlocks` 传空数组 = 清空结构化正文回落纯文本；`industryId` 传空串 = 取消分类；slug 不可改；页面缺失自动补建） | JWT-A |
+| GET    | `/catalog/cases/:id/detail`     | 单条案例详情（含 `industryId / client / systemNote / bodyHtml / bodyBlocks / body / images / sourceUrl`；`infoRows` 由服务端按字段派生，不入库不收参） | JWT-A |
+| POST   | `/catalog/cases`                | 新建案例（`{ siteId, title, industryId?, industry?, client?, location?, area?, year?, system?, systemNote?, img?, lead?, chips?, bgImage?, bodyHtml?, body?, bodyBlocks?, images?, sourceUrl? }`；**行业只认分类表**：`industryId` 优先，回落 `industry` 名称精确匹配，给了值但未命中返回 400；**正文以 `bodyHtml` 为准**，经 `sanitizeArticleHtml` 白名单化，`body` 由其派生，`bodyBlocks` 仅作历史兼容；slug 缺省 `case-YYYYMMDD-序号`；落表后立即派生详情页） | JWT-A |
+| PATCH  | `/catalog/cases/:id`            | 编辑案例（字段同 POST 且均可选；`bodyHtml` 传空串 = 清空正文；`industryId` 传空串 = 取消分类；slug 不可改；页面缺失自动补建） | JWT-A |
 | DELETE | `/catalog/cases/:id`            | 删除案例（删发布产物页面与表记录，重算列表页） | JWT-A |
 
 > **详情页派生走模板**（[ADR-052](./08-adr.md)）：块结构从站点既有同栏目 detail 页克隆，代码只做字段覆盖，不含任何站点文案。

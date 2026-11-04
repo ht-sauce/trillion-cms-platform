@@ -256,7 +256,7 @@ apps/server/prisma/
 
 | 表 | 字段 | 关键约束 |
 | -- | ---- | -------- |
-| `NewsArticle` 新闻文章 | `siteId` / `title`(200) / `summary`(500，缺省取正文首段截断) / `content`(**Text 纯文本**，`body` 的派生列) / `body`(**JSON 结构化正文块**：段落 / 小标题 / 图片，可空) / `cover`(300，封面图，可空) / `publishDate`(10，`YYYY-MM-DD`，创建时不允许早于今天) / `slug`(120) / `status`(20，默认 `published`) / `pageId`(String?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId])` |
+| `NewsArticle` 新闻文章 | `siteId` / `title`(200) / `summary`(500，缺省取正文首段截断) / `content`(**Text 纯文本**，`bodyHtml` 的派生列) / `bodyHtml`(**Text 整篇 HTML**，唯一编辑源，可空；ADR-060) / `body`(**JSON 结构化正文块**：历史兼容格式，新代码不再写入，可空) / `cover`(300，封面图，可空) / `publishDate`(10，`YYYY-MM-DD`，创建时不允许早于今天) / `slug`(120) / `status`(20，默认 `published`) / `pageId`(String?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId])` |
 | `FaqItem` 问答条目 | `siteId` / `question`(200) / `category`(100) / `answer`(**Text 纯文本，\n 分段，由 answerHtml 派生**) / `answerHtml`(**Text 受限富文本：段落 / 有序无序列表 / 行内标记**，可空) / `slug`(120，形态 `q{三位序号}`) / `status`(20，默认 `published`) / `featured`(Boolean，默认 `true`，「上架展示」开关) / `relatedIds`(**JSON，手工指定的关联问题 id 数组**，可空) / `pageId`(Int?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId, category])` |
 
 设计口径：
@@ -287,7 +287,7 @@ apps/server/prisma/
 | -- | ---- | -------- |
 | `ProductIndustry` 行业分组 | `siteId` / `name`(100) / `desc`(300，分组头的说明文案) / `moreLabel`(20，分组头更多链接文案，可空) / `sort` / `createdAt` / `updatedAt` | `@@unique([siteId, name])`（`name` 同时是产品 `industries` 的引用键）；`@@index([siteId, sort])` |
 | `Product` 产品 | **卡片**：`name`(100) / `cnName`(100) / `series`(60，树脂系列，第二种分类维度) / `industries`(**Json?**，行业分组名数组) / `desc`(300) / `img` / `lead`(500) / `chips`(Json?) / `bgImage` / `tags`(Json?) / `sort`<br>**详情**：`systemIntro`(Json?) / `layers`(Json?) / `features`(Json?) / `colors`(Json?) / `faqs`(Json?)<br>**标识**：`slug`(120) / `status` / `pageId` | `@@unique([siteId, slug])`；`@@index([siteId, series])` |
-| `CaseStudy` 案例 | `title`(200) / `industryId`(36，可空，关联 `ProductIndustry.id`) / `industry`(100，分类名快照) / `client`(200，业主) / `location`(120) / `area`(60) / `year`(20) / `system`(200，使用体系主项) / `systemNote`(200，使用体系副项) / `img` / `lead`(500) / `chips`(Json?) / `bgImage` / `infoRows`(Json?) / `body`(**Text 纯文本，bodyBlocks 的派生列**) / `bodyBlocks`(**Json?**，与新闻同口径的 ArticleBlock 数组，段落/图片/视频/表格) / `images`(Json?，项目画面) / `sourceUrl`(300，抓取来源页) / `slug`(120) / `status` / `pageId` / `sort` | `@@unique([siteId, slug])`；`@@index([siteId, status])`；`@@index([siteId, industryId])` |
+| `CaseStudy` 案例 | `title`(200) / `industryId`(36，可空，关联 `ProductIndustry.id`) / `industry`(100，分类名快照) / `client`(200，业主) / `location`(120) / `area`(60) / `year`(20) / `system`(200，使用体系主项) / `systemNote`(200，使用体系副项) / `img` / `lead`(500) / `chips`(Json?) / `bgImage` / `infoRows`(Json?) / `body`(**Text 纯文本，`bodyHtml` 的派生列**) / `bodyHtml`(**Text 整篇 HTML**，唯一编辑源，可空；ADR-060) / `bodyBlocks`(**Json?**，历史兼容的 ArticleBlock 数组，新代码不再写入) / `images`(Json?，项目画面) / `sourceUrl`(300，抓取来源页) / `slug`(120) / `status` / `pageId` / `sort` | `@@unique([siteId, slug])`；`@@index([siteId, status])`；`@@index([siteId, industryId])` |
 
 设计口径（与 §8 一致，差异项单独说明）：
 
@@ -297,7 +297,7 @@ apps/server/prisma/
 - **Json 字段一律 `Json?` 无默认值**（MySQL 的 JSON/TEXT 列不允许 DEFAULT，见 §8 踩坑记录）；`body` 是 `String @db.Text` 无默认值，写入时 service 兜底 `?? ''`。
 - 列表接口**不返回详情字段**（`layers` / `colors` / `body` / `images` 等），编辑回显走单条详情接口，避免列表页把大字段全量拉一遍。
 - **案例行业只能来自分类表**（2026-11 起）：`industryId` 指向 `ProductIndustry.id`，`industry` 仅作名称快照由服务端按分类写入；管理端只能下拉选择，传未命中行业返回 400。存量自由文本经采集脚本 `--audit-industry` 出清单、人工确认映射后回填。
-- **案例正文与新闻同口径**：`bodyBlocks`（Json?，ArticleBlock 数组）是主数据，支持段落 / 小标题 / 图片 / 表格 / 视频按序穿插；`body`（Text）是 `articleBlocksToText` 派生的纯文本列，供摘要 / 检索 / GEO 取文；历史行 `bodyBlocks` 为 null，发布时按 `body` 换行拆段回落（`resolveArticleBlocks`）。`client`（业主）、`systemNote`（使用体系副项）为一级字段；`infoRows` 由服务端统一生成，不再由管理端拼装。
+- **案例正文与新闻同口径**：`bodyHtml`（Text，整篇白名单化 HTML）是唯一编辑源，支持段落 / 小标题 / 图片 / 表格 / 视频与受限布局（flex 两列等）；`body`（Text）是 `htmlToText` 派生的纯文本列，供摘要 / 检索 / GEO 取文；`bodyBlocks`（Json?）降级为历史兼容格式，新代码不再写入，渲染在 `bodyHtml` 为空时回落块数组、再回落 `body` 换行拆段（`resolveArticleBlocks`）。`client`（业主）、`systemNote`（使用体系副项）为一级字段；`infoRows` 由服务端统一生成，不再由管理端拼装。（ADR-060 supersede ADR-053 的块数组主数据口径）
 
 ### 9.2 派生页面模板化（ADR-052）
 

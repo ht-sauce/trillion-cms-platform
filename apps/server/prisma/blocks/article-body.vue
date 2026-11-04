@@ -7,10 +7,14 @@
  * 原型 DOM 对应 99-blocks.html `blk-artmeta / artbody`，以及 news/*.html：
  *   .artbody > p*(段落) ＋ .cmpl > b + 合规声明
  *
- * 数据字段（ADR-053 / ADR-054）：
+ * 数据字段（ADR-053 / ADR-054 / ADR-060）：
+ *   html（整篇正文 HTML，优先；服务端 sanitizeArticleHtml 白名单化后原样输出）/
  *   blocks[{kind:'paragraph', text, html?, align?}] / [{kind:'heading', text, html?, align?, level}] /
  *   [{kind:'image', src, alt?, caption?}] / [{kind:'table', rows, header?, align?}] /
  *   [{kind:'video', src, poster?, caption?}] / [{kind:'rich', html}] / disclaimer
+ *
+ *   `html` 是 ADR-060 的主数据形态：排版（双列、图片尺寸、行内颜色/字号）由内容自身决定，
+ *   渲染不再经过「块 → 固定模板」的二次降级；为空时回落 blocks（历史数据）。
  *
  *   `rich` 是块级受限 HTML（段落 + 有序/无序列表），给问答答案这类自带分点结构的内容用（ADR-058）；
  *   它只有 html、没有 text，过滤空块时必须单独放行，否则整块会被丢掉（正文变空白）。
@@ -42,6 +46,15 @@ interface RenderBlock {
 }
 
 const props = defineProps<{ data: Record<string, any>; context: BlockContext }>()
+
+/**
+ * 整篇正文 HTML（ADR-060）：有值时原样输出（服务端已白名单化），
+ * 否则回落结构化块数组（历史数据）与纯文本段落。
+ */
+const htmlContent = computed(() => {
+  const raw = props.data?.html
+  return typeof raw === 'string' && raw.trim() ? raw : ''
+})
 
 /** 纯文本 → 可安全 v-html 的片段（转义尖括号与 &） */
 function escapeHtml(text: string): string {
@@ -103,8 +116,14 @@ const disclaimerHtml = computed(() => {
 defineBlock({
   key: 'article-body',
   name: '文章正文',
-  hint: '正文段落 / 小标题 / 图片 / 表格 / 视频 / 富文本块 + 合规声明（声明必填）',
+  hint: '整篇 HTML（优先）/ 正文段落 / 小标题 / 图片 / 表格 / 视频 / 富文本块 + 合规声明（声明必填）',
   fields: [
+    {
+      key: 'html',
+      label: '整篇正文 HTML',
+      type: 'textarea',
+      hint: 'ADR-060 主数据：有值时原样渲染（服务端白名单化）；留空则用下方块数组'
+    },
     {
       key: 'blocks',
       label: '内容块',
@@ -141,11 +160,16 @@ defineBlock({
 
 <template>
   <div class="artbody">
-    <template v-for="(block, index) in blocks" :key="index">
-      <figure v-if="block.kind === 'image'" class="art-fig">
-        <img :src="block.src" :alt="block.alt || ''" loading="lazy" decoding="async" />
-        <figcaption v-if="block.caption">{{ block.caption }}</figcaption>
-      </figure>
+    <!-- 整篇 HTML（ADR-060）：原样输出，排版与行内格式由编辑器/采集时决定 -->
+    <!-- eslint-disable-next-line vue/no-v-html -- 已在服务端 sanitizeArticleHtml 白名单化 -->
+    <div v-if="htmlContent" class="art-html" v-html="htmlContent" />
+
+    <template v-else>
+      <template v-for="(block, index) in blocks" :key="index">
+        <figure v-if="block.kind === 'image'" class="art-fig">
+          <img :src="block.src" :alt="block.alt || ''" loading="lazy" decoding="async" />
+          <figcaption v-if="block.caption">{{ block.caption }}</figcaption>
+        </figure>
 
       <figure v-else-if="block.kind === 'video'" class="art-video">
         <video
@@ -187,6 +211,7 @@ defineBlock({
       <h2 v-else-if="block.kind === 'heading'" :class="['art-h', `art-h${block.level}`]" :style="alignStyle(block.align)" v-html="block.html || block.text" />
       <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
       <p v-else :style="alignStyle(block.align)" v-html="block.html || block.text" />
+      </template>
     </template>
   </div>
   <div v-if="disclaimerHtml" class="cmpl" v-html="disclaimerHtml" />

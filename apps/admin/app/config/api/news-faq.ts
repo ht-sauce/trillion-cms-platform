@@ -52,9 +52,11 @@ export interface ArticleBlock {
 
 /** 新闻文章详情（含正文，编辑回显用） */
 export interface NewsArticleDetail extends NewsArticleItem {
-  /** 正文纯文本（body 的派生列，段落间 \n 分隔） */
+  /** 正文纯文本（bodyHtml 的派生列，段落间 \n 分隔） */
   content: string
-  /** 正文结构化块（历史数据为空数组，按 content 纯文本回显） */
+  /** 正文整篇 HTML（主数据；历史文章已由服务端由块数组转换） */
+  bodyHtml: string
+  /** 结构化正文块（历史兼容，前端不再用于渲染） */
   body?: ArticleBlock[]
   /** URL 片段（创建时可留空由服务端按标题生成） */
   slug: string
@@ -66,10 +68,10 @@ export interface NewsArticlePayload {
   summary?: string
   /** 发布日期（YYYY-MM-DD；创建时不允许早于今天，编辑现有日期不受限） */
   publishDate: string
-  /** 正文纯文本（body 的派生列，服务端以 body 为准） */
+  /** 正文整篇 HTML（主数据，服务端白名单化并派生 content） */
+  bodyHtml?: string
+  /** 正文纯文本（bodyHtml 为空时的历史回落） */
   content?: string
-  /** 正文结构化块 */
-  body?: ArticleBlock[]
   slug?: string
 }
 

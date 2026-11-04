@@ -77,6 +77,7 @@ export interface CaseView {
   chips: string[]
   bgImage: string
   body: string
+  bodyHtml: string
   bodyBlocks: ArticleBlock[]
   images: Record<string, unknown>[]
 }
@@ -266,13 +267,15 @@ export class CatalogSyncService {
     const card = dataOf(skeleton, 'glass-card')
     /** 信息行由一级字段统一生成（业主 / 行业 / 地点 / 地坪面积 / 使用体系 / 交付年份） */
     const infoRows = buildCaseInfoRows(item)
-    /** 正文优先用结构化块（图文/视频/表格按序），历史纯文本案例回落按空行拆段 */
-    const blocks = resolveArticleBlocks(item.bodyBlocks?.length ? item.bodyBlocks : null, splitParagraphs(item.body))
+    /** 正文整篇 HTML 优先（ADR-060，原样输出）；否则回落历史块数组 / 纯文本分段 */
+    const article = item.bodyHtml
+      ? { html: item.bodyHtml, blocks: [] as ArticleBlock[] }
+      : { blocks: resolveArticleBlocks(item.bodyBlocks?.length ? item.bodyBlocks : null, splitParagraphs(item.body)) }
 
     const overrides: Record<string, Record<string, unknown> | null> = {
       'hero-dark': hero,
       'glass-card': infoRows.length ? { rows: infoRows, badge: item.industry || card.badge } : null,
-      'article-body': blocks.length ? { blocks } : null,
+      'article-body': article.blocks.length || article.html ? article : null,
       'env-grid': item.images?.length ? { items: item.images } : null
     }
     return withStableIds(assembleFromTemplate(skeleton, overrides), oldBlocks)

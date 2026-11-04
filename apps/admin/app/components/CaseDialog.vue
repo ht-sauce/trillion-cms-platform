@@ -4,12 +4,12 @@
  * 规范：弹窗一律独立组件，defineModel 控显隐、emit('saved') 通知父页面刷新
  * 两个页签：
  *   基础信息 —— 卡片字段（标题/行业/业主/地点/面积/年份/使用体系/图片）+ 详情页头部（导语/标签/大图）
- *   详情内容 —— 案例正文（NewsBodyEditor，支持图片/视频/表格）/ 项目画面（均可空，留空则该区块不输出）
+ *   详情内容 —— 案例正文（NewsBodyEditor，整篇 HTML，支持图片/视频/表格与双列排版）/ 项目画面（均可空，留空则该区块不输出）
  * 行业只能下拉选择行业分类（ProductIndustry），不允许自由输入；项目信息行由服务端按字段派生。
- * 列表接口不返回详情字段，编辑打开时拉单条详情回显。
+ * 列表接口不返回详情字段，编辑打开时拉单条详情回显。正文纯文本列由服务端从 HTML 派生。
  */
 import { ElMessage } from 'element-plus'
-import { catalogApi, type ArticleBlock, type CaseItem, type CasePayload, type ProductIndustryItem } from '~/config/api'
+import { catalogApi, type CaseItem, type CasePayload, type ProductIndustryItem } from '~/config/api'
 import ImageField from './ImageField.vue'
 import NewsBodyEditor from './NewsBodyEditor.vue'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
@@ -50,7 +50,7 @@ const form = reactive({
   bgImage: ''
 })
 
-const bodyBlocks = ref<ArticleBlock[]>([])
+const bodyHtml = ref('')
 const images = ref<ImageRow[]>([])
 
 const editing = computed(() => props.item)
@@ -64,18 +64,6 @@ function splitList(text: string): string[] {
     .split(/[,，]/)
     .map((item) => item.trim())
     .filter(Boolean)
-}
-
-/** 结构化块 → 纯文本（与服务端 articleBlocksToText 同口径的客户端派生，作为 body 兼容列） */
-function blocksToText(blocks: ArticleBlock[]): string {
-  return blocks
-    .map((block) => {
-      if (block.kind === 'table') return (block.rows ?? []).map((row) => row.join(' ')).join('\n')
-      if (block.kind === 'image' || block.kind === 'video') return ''
-      return block.text ?? ''
-    })
-    .filter(Boolean)
-    .join('\n')
 }
 
 watch(visible, (open) => {
@@ -93,7 +81,7 @@ watch(visible, (open) => {
   form.lead = ''
   form.chipsText = ''
   form.bgImage = ''
-  bodyBlocks.value = []
+  bodyHtml.value = ''
   images.value = []
 
   if (!props.item) return
@@ -111,7 +99,7 @@ watch(visible, (open) => {
     form.lead = row.lead ?? ''
     form.chipsText = (row.chips ?? []).join(', ')
     form.bgImage = row.bgImage ?? ''
-    bodyBlocks.value = row.bodyBlocks ?? []
+    bodyHtml.value = row.bodyHtml ?? ''
     images.value = (row.images ?? []).map((item) => ({
       img: String(item.img ?? ''),
       caption: String(item.caption ?? ''),
@@ -144,8 +132,7 @@ const submit = debounce(() => {
     lead: form.lead.trim(),
     chips: splitList(form.chipsText),
     bgImage: form.bgImage.trim(),
-    body: blocksToText(bodyBlocks.value),
-    bodyBlocks: bodyBlocks.value,
+    bodyHtml: bodyHtml.value,
     images: images.value.filter((item) => item.img.trim() || item.caption.trim())
   }
 
@@ -163,7 +150,13 @@ const submit = debounce(() => {
 </script>
 
 <template>
-  <el-dialog v-model="visible" :title="editing ? '编辑案例' : '新建案例'" width="880px" :close-on-click-modal="false">
+  <el-dialog
+    v-model="visible"
+    :title="editing ? '编辑案例' : '新建案例'"
+    width="880px"
+    :close-on-click-modal="false"
+    destroy-on-close
+  >
     <el-tabs v-model="activeTab">
       <el-tab-pane label="基础信息" name="basic">
         <el-form v-loading="isLoading('detail')" label-width="96px" size="small">
@@ -254,7 +247,7 @@ const submit = debounce(() => {
         </el-form>
       </el-tab-pane>
 
-      <el-tab-pane label="详情内容" name="detail">
+      <el-tab-pane label="详情内容" name="detail" lazy>
         <div v-loading="isLoading('detail')" class="detail-pane">
           <p class="c-mute hint">以下区块均可留空：留空则详情页不输出该区块（含其小标题）。</p>
 
@@ -263,7 +256,7 @@ const submit = debounce(() => {
               <span class="block-title">案例正文</span>
               <span class="c-mute hint">支持图片 / 视频 / 表格，图片与视频上传到素材库</span>
             </div>
-            <NewsBodyEditor v-model="bodyBlocks" :source="editorSource" :height="320" />
+            <NewsBodyEditor v-model="bodyHtml" :source="editorSource" :height="320" />
           </section>
 
           <section class="detail-block">

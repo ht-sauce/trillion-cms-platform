@@ -939,3 +939,23 @@
   - ✅ 新增页面零成本获得一致口径；整体变大变小只改 `$control-height`
   - ⚠️ 原先靠 `.el-input__inner` 高度撑起来的少量居中效果，改由 wrapper 的 `align-items` 保证，替换自定义高度时需人眼复核
 - **否决**：把 `--el-component-size-small` 调到 30px（只影响部分组件，textarea / button / table 尺寸会一起漂）；每个页面各自 `:deep` 补高度（口径分散、必然再漂移）；把输入框降到 24px 迁就下拉（后台信息密度变差）。
+
+## ADR-060 正文主数据改为整篇 HTML：块数组合约降级保留，白名单在服务端整篇收口
+
+- **日期**：2026-11-04 · **状态**：accepted（**supersede** ADR-053 第 1 条「正文主数据是块数组」与 ADR-054 的块内行内格式口径；ADR-053 第 3 条「图片只走素材库」、ADR-054 的素材来源记录继续有效）
+- **上下文**：ADR-053/054 把正文拆成 `[{kind:'paragraph'|'heading'|'image'|...}]` 块数组，出发点是「GEO 取文 / 检索只读纯文本」「服务端白名单保安全」「块库可编辑」。实际落地暴露三个问题：① **入库即降级**——段落只存 `text`（连 `html` 都不落）、图片独立成块，原站的双列图文（logo 并排 + 各自说明）、行内颜色/字号、图片原始尺寸全部丢失；② **渲染再降级**——`BlkArticleBody` 按块类型套固定模板，`site.css` 的 `.artbody .art-fig img{width:100%}` 把每张图拉满栏宽，小 logo 被放大成模糊；③ 采集/导入的正文本来带排版，却在「编辑器 → 块 → 页面」两次转换中被抹平，运营看到的是「富文本好好的，页面全错」。FAQ（ADR-058）也印证同一问题：`answerHtml` 原样存，但白名单不含 `<img>`，图片被直接剥掉。
+- **决策**：
+  1. **正文主数据改为整篇 HTML 字符串**：新闻 `NewsArticle.bodyHtml`（`Text`，可空）、案例 `CaseStudy.bodyHtml`（`Text`，可空）为唯一编辑源；`body` / `content` 降为**它去标签得到的纯文本派生列**（摘要缺省值、meta description、检索、GEO 取文继续读派生列，不解析 HTML）。
+  2. **历史数据零破坏**：`NewsArticle.body`（Json 块数组）、`CaseStudy.bodyBlocks`（Json）保留不动；渲染时 `bodyHtml` 优先，为空时回落旧块数组 → 纯文本分段（三层回落）。存量数据由一次性转换脚本回填 `bodyHtml`，不回填也能正常发布。
+  3. **白名单整篇收口在服务端**（`common/utils/article-html.ts`）：标签白名单（p / br / h2-h4 / b / strong / i / em / u / s / del / code / ul / ol / li / a / figure / figcaption / img / table / thead / tbody / tr / th / td / video / div / section / span）；属性白名单（img 只留 src/alt/width/height，a 只留 href（http(s) 或站内相对路径）+ title，video 只留 src/poster/controls）；`style` 按**键值白名单**解析（text-align / width / max-width / margin / padding / display(flex|grid|block|inline-block|none) / grid-template-columns / gap / flex / align-items / justify-content / float / object-fit / aspect-ratio / color / background-color / font-size / font-weight / line-height），值不匹配正则即丢弃该声明；脚本、事件属性、`javascript:` / `data:` 地址、`position:fixed` 一律剔除。
+  4. **渲染尊重原样**：`article-body` 块新增 `html` 字段（整篇），`BlkArticleBody` 优先 `v-html` 输出；图片改为 `max-width:100%` + `height:auto`（**永不放大超过原图**），小图不再被拉满；`width/height` 属性与内联 style 按白名单保留。
+  5. **编辑器双模式**：`NewsBodyEditor` 的 v-model 由 `ArticleBlock[]` 改为 **HTML 字符串**；保留 wangEditor 可视化模式用于常规图文，新增「HTML 源码」切换（textarea），供双列布局等 wangEditor 无法表达的排版直接编辑（切换时互相同步）。
+  6. **采集脚本产出 HTML**：案例采集按原站结构生成 HTML（段落保留行内 span 颜色/加粗、h2 生成标题、图片按原尺寸、logo 与说明用 flex 两列容器），不再降级成「段落组 + 图片组」。
+- **后果**：
+  - ✅ 页面按编辑/采集时的排版原样渲染（双列图文、行内颜色、图片尺寸、图注），图片不再被拉伸模糊
+  - ✅ 新闻 / 案例 / 采集三处统一到同一套白名单与渲染口径
+  - ✅ GEO 取文、摘要、检索仍读纯文本派生列，不依赖 HTML 解析
+  - ⚠️ 安全面从「结构化字段逐个校验」变成「整篇 HTML 白名单化」，`sanitizeArticleHtml` 成为唯一信任边界，必须有单测覆盖（脚本、事件属性、`javascript:`、`data:`、越界 style 键）
+  - ⚠️ `ArticleBlock` 契约保留但降级为**历史兼容格式**，新代码不应再写入块数组
+  - ⚠️ wangEditor 会规整复杂布局：打开可视化模式再保存可能丢掉 flex 两列，这类内容必须用源码模式编辑（编辑器内需给出提示）
+- **否决**：继续在块模型上打补丁（新增分栏块 / 图片尺寸块）——块模型每加一种排版就要加一种 kind，编辑器与白名单同步膨胀，且 wangEditor 本身不支持分栏；正文直接存 HTML 但不做服务端白名单（XSS 与 `style` 注入面不可控）；只改 CSS 把图片改成 `max-width`（能治模糊，治不了排版丢失）。

@@ -5,11 +5,11 @@
  * 列表接口不返回正文，编辑打开时拉单条详情回显（含正文）
  * URL 片段不对用户开放：服务端按标题自动生成（slug 创建后不可改，无需展示）
  * 保存成功后服务端自动触发站点构建，提示带一句「站点正在重新构建」
- * 正文为结构化块数组（段落 / 小标题 / 图片，ADR-053）：编辑器插图片走素材库，
- * content 由段落文本派生后一并提交（服务端仍以 body 为准，纯文本仅供摘要与检索）
+ * 正文为整篇 HTML（ADR-060）：编辑器所见即所得，服务端白名单化后原样渲染；
+ * content（纯文本派生列）由服务端从 HTML 生成，前端不再重复派生。
  */
 import { ElMessage } from 'element-plus'
-import { newsFaqApi, type ArticleBlock, type NewsArticleItem } from '~/config/api'
+import { newsFaqApi, type NewsArticleItem } from '~/config/api'
 import ImageField from './ImageField.vue'
 import NewsBodyEditor from './NewsBodyEditor.vue'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
@@ -30,25 +30,17 @@ const form = reactive({
   title: '',
   publishDate: '',
   summary: '',
-  body: [] as ArticleBlock[],
+  /** 整篇正文 HTML（主数据） */
+  bodyHtml: '',
   cover: ''
 })
 
-/** 纯文本 → 正文块（历史数据只有 content 时的回显路径） */
-function textToBlocks(text: string): ArticleBlock[] {
-  return String(text ?? '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => ({ kind: 'paragraph' as const, text: line }))
-}
-
-/** 正文块 → 纯文本（提交时派生 content，供摘要 / 检索 / GEO 取文） */
-function blocksToText(blocks: ArticleBlock[]): string {
-  return blocks
-    .filter((block) => block.kind !== 'image' && block.text)
-    .map((block) => block.text as string)
-    .join('\n')
+/** 正文 HTML 是否为空（去掉空段落标签后再判断，编辑器空态是 `<p><br></p>`） */
+function isEmptyHtml(html: string): boolean {
+  return !String(html ?? '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, '')
+    .trim()
 }
 
 /** 编辑对象（打开后不再变化，供提交分支判断） */
@@ -66,14 +58,14 @@ watch(visible, (open) => {
   form.title = props.article?.title ?? ''
   form.publishDate = props.article?.publishDate ?? ''
   form.summary = props.article?.summary ?? ''
-  form.body = []
+  form.bodyHtml = ''
   if (props.article) {
     void runKeyed('detail', async () => {
       const detail = await newsFaqApi.articleDetail(props.article!.id)
       form.title = detail.title ?? form.title
       form.publishDate = detail.publishDate ?? form.publishDate
       form.summary = detail.summary ?? form.summary
-      form.body = detail.body?.length ? detail.body : textToBlocks(detail.content ?? '')
+      form.bodyHtml = detail.bodyHtml ?? ''
       form.cover = detail.cover ?? ''
     })
   }
@@ -97,8 +89,7 @@ const submit = debounce(() => {
     return
   }
 
-  const body = form.body.filter((block) => (block.kind === 'image' ? Boolean(block.src) : Boolean(block.text?.trim())))
-  if (!body.length) {
+  if (isEmptyHtml(form.bodyHtml)) {
     ElMessage.warning('请输入正文')
     return
   }
@@ -107,8 +98,7 @@ const submit = debounce(() => {
     title: form.title.trim(),
     publishDate: form.publishDate,
     summary: form.summary.trim() || undefined,
-    content: blocksToText(body),
-    body,
+    bodyHtml: form.bodyHtml,
     cover: form.cover.trim() || null
   }
 
@@ -156,7 +146,7 @@ const submit = debounce(() => {
       </el-form-item>
       <el-form-item label="正文内容">
         <NewsBodyEditor
-          v-model="form.body"
+          v-model="form.bodyHtml"
           :height="440"
           :source="editorSource"
           placeholder="请输入正文，可用工具栏插入字号 / 颜色 / 表格 / 图片 / 视频"

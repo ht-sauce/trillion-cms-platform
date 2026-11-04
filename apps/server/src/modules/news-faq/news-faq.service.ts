@@ -25,6 +25,7 @@ import { assertSiteAccess } from '../../common/utils/site-scope'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
 import { articleBlocksToText, normalizeArticleBody } from '../../common/utils/article-body'
+import { articleBlocksToHtml, htmlToText, sanitizeArticleHtml } from '../../common/utils/article-html'
 import type { BlockInstanceInput } from '../../common/utils/block-instances'
 import {
   RELATED_FAQ_MAX,
@@ -124,7 +125,9 @@ export class NewsFaqService {
       status: row.status,
       slug: row.slug,
       content: row.content,
-      /** 结构化正文块（历史数据 body 为 null 时返回空数组，前端按 content 纯文本回显） */
+      /** 正文整篇 HTML（主数据；历史文章由块数组转换，前端只处理 HTML） */
+      bodyHtml: row.bodyHtml ?? articleBlocksToHtml(normalizeArticleBody(row.body)),
+      /** 结构化正文块（历史兼容，仅回显对照，前端不再用于渲染） */
       body: Array.isArray(row.body) ? row.body : [],
       cover: row.cover
     }
@@ -147,9 +150,10 @@ export class NewsFaqService {
 
     const paragraphs = splitParagraphs(dto.content ?? '')
     const body = normalizeArticleBody(dto.body)
-    /** 正文文本以 body 的段落为准（body 为空则用 content 纯文本）：摘要缺省值、meta description 复用 */
-    const plainText = body.length ? articleBlocksToText(body) : paragraphs.join('\n')
-    const resolvedParagraphs = body.length ? splitParagraphs(plainText) : paragraphs
+    /** 正文整篇 HTML 是主数据；纯文本由它派生（无 HTML 时回落块数组 / content） */
+    const bodyHtml = sanitizeArticleHtml(dto.bodyHtml)
+    const plainText = bodyHtml ? htmlToText(bodyHtml) : body.length ? articleBlocksToText(body) : paragraphs.join('\n')
+    const resolvedParagraphs = splitParagraphs(plainText)
     if (!plainText.trim()) throw new BadRequestException('正文不能为空')
     const summary = dto.summary?.trim() || truncate(resolvedParagraphs.join(''), SUMMARY_MAX)
 
@@ -159,6 +163,7 @@ export class NewsFaqService {
         title: dto.title,
         summary,
         content: plainText,
+        bodyHtml: bodyHtml || null,
         body: body.length ? toJsonInput(body) : undefined,
         cover: dto.cover || null,
         publishDate: dto.publishDate,
@@ -176,6 +181,7 @@ export class NewsFaqService {
         publishDate: dto.publishDate,
         paragraphs: resolvedParagraphs,
         body,
+        bodyHtml,
         cover: dto.cover
       },
       template
@@ -209,13 +215,16 @@ export class NewsFaqService {
     const title = dto.title ?? row.title
     const summary = dto.summary !== undefined ? dto.summary : row.summary
     const publishDate = dto.publishDate ?? row.publishDate
-    /** 正文：body 是主数据（传了就整体覆盖），content 只在 body 为空时保留原文 */
+    /** 正文：bodyHtml 是主数据（传了就整体覆盖），纯文本 content 由它派生；无 HTML 时回落块数组 */
+    const bodyHtml = dto.bodyHtml !== undefined ? sanitizeArticleHtml(dto.bodyHtml) : (row.bodyHtml ?? '')
     const body = dto.body !== undefined ? normalizeArticleBody(dto.body) : normalizeArticleBody(row.body)
-    const content = body.length
-      ? articleBlocksToText(body)
-      : dto.content !== undefined
-        ? dto.content
-        : row.content
+    const content = bodyHtml
+      ? htmlToText(bodyHtml)
+      : body.length
+        ? articleBlocksToText(body)
+        : dto.content !== undefined
+          ? dto.content
+          : row.content
     const paragraphs = splitParagraphs(content)
     /** 封面：传 null = 显式清空（回落模板背景） */
     const cover = dto.cover !== undefined ? dto.cover : row.cover
@@ -227,6 +236,7 @@ export class NewsFaqService {
         summary,
         publishDate,
         content,
+        bodyHtml: bodyHtml || null,
         body: body.length ? toJsonInput(body) : Prisma.DbNull,
         cover
       }
@@ -237,7 +247,7 @@ export class NewsFaqService {
     let pageId: string
     if (linked) {
       const blocks = this.sync.buildArticleDetailBlocks(
-        { title, summary, publishDate, paragraphs, body, cover },
+        { title, summary, publishDate, paragraphs, body, bodyHtml, cover },
         template,
         linked.blocks
       )
@@ -248,7 +258,7 @@ export class NewsFaqService {
       pageId = linked.id
     } else {
       const blocks = this.sync.buildArticleDetailBlocks(
-        { title, summary, publishDate, paragraphs, body, cover },
+        { title, summary, publishDate, paragraphs, body, bodyHtml, cover },
         template
       )
       pageId = await this.ensureDetailPage({
@@ -443,11 +453,12 @@ export class NewsFaqService {
      *   传了 answerHtml → 以它为准派生纯文本；只传 answer（纯文本）→ 按编号规则重新还原结构；
      *   都没传 → 沿用库里既有值（编辑问题/分类时不动答案）
      */
-    const resolved = dto.answerHtml !== undefined
-      ? resolveFaqAnswer({ answerHtml: dto.answerHtml })
-      : dto.answer !== undefined
-        ? resolveFaqAnswer({ answer: dto.answer })
-        : { answer: row.answer, answerHtml: row.answerHtml ?? '' }
+    const resolved =
+      dto.answerHtml !== undefined
+        ? resolveFaqAnswer({ answerHtml: dto.answerHtml })
+        : dto.answer !== undefined
+          ? resolveFaqAnswer({ answer: dto.answer })
+          : { answer: row.answer, answerHtml: row.answerHtml ?? '' }
     const answer = resolved.answer
     const featured = dto.featured ?? row.featured
 
@@ -580,7 +591,10 @@ export class NewsFaqService {
     const detail = all.find((item) => item.id === row.id)
     let affectedPages: string[] = []
     if (detail?.pageId) {
-      const page = await this.prisma.page.findUnique({ where: { id: detail.pageId }, select: { id: true, blocks: true } })
+      const page = await this.prisma.page.findUnique({
+        where: { id: detail.pageId },
+        select: { id: true, blocks: true }
+      })
       if (page) {
         const items = this.sync
           .resolveRelated({ id: row.id, category: row.category, relatedIds: unique }, all)
@@ -634,7 +648,8 @@ export class NewsFaqService {
     const newsPageIds: string[] = []
     const articles = await this.prisma.newsArticle.findMany({ where: { siteId }, orderBy: { publishDate: 'asc' } })
     for (const row of articles) {
-      const paragraphs = splitParagraphs(row.content)
+      const bodyHtml = row.bodyHtml ?? ''
+      const paragraphs = splitParagraphs(bodyHtml ? htmlToText(bodyHtml) : row.content)
       const body = normalizeArticleBody(row.body)
       const linked = await this.findLinkedPage(row.pageId, siteId, '/news/')
       const input = {
@@ -643,6 +658,7 @@ export class NewsFaqService {
         publishDate: row.publishDate,
         paragraphs,
         body,
+        bodyHtml: row.bodyHtml ?? '',
         cover: row.cover
       }
       if (linked) {

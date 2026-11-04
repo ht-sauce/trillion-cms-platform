@@ -19,6 +19,7 @@ import { assertSiteAccess } from '../../common/utils/site-scope'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
 import { articleBlocksToText, normalizeArticleBody } from '../../common/utils/article-body'
+import { articleBlocksToHtml, htmlToText, sanitizeArticleHtml } from '../../common/utils/article-html'
 import { CatalogSyncService, CASE_SECTION, type CaseView } from './catalog-sync.service'
 import type { CreateCaseDto, UpdateCaseDto } from './dto'
 
@@ -108,6 +109,8 @@ export class CasesService {
       chips: (row.chips as string[] | null) ?? [],
       bgImage: row.bgImage,
       body: row.body,
+      /** 正文整篇 HTML（主数据；历史案例由块数组转换，前端只处理 HTML） */
+      bodyHtml: row.bodyHtml ?? articleBlocksToHtml(normalizeArticleBody(row.bodyBlocks)),
       bodyBlocks: (row.bodyBlocks as Record<string, unknown>[] | null) ?? [],
       images: (row.images as Record<string, unknown>[] | null) ?? [],
       sourceUrl: row.sourceUrl,
@@ -131,9 +134,14 @@ export class CasesService {
 
     /** 行业只能来自分类表：industryId 优先，回落名称精确匹配，都不命中直接 400 */
     const industry = await this.resolveIndustry(dto.siteId, dto.industryId, dto.industry)
+    /** 正文整篇 HTML 是主数据；无 HTML 时回落历史块数组 / 纯文本 */
+    const bodyHtml = sanitizeArticleHtml(dto.bodyHtml)
     const bodyBlocks = normalizeArticleBody(dto.bodyBlocks)
-    /** 正文纯文本以结构化块派生；无块时回落 body 文本（历史口径） */
-    const body = bodyBlocks.length ? articleBlocksToText(bodyBlocks) : (dto.body ?? '')
+    const body = bodyHtml
+      ? htmlToText(bodyHtml)
+      : bodyBlocks.length
+        ? articleBlocksToText(bodyBlocks)
+        : (dto.body ?? '')
 
     const max = await this.prisma.caseStudy.aggregate({ where: { siteId: dto.siteId }, _max: { sort: true } })
     const row = await this.prisma.caseStudy.create({
@@ -153,6 +161,7 @@ export class CasesService {
         chips: toJsonInput(dto.chips ?? []),
         bgImage: dto.bgImage ?? '',
         body,
+        bodyHtml: bodyHtml || null,
         bodyBlocks: bodyBlocks.length ? toJsonInput(bodyBlocks) : undefined,
         images: toJsonInput(dto.images ?? []),
         sourceUrl: dto.sourceUrl ?? '',
@@ -182,10 +191,17 @@ export class CasesService {
       industryName = resolved.name
     }
 
-    /** 正文：bodyBlocks 传了就整体覆盖（空数组回落 DbNull + 纯文本），没传保留库里的块 */
+    /** 正文：bodyHtml 是主数据（传了就整体覆盖），纯文本由它派生；无 HTML 时回落历史块数组 */
+    const bodyHtml = dto.bodyHtml !== undefined ? sanitizeArticleHtml(dto.bodyHtml) : (row.bodyHtml ?? '')
     const bodyBlocks =
       dto.bodyBlocks !== undefined ? normalizeArticleBody(dto.bodyBlocks) : normalizeArticleBody(row.bodyBlocks)
-    const body = bodyBlocks.length ? articleBlocksToText(bodyBlocks) : dto.body !== undefined ? dto.body : row.body
+    const body = bodyHtml
+      ? htmlToText(bodyHtml)
+      : bodyBlocks.length
+        ? articleBlocksToText(bodyBlocks)
+        : dto.body !== undefined
+          ? dto.body
+          : row.body
     const bodyBlocksInput =
       dto.bodyBlocks !== undefined ? (bodyBlocks.length ? toJsonInput(bodyBlocks) : Prisma.DbNull) : undefined
 
@@ -206,6 +222,7 @@ export class CasesService {
         chips: dto.chips === undefined ? toJsonInput((row.chips as string[] | null) ?? []) : toJsonInput(dto.chips),
         bgImage: dto.bgImage ?? row.bgImage,
         body,
+        bodyHtml: bodyHtml || null,
         ...(bodyBlocksInput !== undefined ? { bodyBlocks: bodyBlocksInput } : {}),
         images: dto.images === undefined ? toJsonInput(row.images ?? []) : toJsonInput(dto.images),
         sourceUrl: dto.sourceUrl ?? row.sourceUrl,
@@ -309,6 +326,7 @@ export class CasesService {
     chips: unknown
     bgImage: string
     body: string
+    bodyHtml: string
     bodyBlocks: unknown
     images: unknown
   }): CaseView {
@@ -326,6 +344,7 @@ export class CasesService {
       chips: (row.chips as string[] | null) ?? [],
       bgImage: row.bgImage,
       body: row.body,
+      bodyHtml: row.bodyHtml ?? '',
       bodyBlocks: (row.bodyBlocks as CaseView['bodyBlocks']) ?? [],
       images: (row.images as Record<string, unknown>[] | null) ?? []
     }

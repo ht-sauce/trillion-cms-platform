@@ -166,7 +166,9 @@ export class NewsFaqSyncService {
       publishDate: string
       paragraphs: string[]
       cover?: string | null
-      /** 结构化正文块（段落/小标题/图片）；空则回落 paragraphs 纯文本（历史数据） */
+      /** 正文整篇 HTML（ADR-060 主数据）；有值则优先，渲染原样输出 */
+      bodyHtml?: string | null
+      /** 结构化正文块（历史兼容）；bodyHtml 为空时回落 paragraphs 纯文本 */
       body?: ArticleBlock[] | null
     },
     template: BlockInstanceInput[],
@@ -191,7 +193,8 @@ export class NewsFaqSyncService {
     const overrides: Record<string, Record<string, unknown> | null> = {
       'hero-dark': hero,
       'article-meta': { date: input.publishDate },
-      'article-body': { blocks: resolveArticleBlocks(input.body ?? null, input.paragraphs) }
+      /** 正文整篇 HTML 优先（ADR-060）；无 HTML 时回落历史块数组 / 纯文本分段 */
+      'article-body': input.bodyHtml ? { html: input.bodyHtml, blocks: [] } : { blocks: resolveArticleBlocks(input.body ?? null, input.paragraphs) }
     }
     return withStableIds(assembleFromTemplate(template, overrides), oldBlocks)
   }

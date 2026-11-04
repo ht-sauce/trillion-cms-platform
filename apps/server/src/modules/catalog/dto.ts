@@ -352,13 +352,21 @@ export class CreateCaseDto {
   @MaxLength(300)
   bgImage?: string
 
-  @ApiPropertyOptional({ description: '案例正文纯文本（bodyBlocks 为空时的历史回落，按换行拆段）' })
+  @ApiPropertyOptional({ description: '案例正文纯文本（bodyHtml 为空时的历史回落，按换行拆段）' })
   @IsOptional()
   @IsString()
   body?: string
 
   @ApiPropertyOptional({
-    description: '案例正文结构化块（段落 / 小标题 / 图片 / 表格 / 视频，按顺序渲染）',
+    description: '案例正文整篇 HTML（主数据；服务端 sanitizeArticleHtml 白名单化，body 由其派生）'
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200000)
+  bodyHtml?: string
+
+  @ApiPropertyOptional({
+    description: '案例正文结构化块（历史兼容格式，新代码不再写入）',
     type: [ArticleBlockDto]
   })
   @IsOptional()
@@ -470,12 +478,18 @@ export class UpdateCaseDto {
   @MaxLength(300)
   bgImage?: string
 
-  @ApiPropertyOptional({ description: '案例正文纯文本（bodyBlocks 为空时的历史回落）' })
+  @ApiPropertyOptional({ description: '案例正文纯文本（bodyHtml 为空时的历史回落）' })
   @IsOptional()
   @IsString()
   body?: string
 
-  @ApiPropertyOptional({ description: '案例正文结构化块（传空数组 = 清空为纯文本回落）', type: [ArticleBlockDto] })
+  @ApiPropertyOptional({ description: '案例正文整篇 HTML（主数据；传空串 = 清空正文）' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200000)
+  bodyHtml?: string
+
+  @ApiPropertyOptional({ description: '案例正文结构化块（历史兼容格式，新代码不再写入）', type: [ArticleBlockDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

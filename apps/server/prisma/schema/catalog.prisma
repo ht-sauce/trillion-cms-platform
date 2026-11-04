@@ -112,9 +112,11 @@ model CaseStudy {
   bgImage String @default("") @map("bg_image") @db.VarChar(300)
   /// 项目信息行（Json：glass-card rows [{k,v,sub?}]；null/空数组 = 详情页不含项目信息卡）
   infoRows Json? @map("info_rows")
-  /// 案例正文纯文本（bodyBlocks 的派生列：段落用 \n 拼接，摘要 / 检索 / GEO 取文口径不变）
+  /// 案例正文纯文本（bodyHtml 去标签派生：段落用 \n 拼接，摘要 / 检索 / GEO 取文口径不变）
   body String @db.Text
-  /// 案例正文结构化块（与新闻同一套 ArticleBlock：段落 / 小标题 / 图片 / 表格 / 视频；null = 历史纯文本案例，发布时按 body 拆段回落）
+  /// 案例正文整篇 HTML（唯一编辑源，渲染时原样输出；服务端 sanitizeArticleHtml 白名单化；可空＝历史数据）
+  bodyHtml String? @map("body_html") @db.Text
+  /// 案例正文结构化块（历史兼容的 ArticleBlock 数组，新代码不再写入；bodyHtml 为空时回落渲染）
   bodyBlocks Json? @map("body_blocks")
   /// 项目画面（Json：env-grid items [{img,caption,note,alt}]；null/空数组 = 不含画面块）
   images Json?

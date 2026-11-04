@@ -135,12 +135,20 @@ export class CreateArticleDto {
   @Validate(PublishDateNotBeforeTodayConstraint)
   publishDate: string
 
-  @ApiPropertyOptional({ description: '正文纯文本（body 的派生列；body 为空时才以此为准，按换行拆段）' })
+  @ApiPropertyOptional({ description: '正文纯文本（bodyHtml 的派生列；bodyHtml 为空时才以此为准，按换行拆段）' })
   @IsOptional()
   @IsString()
   content?: string
 
-  @ApiPropertyOptional({ description: '正文结构化块（段落 / 小标题 / 图片，按顺序渲染）', type: [ArticleBlockDto] })
+  @ApiPropertyOptional({
+    description: '正文整篇 HTML（主数据；服务端 sanitizeArticleHtml 白名单化，content 由其派生）'
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200000)
+  bodyHtml?: string
+
+  @ApiPropertyOptional({ description: '正文结构化块（历史兼容格式，新代码不再写入）', type: [ArticleBlockDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -186,12 +194,18 @@ export class UpdateArticleDto {
   @Matches(DATE_PATTERN, { message: '发布日期必须为 YYYY-MM-DD 格式' })
   publishDate?: string
 
-  @ApiPropertyOptional({ description: '正文纯文本（body 的派生列）' })
+  @ApiPropertyOptional({ description: '正文纯文本（bodyHtml 的派生列）' })
   @IsOptional()
   @IsString()
   content?: string
 
-  @ApiPropertyOptional({ description: '正文结构化块（段落 / 小标题 / 图片）', type: [ArticleBlockDto] })
+  @ApiPropertyOptional({ description: '正文整篇 HTML（主数据；传空串 = 清空正文）' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200000)
+  bodyHtml?: string
+
+  @ApiPropertyOptional({ description: '正文结构化块（历史兼容格式，新代码不再写入）', type: [ArticleBlockDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

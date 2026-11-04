@@ -103,16 +103,18 @@ export interface CaseDetail extends CaseItem {
   lead: string
   chips: string[]
   bgImage: string
-  /** 案例正文纯文本（bodyBlocks 的派生列） */
+  /** 案例正文纯文本（bodyHtml 的派生列） */
   body: string
-  /** 案例正文结构化块（与新闻同一套，支持图片 / 视频 / 表格） */
+  /** 案例正文整篇 HTML（主数据；历史案例已由服务端由块数组转换） */
+  bodyHtml: string
+  /** 结构化正文块（历史兼容，前端不再用于渲染） */
   bodyBlocks: ArticleBlock[]
   images: Record<string, unknown>[]
   /** 抓取 / 录入来源页 */
   sourceUrl: string
 }
 
-/** 案例保存载荷（行业只收分类 ID；bodyBlocks 为主数据，body 为兼容派生列） */
+/** 案例保存载荷（正文以 bodyHtml 为准；body 为纯文本兼容列） */
 export interface CasePayload {
   title: string
   industryId?: string
@@ -128,8 +130,10 @@ export interface CasePayload {
   lead?: string
   chips?: string[]
   bgImage?: string
+  /** 正文整篇 HTML（主数据） */
+  bodyHtml?: string
+  /** 正文纯文本（bodyHtml 为空时的历史回落） */
   body?: string
-  bodyBlocks?: ArticleBlock[]
   images?: Record<string, unknown>[]
   sourceUrl?: string
   slug?: string
