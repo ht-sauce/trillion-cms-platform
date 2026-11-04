@@ -6,7 +6,14 @@
  * 站点切换与默认站点逻辑与新闻管理（news.vue）一致
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { catalogApi, resolveMediaUrl, sitesApi, type CaseItem, type SiteItem } from '~/config/api'
+import {
+  catalogApi,
+  resolveMediaUrl,
+  sitesApi,
+  type CaseItem,
+  type ProductIndustryItem,
+  type SiteItem
+} from '~/config/api'
 import { BADGE_META } from '~/config/menu'
 import { PAGINATION_LAYOUT, PAGE_SIZE_DEFAULT, PAGE_SIZE_OPTIONS } from '~/config/pagination'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
@@ -20,7 +27,8 @@ const list = ref<CaseItem[]>([])
 const total = ref(0)
 const keyword = ref('')
 const industry = ref('')
-const industryList = ref<string[]>([])
+/** 行业筛选与案例弹窗共用同一份分类表数据（唯一来源 ProductIndustry） */
+const industries = ref<ProductIndustryItem[]>([])
 const page = ref(1)
 const pageSize = ref(PAGE_SIZE_DEFAULT)
 
@@ -32,6 +40,13 @@ async function loadSites() {
   const result = await sitesApi.list({ pageSize: 100 })
   sites.value = result.list.map((item) => ({ id: item.id, name: item.name }))
   if (!siteId.value && sites.value.length) siteId.value = sites.value[0].id
+}
+
+/** 行业分类来自分类表（不再使用案例表 distinct 的脏文本） */
+async function loadIndustries() {
+  if (!siteId.value) return
+  const result = await catalogApi.industries(siteId.value)
+  industries.value = result.list
 }
 
 async function load() {
@@ -46,7 +61,6 @@ async function load() {
     })
     list.value = result.list
     total.value = result.total
-    industryList.value = result.industryList
   })
 }
 
@@ -91,11 +105,12 @@ watch(industry, () => {
 watch(siteId, () => {
   page.value = 1
   industry.value = ''
+  void loadIndustries()
   load()
 })
 onMounted(async () => {
   await loadSites()
-  await load()
+  await Promise.all([load(), loadIndustries()])
 })
 </script>
 
@@ -115,8 +130,8 @@ onMounted(async () => {
         @keyup.enter="load"
         @clear="load"
       />
-      <el-select v-model="industry" size="small" placeholder="全部行业" clearable style="width: 140px">
-        <el-option v-for="item in industryList" :key="item" :label="item" :value="item" />
+      <el-select v-model="industry" size="small" placeholder="全部行业" clearable filterable style="width: 140px">
+        <el-option v-for="item in industries" :key="item.id" :label="item.name" :value="item.name" />
       </el-select>
       <span class="spacer" />
       <el-button type="primary" size="small" @click="openCreate">新建</el-button>
@@ -183,7 +198,7 @@ onMounted(async () => {
       />
     </div>
 
-    <CaseDialog v-model="dialogVisible" :site-id="siteId" :item="editing" @saved="load" />
+    <CaseDialog v-model="dialogVisible" :site-id="siteId" :item="editing" :industries="industries" @saved="load" />
   </div>
 </template>
 

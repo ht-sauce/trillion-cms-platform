@@ -44,7 +44,8 @@ const icp = computed(() => String(props.icpNumber || '').trim())
 const phoneText = computed(() => {
   const raw = String(props.phone || '').trim()
   if (!raw) return ''
-  const m = raw.match(/^(0\d{2,3})-?(\d{7,8})$/)
+  /** 3 位区号 + 8 位号码（如 022-27320939）或 4 位区号 + 7/8 位号码（如 0220-1234567）；连字符可省 */
+  const m = raw.match(/^(0\d{2})-?(\d{8})$/) ?? raw.match(/^(0\d{3})-?(\d{7,8})$/)
   if (!m) return raw
   const [, area, num] = m
   return num.length === 8 ? `${area}-${num.slice(0, 4)} ${num.slice(4)}` : `${area}-${num}`
@@ -101,7 +102,7 @@ const phoneText = computed(() => {
 }
 .tel {
   color: rgba(255, 255, 255, 0.62);
-  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   text-decoration: none;
 }
 .tel:hover {

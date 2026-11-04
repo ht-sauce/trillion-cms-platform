@@ -10,6 +10,7 @@
  * - slug 创建后不可修改（编辑 DTO 不收 slug）；缺省自动生成 case-YYYYMMDD-序号
  */
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { ContentEditorService } from '../content/editor.service'
 import { PublishService } from '../publish/publish.service'
@@ -17,6 +18,7 @@ import type { AuthUser } from '../../common/decorators/current-user.decorator'
 import { assertSiteAccess } from '../../common/utils/site-scope'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
+import { articleBlocksToText, normalizeArticleBody } from '../../common/utils/article-body'
 import { CatalogSyncService, CASE_SECTION, type CaseView } from './catalog-sync.service'
 import type { CreateCaseDto, UpdateCaseDto } from './dto'
 
@@ -58,7 +60,7 @@ export class CasesService {
         take: pageSize
       }),
       this.prisma.caseStudy.count({ where }),
-      this.prisma.caseStudy.findMany({ where: { siteId }, select: { industry: true } })
+      this.prisma.productIndustry.findMany({ where: { siteId }, orderBy: [{ sort: 'asc' }, { id: 'asc' }] })
     ])
 
     const list = rows.map((row) => ({
@@ -66,7 +68,9 @@ export class CasesService {
       pageId: row.pageId,
       path: joinPath(CASE_SECTION, row.slug),
       title: row.title,
+      industryId: row.industryId,
       industry: row.industry,
+      client: row.client,
       location: row.location,
       area: row.area,
       year: row.year,
@@ -75,7 +79,8 @@ export class CasesService {
       sort: row.sort,
       status: row.status
     }))
-    const industryList = [...new Set(industries.map((row) => row.industry).filter(Boolean))]
+    /** 行业筛选项以分类表为唯一来源（不再从案例表 distinct，避免脏文本变成可筛选项） */
+    const industryList = industries.map((row) => row.name)
     return { list, total, page, pageSize, industryList }
   }
 
@@ -90,18 +95,22 @@ export class CasesService {
       path: joinPath(CASE_SECTION, row.slug),
       slug: row.slug,
       title: row.title,
+      industryId: row.industryId,
       industry: row.industry,
+      client: row.client,
       location: row.location,
       area: row.area,
       year: row.year,
       system: row.system,
+      systemNote: row.systemNote,
       img: row.img,
       lead: row.lead,
       chips: (row.chips as string[] | null) ?? [],
       bgImage: row.bgImage,
-      infoRows: (row.infoRows as Record<string, unknown>[] | null) ?? [],
       body: row.body,
+      bodyBlocks: (row.bodyBlocks as Record<string, unknown>[] | null) ?? [],
       images: (row.images as Record<string, unknown>[] | null) ?? [],
+      sourceUrl: row.sourceUrl,
       sort: row.sort,
       status: row.status
     }
@@ -120,23 +129,33 @@ export class CasesService {
     const channel = await this.resolveChannel(dto.siteId)
     await this.assertPathFree(dto.siteId, joinPath(channel.path, slug))
 
+    /** 行业只能来自分类表：industryId 优先，回落名称精确匹配，都不命中直接 400 */
+    const industry = await this.resolveIndustry(dto.siteId, dto.industryId, dto.industry)
+    const bodyBlocks = normalizeArticleBody(dto.bodyBlocks)
+    /** 正文纯文本以结构化块派生；无块时回落 body 文本（历史口径） */
+    const body = bodyBlocks.length ? articleBlocksToText(bodyBlocks) : (dto.body ?? '')
+
     const max = await this.prisma.caseStudy.aggregate({ where: { siteId: dto.siteId }, _max: { sort: true } })
     const row = await this.prisma.caseStudy.create({
       data: {
         siteId: dto.siteId,
         title: dto.title,
-        industry: dto.industry ?? '',
+        industryId: industry.id,
+        industry: industry.name,
+        client: dto.client ?? '',
         location: dto.location ?? '',
         area: dto.area ?? '',
         year: dto.year ?? '',
         system: dto.system ?? '',
+        systemNote: dto.systemNote ?? '',
         img: dto.img ?? '',
         lead: dto.lead ?? '',
         chips: toJsonInput(dto.chips ?? []),
         bgImage: dto.bgImage ?? '',
-        infoRows: toJsonInput(dto.infoRows ?? []),
-        body: dto.body ?? '',
+        body,
+        bodyBlocks: bodyBlocks.length ? toJsonInput(bodyBlocks) : undefined,
         images: toJsonInput(dto.images ?? []),
+        sourceUrl: dto.sourceUrl ?? '',
         slug,
         status: 'published',
         sort: dto.sort ?? (max._max.sort ?? 0) + 1
@@ -154,22 +173,42 @@ export class CasesService {
     if (!row) throw new NotFoundException('案例不存在')
     assertSiteAccess(user, row.siteId)
 
+    /** 行业：DTO 任一行业字段出现即重新解析（传空 = 取消分类）；未出现则保留原值 */
+    let industryId = row.industryId
+    let industryName = row.industry
+    if (dto.industryId !== undefined || dto.industry !== undefined) {
+      const resolved = await this.resolveIndustry(row.siteId, dto.industryId ?? '', dto.industry)
+      industryId = resolved.id
+      industryName = resolved.name
+    }
+
+    /** 正文：bodyBlocks 传了就整体覆盖（空数组回落 DbNull + 纯文本），没传保留库里的块 */
+    const bodyBlocks =
+      dto.bodyBlocks !== undefined ? normalizeArticleBody(dto.bodyBlocks) : normalizeArticleBody(row.bodyBlocks)
+    const body = bodyBlocks.length ? articleBlocksToText(bodyBlocks) : dto.body !== undefined ? dto.body : row.body
+    const bodyBlocksInput =
+      dto.bodyBlocks !== undefined ? (bodyBlocks.length ? toJsonInput(bodyBlocks) : Prisma.DbNull) : undefined
+
     await this.prisma.caseStudy.update({
       where: { id: row.id },
       data: {
         title: dto.title ?? row.title,
-        industry: dto.industry ?? row.industry,
+        industryId,
+        industry: industryName,
+        client: dto.client ?? row.client,
         location: dto.location ?? row.location,
         area: dto.area ?? row.area,
         year: dto.year ?? row.year,
         system: dto.system ?? row.system,
+        systemNote: dto.systemNote ?? row.systemNote,
         img: dto.img ?? row.img,
         lead: dto.lead ?? row.lead,
         chips: dto.chips === undefined ? toJsonInput((row.chips as string[] | null) ?? []) : toJsonInput(dto.chips),
         bgImage: dto.bgImage ?? row.bgImage,
-        infoRows: dto.infoRows === undefined ? toJsonInput(row.infoRows ?? []) : toJsonInput(dto.infoRows),
-        body: dto.body ?? row.body,
+        body,
+        ...(bodyBlocksInput !== undefined ? { bodyBlocks: bodyBlocksInput } : {}),
         images: dto.images === undefined ? toJsonInput(row.images ?? []) : toJsonInput(dto.images),
+        sourceUrl: dto.sourceUrl ?? row.sourceUrl,
         sort: dto.sort ?? row.sort,
         status: dto.status ?? row.status
       }
@@ -259,33 +298,67 @@ export class CasesService {
   private toView(row: {
     title: string
     industry: string
+    client: string
     location: string
     area: string
     year: string
     system: string
+    systemNote: string
     img: string
     lead: string
     chips: unknown
     bgImage: string
-    infoRows: unknown
     body: string
+    bodyBlocks: unknown
     images: unknown
   }): CaseView {
     return {
       title: row.title,
       industry: row.industry,
+      client: row.client,
       location: row.location,
       area: row.area,
       year: row.year,
       system: row.system,
+      systemNote: row.systemNote,
       img: row.img,
       lead: row.lead,
       chips: (row.chips as string[] | null) ?? [],
       bgImage: row.bgImage,
-      infoRows: (row.infoRows as Record<string, unknown>[] | null) ?? [],
       body: row.body,
+      bodyBlocks: (row.bodyBlocks as CaseView['bodyBlocks']) ?? [],
       images: (row.images as Record<string, unknown>[] | null) ?? []
     }
+  }
+
+  /**
+   * 行业名 / ID → 分类记录：industryId 优先；其次按名称在站点分类表精确匹配；
+   * 两者都为空 = 未分类（null）；给了值但不命中一律 400，拒绝自由文本脏分类。
+   */
+  private async resolveIndustry(
+    siteId: string,
+    industryId?: string,
+    industryName?: string
+  ): Promise<{ id: string | null; name: string }> {
+    const id = industryId?.trim()
+    if (id) {
+      const industry = await this.prisma.productIndustry.findFirst({
+        where: { siteId, id },
+        select: { id: true, name: true }
+      })
+      if (!industry) throw new BadRequestException('所选行业分类不存在，请刷新后重试')
+      return { id: industry.id, name: industry.name }
+    }
+    const name = industryName?.trim()
+    if (name) {
+      const industry = await this.prisma.productIndustry.findFirst({
+        where: { siteId, name },
+        select: { id: true, name: true }
+      })
+      if (!industry) throw new BadRequestException(`行业「${name}」不在行业分类表中，请先在产品行业分类中维护`)
+      return { id: industry.id, name: industry.name }
+    }
+    return { id: null, name: '' }
   }
 
   /** 案例列表页重算 + 受影响页面发布 */

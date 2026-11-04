@@ -29,6 +29,7 @@ import {
 } from '../../common/utils/block-instances'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
+import { resolveArticleBlocks, type ArticleBlock } from '../../common/utils/article-body'
 
 /** 产品体系栏目路径 */
 export const PRODUCT_SECTION = '/products'
@@ -65,17 +66,55 @@ export interface ProductView {
 export interface CaseView {
   title: string
   industry: string
+  client: string
   location: string
   area: string
   year: string
   system: string
+  systemNote: string
   img: string
   lead: string
   chips: string[]
   bgImage: string
-  infoRows: Record<string, unknown>[]
   body: string
+  bodyBlocks: ArticleBlock[]
   images: Record<string, unknown>[]
+}
+
+/** 项目信息卡行（glass-card rows） */
+interface CaseInfoRow {
+  k: string
+  v: string
+  sub?: string
+}
+
+/**
+ * 由案例一级字段统一生成详情页项目信息行：业主 / 行业 / 地点 / 地坪面积 /
+ * 使用体系（主项 + 副项 sub）/ 交付年份。空值行整行不输出，顺序固定。
+ */
+export function buildCaseInfoRows(item: {
+  client: string
+  industry: string
+  location: string
+  area: string
+  system: string
+  systemNote: string
+  year: string
+}): CaseInfoRow[] {
+  const rows: CaseInfoRow[] = []
+  if (item.client?.trim()) rows.push({ k: '业主', v: item.client.trim() })
+  if (item.industry?.trim()) rows.push({ k: '行业', v: item.industry.trim() })
+  if (item.location?.trim()) rows.push({ k: '地点', v: item.location.trim() })
+  if (item.area?.trim()) rows.push({ k: '地坪面积', v: item.area.trim() })
+  if (item.system?.trim()) {
+    rows.push({
+      k: '使用体系',
+      v: item.system.trim(),
+      ...(item.systemNote?.trim() ? { sub: item.systemNote.trim() } : {})
+    })
+  }
+  if (item.year?.trim()) rows.push({ k: '交付年份', v: item.year.trim() })
+  return rows
 }
 
 @Injectable()
@@ -137,9 +176,11 @@ export class CatalogSyncService {
    */
   buildProductBlocks(product: ProductView, template: BlockInstanceInput[], oldBlocks?: unknown): BlockInstanceInput[] {
     const current = normalizeBlockInstances(oldBlocks)
-    const heroBase = (Object.keys(dataOf(current, 'hero-dark')).length ? dataOf(current, 'hero-dark') : dataOf(template, 'hero-dark')) as Record<string, unknown>
+    const heroBase = (
+      Object.keys(dataOf(current, 'hero-dark')).length ? dataOf(current, 'hero-dark') : dataOf(template, 'hero-dark')
+    ) as Record<string, unknown>
     const h1 = product.cnName ? `${product.name}\n${product.cnName}` : product.name
-    const chips = product.chips?.length ? product.chips : product.tags ?? []
+    const chips = product.chips?.length ? product.chips : (product.tags ?? [])
     const hero: Record<string, unknown> = {
       ...heroBase,
       h1,
@@ -166,13 +207,52 @@ export class CatalogSyncService {
   }
 
   /**
+   * 案例详情骨架补位：站点的详情模板可能来自早期抓取页（只有 hero + 正文），
+   * 缺少项目信息卡 / 项目画面时按标准顺序补上，否则这些数据无处输出。
+   * 区块标题是通用结构标签（不是站点专属文案），模板已有对应块时一律不动。
+   */
+  private static readonly CASE_SKELETON = {
+    cardTitle: '项目信息',
+    gridTitle: '项目画面'
+  }
+
+  private ensureCaseSkeleton(template: BlockInstanceInput[]): BlockInstanceInput[] {
+    const list = [...template]
+    const has = (key: string) => list.some((block) => block.key === key)
+    if (!has('glass-card')) {
+      const heroAt = list.findIndex((block) => block.key === 'hero-dark')
+      list.splice(heroAt >= 0 ? heroAt + 1 : 0, 0, {
+        id: 'skeleton-card',
+        key: 'glass-card',
+        enabled: true,
+        data: { title: CatalogSyncService.CASE_SKELETON.cardTitle }
+      })
+    }
+    if (!has('env-grid')) {
+      const articleAt = list.findIndex((block) => block.key === 'article-body')
+      const insertAt = articleAt >= 0 ? articleAt + 1 : list.length
+      list.splice(insertAt, 0, {
+        id: 'skeleton-grid-head',
+        key: 'section-head',
+        enabled: true,
+        data: { title: CatalogSyncService.CASE_SKELETON.gridTitle }
+      })
+      list.splice(insertAt + 1, 0, { id: 'skeleton-grid', key: 'env-grid', enabled: true, data: {} })
+    }
+    return list
+  }
+
+  /**
    * 案例详情页标准块组合（模板骨架 + 表数据）：
    * hero-dark（标题/导语/标签）→ glass-card（项目信息行）→ article-body（正文）
    * → section-head + env-grid（项目画面）→ telbar
    */
   buildCaseBlocks(item: CaseView, template: BlockInstanceInput[], oldBlocks?: unknown): BlockInstanceInput[] {
     const current = normalizeBlockInstances(oldBlocks)
-    const heroBase = (Object.keys(dataOf(current, 'hero-dark')).length ? dataOf(current, 'hero-dark') : dataOf(template, 'hero-dark')) as Record<string, unknown>
+    const skeleton = this.ensureCaseSkeleton(template)
+    const heroBase = (
+      Object.keys(dataOf(current, 'hero-dark')).length ? dataOf(current, 'hero-dark') : dataOf(skeleton, 'hero-dark')
+    ) as Record<string, unknown>
     const chips = item.chips?.length ? item.chips : [item.area, item.industry].filter(Boolean)
     const hero: Record<string, unknown> = {
       ...heroBase,
@@ -183,16 +263,19 @@ export class CatalogSyncService {
     }
     if (hero.h1Grad && !item.title.includes(String(hero.h1Grad))) delete hero.h1Grad
 
-    const card = dataOf(template, 'glass-card')
-    const paragraphs = splitParagraphs(item.body)
+    const card = dataOf(skeleton, 'glass-card')
+    /** 信息行由一级字段统一生成（业主 / 行业 / 地点 / 地坪面积 / 使用体系 / 交付年份） */
+    const infoRows = buildCaseInfoRows(item)
+    /** 正文优先用结构化块（图文/视频/表格按序），历史纯文本案例回落按空行拆段 */
+    const blocks = resolveArticleBlocks(item.bodyBlocks?.length ? item.bodyBlocks : null, splitParagraphs(item.body))
 
     const overrides: Record<string, Record<string, unknown> | null> = {
       'hero-dark': hero,
-      'glass-card': item.infoRows?.length ? { rows: item.infoRows, badge: item.industry || card.badge } : null,
-      'article-body': paragraphs.length ? { blocks: paragraphs.map((text) => ({ kind: 'paragraph', text })) } : null,
+      'glass-card': infoRows.length ? { rows: infoRows, badge: item.industry || card.badge } : null,
+      'article-body': blocks.length ? { blocks } : null,
       'env-grid': item.images?.length ? { items: item.images } : null
     }
-    return withStableIds(assembleFromTemplate(template, overrides), oldBlocks)
+    return withStableIds(assembleFromTemplate(skeleton, overrides), oldBlocks)
   }
 
   // ---------------- 列表页重算 ----------------
@@ -210,7 +293,10 @@ export class CatalogSyncService {
 
     const [industries, products] = await Promise.all([
       this.prisma.productIndustry.findMany({ where: { siteId }, orderBy: [{ sort: 'asc' }, { id: 'asc' }] }),
-      this.prisma.product.findMany({ where: { siteId, status: 'published' }, orderBy: [{ sort: 'asc' }, { id: 'asc' }] })
+      this.prisma.product.findMany({
+        where: { siteId, status: 'published' },
+        orderBy: [{ sort: 'asc' }, { id: 'asc' }]
+      })
     ])
 
     const instances = normalizeBlockInstances(page.blocks)

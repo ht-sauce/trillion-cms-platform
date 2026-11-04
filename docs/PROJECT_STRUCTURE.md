@@ -65,6 +65,8 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 - [`check-site-data.mjs`](../scripts/check-site-data.mjs) —— **建站描述契约校验器**（`pnpm site check <描述文件>`，**路径必填**）：以块 SFC 的 `defineBlock` 声明为唯一事实来源，递归比对每个块实例的键名与必填项（`--dump-fields` 只打印字段清单）
 - [`upload-site-assets.mjs`](../scripts/upload-site-assets.mjs) —— **素材库双轨上传**（ADR-037 轨①）：把 `apps/geo/public/assets/img/**` 图片以 `siteId` 上传进 CMS 素材库（按 `originalName` 幂等判重，结尾做磁盘↔素材库集合对账）；站点页面引用的 `/assets/img/**` 是轨②静态直出，两轨文件名一一对应
 - [`check-built-site.mjs`](../scripts/check-built-site.mjs) —— **站点产物机械检查**（09 §12.3 step7 补充 / §12.4）：对构建产物逐页校验唯一 h1 / title / description / canonical、JSON-LD 可解析、内链完整、图片可达、NAP 电话口径、标签闭合；只做机械校验，**不能替代 §12.5 人眼视觉比对**
+- [`data/import-forintech-cases.mjs`](../scripts/data/import-forintech-cases.mjs) —— **工程案例采集脚本**（一次性，`node scripts/data/import-forintech-cases.mjs`）：抓 `https://sea.forintech.com/zh/casestudies` 列表页与详情页，解析标题 / 导语 / 正文段落 / 内容图，图片下载后按 `StaticFilesService` 规则落 `uploads/<yyyy>/<mm>/<uuid>.<ext>` 并登记 `StaticFile`（`source='富林泛泰官网 · 工程案例'`），生成 `img / bgImage / images / bodyBlocks` 按标题匹配更新存量 `CaseStudy`。**默认 dry-run**，`--apply` 才写库；`--audit-industry` 只读输出行业命中 / 未命中清单；`--normalize-industry` 把历史脏行业（食品加工 / 电子制造 / 医药净化 / 停车场与坡道）回填为分类表；请求限频 ≥2s、图片域名走 `images.wixstatic.com`（直链 host 在部分网络被重置）
+- [`data/case-industry-map.json`](../scripts/data/case-industry-map.json) —— **案例 → 行业分类映射表**：`{ 数据源标题: { industry: 分类名, match?: 库里存量标题 } }`；`industry` 必须是 `ProductIndustry.name`，`null` 表示暂不分类（需人工决定）；采集脚本缺映射会中止，不自动建分类
 
 ## /docs
 
@@ -391,15 +393,14 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`SideMenuNode.vue`](../apps/admin/app/components/SideMenuNode.vue) —— 侧栏菜单递归节点（最多三级，目录可展开/收起，命中路由高亮）
 - [`DashboardOverview.vue`](../apps/admin/app/components/DashboardOverview.vue) —— GEO 监控工作台仪表盘（PV/UV + AI 抓取 + 发布任务）；**当前未挂载**：根路径 `/` 改为空白占位页（`pages/index.vue`），需要恢复时在页面模板写 `<DashboardOverview />`
 - [`MemberCreateDialog.vue`](../apps/admin/app/components/MemberCreateDialog.vue) —— 新增站点会员弹窗
-- [`PlainTextEditor.vue`](../apps/admin/app/components/PlainTextEditor.vue) —— **纯文本编辑器（wangEditor 封装）**：v-model 只暴露纯文本（初始化 `\n` 段落转 `<p>`、onchange 用 `editor.getText()` 输出段落间 `\n` 的纯文本）；工具栏精简为标题 + 基础强调按钮；编辑器实例 `shallowRef` 持有、组件销毁时 `destroy()`；外部值变化（编辑异步回显）经 watch 用 `setHtml` 同步
 - [`NewsDialog.vue`](../apps/admin/app/components/NewsDialog.vue) —— 新闻新建/编辑弹窗（标题 / 发布日期 / 摘要 / 封面图 `ImageField` / 正文 `NewsBodyEditor`（结构化块）+ 编辑打开时拉单条详情回显正文）
 - [`NewsBodyEditor.vue`](../apps/admin/app/components/NewsBodyEditor.vue) —— **新闻正文编辑器（wangEditor + 结构化块，ADR-053 / ADR-054）**：v-model 暴露 `ArticleBlock[]`，`@on-change` 把编辑器 HTML 解析成块（段落 / 小标题 / 图片 / 表格 / 视频）再回写；块内保留**受限行内格式**（加粗 / 斜体 / 下划线 / 删除线 / 行内代码 + span 的 color / background-color / font-size），对齐解析成 `block.align`，列表按「· 项 / 1. 项」逐条转段落，表格存 `rows: string[][]`；工具栏「小标题 / 字号 / 文字色 / 背景色 / B I U S / 左中右对齐 / 有序无序列表 / 表格 / 上传图片 / 上传视频 / 清格式 / 撤销重做」；图片与视频都走素材库 `filesApi.upload`（库里存 `/static/...`，编辑器内用 `resolveMediaUrl` 显示，上传带 `source` 来源标签）；粘贴的 base64 图片先入库再替换；外链 iframe 播放器不支持（提示改用上传）
 - [`ProductDialog.vue`](../apps/admin/app/components/ProductDialog.vue) —— **产品新建/编辑弹窗（2026-11-03）**：两个页签——「基础信息」（名称 / 中文名 / 系列 / 行业分组多选（必填，空则 warning）/ 卡片说明 / 特性标签（逗号分隔）/ 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（系统说明 `{k,v}`、系统构造 `{role,product,thickness,desc,code}`、系统特点 `{title,desc,icon}`、色卡 `{name,hex}` 带色块预览、常见问题 `{q,a}`；均可留空 = 该区块不输出）
 - [`IndustryDialog.vue`](../apps/admin/app/components/IndustryDialog.vue) —— **产品行业分组弹窗（2026-11-03）**：分组名称 / 分组说明（textarea 200 字）/ 更多文案 / 排序
-- [`CaseDialog.vue`](../apps/admin/app/components/CaseDialog.vue) —— **案例新建/编辑弹窗（2026-11-03）**：两个页签——「基础信息」（标题 / 行业 / 地点 / 面积 / 年份 / 使用体系 / 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（项目信息行 `{k,v,sub}` 支持「按卡片字段带入」一键填充、案例正文 `PlainTextEditor`、项目画面 `{img,caption,note,alt}` 带缩略预览）
+- [`CaseDialog.vue`](../apps/admin/app/components/CaseDialog.vue) —— **案例新建/编辑弹窗（2026-11 重构）**：两个页签——「基础信息」（标题 / 行业（`el-select` 选取行业分类，filterable 不可新建）/ 业主 / 地点 / 面积 / 年份 / 使用体系主项 + 体系备注 / 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（案例正文 `NewsBodyEditor`（与新闻同一套结构化块，支持图片 / 视频 / 表格）、项目画面 `{img,caption,note,alt}`）；项目信息行由服务端按一级字段派生，弹窗不再拼装；提交同时带 `body`（纯文本派生）与 `bodyBlocks`
 - [`FaqAnswerEditor.vue`](../apps/admin/app/components/FaqAnswerEditor.vue) —— 问答答案受限富文本编辑器（wangEditor；工具栏仅粗斜下划删除 + 有序无序列表 + 清格式，ADR-058）
 - [`FaqRelatedDialog.vue`](../apps/admin/app/components/FaqRelatedDialog.vue) —— 关联问题弹窗（左候选：关键词搜索 + 分类筛选 + 分页；右已选：按顺序上移/下移/移除，上限 8 条；保存空数组＝恢复「同分类其它问答」自动口径，ADR-057）
-- [`FaqDialog.vue`](../apps/admin/app/components/FaqDialog.vue) —— 高频问答新建/编辑弹窗（问题 / 分类（allow-create 可输入新分类）/ 上架展示开关（默认开）/ 答案 `PlainTextEditor`；编辑打开时拉单条详情回显答案）
+- [`FaqDialog.vue`](../apps/admin/app/components/FaqDialog.vue) —— 高频问答新建/编辑弹窗（问题 / 分类（allow-create 可输入新分类）/ 上架展示开关（默认开）/ 答案 `FaqAnswerEditor`；编辑打开时拉单条详情回显答案）
 - [`MenuFormDialog.vue`](../apps/admin/app/components/MenuFormDialog.vue) —— 菜单新建/编辑弹窗（上级菜单树选择 + 环路排除）
 - [`RoleFormDialog.vue`](../apps/admin/app/components/RoleFormDialog.vue) —— 角色新建/编辑弹窗（内置角色标识与状态受保护）
 - [`RoleMenusDialog.vue`](../apps/admin/app/components/RoleMenusDialog.vue) —— 角色菜单授权弹窗（勾选子级自动含上级）
@@ -431,7 +432,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`sites/index.vue`](../apps/admin/app/pages/sites/index.vue) —— 站点列表（搜索/筛选/分页；**域名映射列**：主域名 + 别名域名；**站点前缀列**：站点标识 `slug`，进编辑页可改；**构建状态列**：未构建 / 排队中 / 构建中 / 构建成功 / 构建失败 + 时间（进行中显示已运行时长，失败悬停看日志尾部；有进行中任务时每 4 秒静默轮询）；操作列「预览」新标签打开**主域名 + 站点前缀**、「编辑」进入深入编辑页、「内容编辑器」进入 `/content/editor?siteId=<id>`、「下载」打开 `SiteDownloadDialog` 下载产物包）
 - [`sites/[id].vue`](../apps/admin/app/pages/sites/%5Bid%5D.vue) —— 站点深入编辑页（单页三分区、无 Tab：基本信息（含**站点前缀 slug**、**主域名 + 别名域名增删**）/ 企业资质 / SEO 设置；渲染模式与主题色不在此页）
 - [`sites/products.vue`](../apps/admin/app/pages/sites/products.vue) —— **产品体系管理（2026-11-03）**：左侧 260px「行业分组」面板（组名 / 产品数 / 说明摘要 + 编辑、删除、加分组；`productCount > 0` 时前端直接 warning 阻止删除，与服务端 400 口径一致）+ 右侧产品表格（缩略图 + 名称、系列、行业标签、访问路径、状态、操作；筛选 keyword / 系列 / 行业；分页）。弹窗 `ProductDialog`（两页签）+ `IndustryDialog`
-- [`sites/cases.vue`](../apps/admin/app/pages/sites/cases.vue) —— **成功案例管理（2026-11-03）**：按站点隔离 + 关键词 / 行业筛选；表格列案例（缩略图 + 标题）/ 行业 / 地点 / 面积·年份 / 使用体系 / 访问路径 / 状态 / 操作；弹窗 `CaseDialog`（两页签，项目信息行支持「按卡片字段带入」快捷填充）
+- [`sites/cases.vue`](../apps/admin/app/pages/sites/cases.vue) —— **成功案例管理**：按站点隔离 + 关键词 / 行业筛选（行业选项来自分类表 `catalogApi.industries`）+ 新建/编辑/删除；表格列案例（缩略图 + 标题）/ 行业 / 地点 / 面积·年份 / 使用体系 / 访问路径 / 状态 / 操作；弹窗 `CaseDialog`（行业为分类下拉，正文用 `NewsBodyEditor`）
 - [`sites/news.vue`](../apps/admin/app/pages/sites/news.vue) —— 新闻资讯管理（按站点隔离：站点切换 + 关键词搜索；表格列标题 / 访问路径 / 发布日期 / 发布状态徽标；操作编辑、删除（删除与保存均由服务端自动触发站点构建）；弹窗 `NewsDialog`）
 - [`sites/faqs.vue`](../apps/admin/app/pages/sites/faqs.vue) —— 高频问答管理（按站点隔离：站点切换 + 关键词搜索 + 分类筛选（选项来自分类接口，清空 = 全部）+ 上架状态筛选（全部 / 只看上架 / 只看未上架）；表格列问题 / 分类 / 访问路径 / 上架开关（行内即时生效，只影响列表页展示，详情页保留，ADR-055）/ 发布状态徽标；操作关联问题（`FaqRelatedDialog`，ADR-057）、编辑、删除；弹窗 `FaqDialog`，新分类保存后刷新分类清单）；答案为受限富文本（`FaqAnswerEditor`，ADR-058）
 - [`content/index.vue`](../apps/admin/app/pages/content/index.vue) —— 页面列表（状态三态、GEO 分、提交审核与发布）

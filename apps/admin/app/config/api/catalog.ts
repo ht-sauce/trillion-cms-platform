@@ -6,6 +6,7 @@
  * 列表接口不返回详情字段，编辑回显走各单条详情接口（productDetail / caseDetail）
  */
 import { get, post, patch, del, type Paged } from './http'
+import type { ArticleBlock } from './news-faq'
 
 /** 行业分组（/products 列表页的分组维度） */
 export interface ProductIndustryItem {
@@ -80,7 +81,11 @@ export interface CaseItem {
   pageId?: string | null
   path: string
   title: string
+  /** 行业分类 ID（ProductIndustry.id；未分类为空串/null） */
+  industryId?: string | null
   industry: string
+  /** 业主 / 客户 */
+  client: string
   location: string
   area: string
   year: string
@@ -93,29 +98,40 @@ export interface CaseItem {
 /** 案例详情（含正文与结构化字段，编辑回显用） */
 export interface CaseDetail extends CaseItem {
   slug: string
+  /** 使用体系副项 / 备注 */
+  systemNote: string
   lead: string
   chips: string[]
   bgImage: string
-  infoRows: Record<string, unknown>[]
+  /** 案例正文纯文本（bodyBlocks 的派生列） */
   body: string
+  /** 案例正文结构化块（与新闻同一套，支持图片 / 视频 / 表格） */
+  bodyBlocks: ArticleBlock[]
   images: Record<string, unknown>[]
+  /** 抓取 / 录入来源页 */
+  sourceUrl: string
 }
 
-/** 案例保存载荷 */
+/** 案例保存载荷（行业只收分类 ID；bodyBlocks 为主数据，body 为兼容派生列） */
 export interface CasePayload {
   title: string
+  industryId?: string
+  /** 兼容字段：必须是分类表已有名称，服务端未命中返回 400 */
   industry?: string
+  client?: string
   location?: string
   area?: string
   year?: string
   system?: string
+  systemNote?: string
   img?: string
   lead?: string
   chips?: string[]
   bgImage?: string
-  infoRows?: Record<string, unknown>[]
   body?: string
+  bodyBlocks?: ArticleBlock[]
   images?: Record<string, unknown>[]
+  sourceUrl?: string
   slug?: string
   sort?: number
 }
@@ -137,7 +153,14 @@ export const catalogApi = {
   },
 
   // ---------------- 产品 ----------------
-  products(params: { siteId: string; page?: number; pageSize?: number; keyword?: string; series?: string; industry?: string }) {
+  products(params: {
+    siteId: string
+    page?: number
+    pageSize?: number
+    keyword?: string
+    series?: string
+    industry?: string
+  }) {
     return get<Paged<ProductItem> & { seriesList: string[] }>('/catalog/products', params as Record<string, unknown>)
   },
   /** 产品单条详情（列表不含详情字段，编辑弹窗回显用） */

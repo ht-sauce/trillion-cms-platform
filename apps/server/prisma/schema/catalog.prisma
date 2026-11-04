@@ -86,16 +86,22 @@ model CaseStudy {
   siteId String @map("site_id") @db.VarChar(36)
   /// 案例标题（如 海康威视 AGV 工厂）
   title String @db.VarChar(200)
-  /// 行业（如 电子制造 / 食品加工，卡片与详情页 badge）
+  /// 所属行业分类 ID（ProductIndustry.id；自由文本 industry 由此派生，未分类为 null）
+  industryId String? @map("industry_id") @db.VarChar(36)
+  /// 行业名称快照（如 电子制造 / 食品加工，由 industryId 对应分类名写入；卡片与详情页 badge）
   industry String @default("") @db.VarChar(100)
+  /// 业主 / 客户（详情页「业主」信息行，数据源详情页字段）
+  client String @default("") @db.VarChar(200)
   /// 项目地点（如 浙江杭州）
   location String @default("") @db.VarChar(120)
   /// 地坪面积（展示文本，如 "35,000 ㎡"）
   area String @default("") @db.VarChar(60)
   /// 完成年份（展示文本，如 "2022"）
   year String @default("") @db.VarChar(20)
-  /// 使用体系（如 ForinCrete SL-ESD）
+  /// 使用体系主项（如 ForinCrete SL-ESD）
   system String @default("") @map("system") @db.VarChar(200)
+  /// 使用体系副项 / 备注（如 重载耐化学，详情页信息行 sub）
+  systemNote String @default("") @map("system_note") @db.VarChar(200)
   /// 卡片图片地址（/assets/img/** 静态轨）
   img String @default("") @db.VarChar(300)
   /// 详情页导语（hero.lead；空 = 回落到 title）
@@ -106,10 +112,14 @@ model CaseStudy {
   bgImage String @default("") @map("bg_image") @db.VarChar(300)
   /// 项目信息行（Json：glass-card rows [{k,v,sub?}]；null/空数组 = 详情页不含项目信息卡）
   infoRows Json? @map("info_rows")
-  /// 案例正文纯文本，按 \n 分段（发布时拆为 article-body 段落块）
+  /// 案例正文纯文本（bodyBlocks 的派生列：段落用 \n 拼接，摘要 / 检索 / GEO 取文口径不变）
   body String @db.Text
+  /// 案例正文结构化块（与新闻同一套 ArticleBlock：段落 / 小标题 / 图片 / 表格 / 视频；null = 历史纯文本案例，发布时按 body 拆段回落）
+  bodyBlocks Json? @map("body_blocks")
   /// 项目画面（Json：env-grid items [{img,caption,note,alt}]；null/空数组 = 不含画面块）
   images Json?
+  /// 抓取 / 录入来源页 URL（采集脚本记录，便于溯源与增量重跑；手工录入为空）
+  sourceUrl String @default("") @map("source_url") @db.VarChar(300)
   /// URL 片段，创建后不可修改（访问地址 /cases/{slug}）
   slug String @db.VarChar(120)
   /// 状态：published=已发布 / draft=草稿（保存即发布口径，默认 published）
@@ -124,5 +134,6 @@ model CaseStudy {
   updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
 
   @@index([siteId, status])
+  @@index([siteId, industryId])
   @@unique([siteId, slug])
 }

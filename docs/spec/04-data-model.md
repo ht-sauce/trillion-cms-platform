@@ -287,7 +287,7 @@ apps/server/prisma/
 | -- | ---- | -------- |
 | `ProductIndustry` 行业分组 | `siteId` / `name`(100) / `desc`(300，分组头的说明文案) / `moreLabel`(20，分组头更多链接文案，可空) / `sort` / `createdAt` / `updatedAt` | `@@unique([siteId, name])`（`name` 同时是产品 `industries` 的引用键）；`@@index([siteId, sort])` |
 | `Product` 产品 | **卡片**：`name`(100) / `cnName`(100) / `series`(60，树脂系列，第二种分类维度) / `industries`(**Json?**，行业分组名数组) / `desc`(300) / `img` / `lead`(500) / `chips`(Json?) / `bgImage` / `tags`(Json?) / `sort`<br>**详情**：`systemIntro`(Json?) / `layers`(Json?) / `features`(Json?) / `colors`(Json?) / `faqs`(Json?)<br>**标识**：`slug`(120) / `status` / `pageId` | `@@unique([siteId, slug])`；`@@index([siteId, series])` |
-| `CaseStudy` 案例 | `title`(200) / `industry`(60) / `location`(60) / `area`(60) / `year`(10) / `system`(60) / `img` / `lead`(500) / `chips`(Json?) / `bgImage` / `infoRows`(Json?) / `body`(**Text 纯文本，\n 分段**) / `images`(Json?，项目画面) / `slug`(120) / `status` / `pageId` / `sort` | `@@unique([siteId, slug])`；`@@index([siteId, sort])` |
+| `CaseStudy` 案例 | `title`(200) / `industryId`(36，可空，关联 `ProductIndustry.id`) / `industry`(100，分类名快照) / `client`(200，业主) / `location`(120) / `area`(60) / `year`(20) / `system`(200，使用体系主项) / `systemNote`(200，使用体系副项) / `img` / `lead`(500) / `chips`(Json?) / `bgImage` / `infoRows`(Json?) / `body`(**Text 纯文本，bodyBlocks 的派生列**) / `bodyBlocks`(**Json?**，与新闻同口径的 ArticleBlock 数组，段落/图片/视频/表格) / `images`(Json?，项目画面) / `sourceUrl`(300，抓取来源页) / `slug`(120) / `status` / `pageId` / `sort` | `@@unique([siteId, slug])`；`@@index([siteId, status])`；`@@index([siteId, industryId])` |
 
 设计口径（与 §8 一致，差异项单独说明）：
 
@@ -296,6 +296,8 @@ apps/server/prisma/
 - **`pageId` 同 §8 为弱引用**，但产品/案例的策略是**保存即自动建页**（不采用「可选建页」）：`createProduct` / `createCase` 落表后立即派生详情页并回写 `pageId`，运营无需第二个动作。
 - **Json 字段一律 `Json?` 无默认值**（MySQL 的 JSON/TEXT 列不允许 DEFAULT，见 §8 踩坑记录）；`body` 是 `String @db.Text` 无默认值，写入时 service 兜底 `?? ''`。
 - 列表接口**不返回详情字段**（`layers` / `colors` / `body` / `images` 等），编辑回显走单条详情接口，避免列表页把大字段全量拉一遍。
+- **案例行业只能来自分类表**（2026-11 起）：`industryId` 指向 `ProductIndustry.id`，`industry` 仅作名称快照由服务端按分类写入；管理端只能下拉选择，传未命中行业返回 400。存量自由文本经采集脚本 `--audit-industry` 出清单、人工确认映射后回填。
+- **案例正文与新闻同口径**：`bodyBlocks`（Json?，ArticleBlock 数组）是主数据，支持段落 / 小标题 / 图片 / 表格 / 视频按序穿插；`body`（Text）是 `articleBlocksToText` 派生的纯文本列，供摘要 / 检索 / GEO 取文；历史行 `bodyBlocks` 为 null，发布时按 `body` 换行拆段回落（`resolveArticleBlocks`）。`client`（业主）、`systemNote`（使用体系副项）为一级字段；`infoRows` 由服务端统一生成，不再由管理端拼装。
 
 ### 9.2 派生页面模板化（ADR-052）
 

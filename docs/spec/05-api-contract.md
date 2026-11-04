@@ -246,10 +246,10 @@ flowchart LR
 | POST   | `/catalog/products`             | 新建产品（`{ siteId, name, cnName?, series?, industries, desc?, img?, lead?, chips?, bgImage?, tags?, ... }`；`slug = slugify(name)`，路径占用 400；`sort` 取 max+1；**落表后立即派生详情页并回写 `pageId`**） | JWT-A |
 | PATCH  | `/catalog/products/:id`         | 编辑产品（slug 不可改；有 `pageId` 走页面更新，无则补建；详情字段留空 = 该区块不输出） | JWT-A |
 | DELETE | `/catalog/products/:id`         | 删除产品（删发布产物页面与表记录，重算列表页） | JWT-A |
-| GET    | `/catalog/cases`                | 案例分页列表（`?siteId&page&pageSize&keyword&industry`；行含卡片字段 + `path`；响应附带 `industryList`） | JWT-A |
-| GET    | `/catalog/cases/:id/detail`     | 单条案例详情（含 `infoRows / body / images`） | JWT-A |
-| POST   | `/catalog/cases`                | 新建案例（`{ siteId, title, industry?, location?, area?, year?, system?, img?, lead?, chips?, bgImage?, infoRows?, body?, images? }`；slug 缺省 `case-YYYYMMDD-序号`；落表后立即派生详情页） | JWT-A |
-| PATCH  | `/catalog/cases/:id`            | 编辑案例（slug 不可改；页面缺失自动补建） | JWT-A |
+| GET    | `/catalog/cases`                | 案例分页列表（`?siteId&page&pageSize&keyword&industry`；行含卡片字段（含 `industryId / client`）+ `path`，**不含详情字段**；响应附带 `industryList`，**来源是行业分类表 `ProductIndustry`**，不再是案例表 distinct） | JWT-A |
+| GET    | `/catalog/cases/:id/detail`     | 单条案例详情（含 `industryId / client / systemNote / bodyBlocks / body / images / sourceUrl`；`infoRows` 由服务端按字段派生，不入库不收参） | JWT-A |
+| POST   | `/catalog/cases`                | 新建案例（`{ siteId, title, industryId?, industry?, client?, location?, area?, year?, system?, systemNote?, img?, lead?, chips?, bgImage?, body?, bodyBlocks?, images?, sourceUrl? }`；**行业只认分类表**：`industryId` 优先，回落 `industry` 名称精确匹配，给了值但未命中返回 400；`bodyBlocks` 经 `normalizeArticleBody` 白名单收口，`body` 由 `articleBlocksToText` 派生；slug 缺省 `case-YYYYMMDD-序号`；落表后立即派生详情页） | JWT-A |
+| PATCH  | `/catalog/cases/:id`            | 编辑案例（字段同 POST 且均可选；`bodyBlocks` 传空数组 = 清空结构化正文回落纯文本；`industryId` 传空串 = 取消分类；slug 不可改；页面缺失自动补建） | JWT-A |
 | DELETE | `/catalog/cases/:id`            | 删除案例（删发布产物页面与表记录，重算列表页） | JWT-A |
 
 > **详情页派生走模板**（[ADR-052](./08-adr.md)）：块结构从站点既有同栏目 detail 页克隆，代码只做字段覆盖，不含任何站点文案。

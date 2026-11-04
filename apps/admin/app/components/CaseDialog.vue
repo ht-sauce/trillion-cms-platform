@@ -3,21 +3,17 @@
  * 案例弹窗（新建 / 编辑）
  * 规范：弹窗一律独立组件，defineModel 控显隐、emit('saved') 通知父页面刷新
  * 两个页签：
- *   基础信息 —— 卡片字段（标题/行业/地点/面积/年份/使用体系/图片）+ 详情页头部（导语/标签/大图）
- *   详情内容 —— 项目信息行 / 案例正文 / 项目画面（均可空，留空则该区块不输出）
- * 列表接口不返回详情字段，编辑打开时拉单条详情回显
+ *   基础信息 —— 卡片字段（标题/行业/业主/地点/面积/年份/使用体系/图片）+ 详情页头部（导语/标签/大图）
+ *   详情内容 —— 案例正文（NewsBodyEditor，支持图片/视频/表格）/ 项目画面（均可空，留空则该区块不输出）
+ * 行业只能下拉选择行业分类（ProductIndustry），不允许自由输入；项目信息行由服务端按字段派生。
+ * 列表接口不返回详情字段，编辑打开时拉单条详情回显。
  */
 import { ElMessage } from 'element-plus'
-import { catalogApi, type CaseItem, type CasePayload } from '~/config/api'
+import { catalogApi, type ArticleBlock, type CaseItem, type CasePayload, type ProductIndustryItem } from '~/config/api'
 import ImageField from './ImageField.vue'
+import NewsBodyEditor from './NewsBodyEditor.vue'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
 
-/** 项目信息行（详情页 glass-card） */
-interface InfoRow {
-  k: string
-  v: string
-  sub: string
-}
 /** 项目画面（详情页 env-grid） */
 interface ImageRow {
   img: string
@@ -31,6 +27,8 @@ const props = defineProps<{
   siteId?: string
   /** 编辑对象；null 表示新建 */
   item: CaseItem | null
+  /** 行业分类选项（父页面与筛选下拉共用同一份 catalogApi.industries 数据） */
+  industries: ProductIndustryItem[]
 }>()
 const emit = defineEmits<{ saved: [] }>()
 
@@ -39,22 +37,26 @@ const activeTab = ref<'basic' | 'detail'>('basic')
 
 const form = reactive({
   title: '',
-  industry: '',
+  industryId: '',
+  client: '',
   location: '',
   area: '',
   year: '',
   system: '',
+  systemNote: '',
   img: '',
   lead: '',
   chipsText: '',
   bgImage: ''
 })
 
-const infoRows = ref<InfoRow[]>([])
-const body = ref('')
+const bodyBlocks = ref<ArticleBlock[]>([])
 const images = ref<ImageRow[]>([])
 
 const editing = computed(() => props.item)
+
+/** 素材上传来源标签（标题未填时用通用文案） */
+const editorSource = computed(() => `案例正文 · ${form.title.trim() || '工程案例'}`)
 
 /** 逗号分隔字符串 → 数组（支持中英文逗号） */
 function splitList(text: string): string[] {
@@ -64,42 +66,52 @@ function splitList(text: string): string[] {
     .filter(Boolean)
 }
 
+/** 结构化块 → 纯文本（与服务端 articleBlocksToText 同口径的客户端派生，作为 body 兼容列） */
+function blocksToText(blocks: ArticleBlock[]): string {
+  return blocks
+    .map((block) => {
+      if (block.kind === 'table') return (block.rows ?? []).map((row) => row.join(' ')).join('\n')
+      if (block.kind === 'image' || block.kind === 'video') return ''
+      return block.text ?? ''
+    })
+    .filter(Boolean)
+    .join('\n')
+}
+
 watch(visible, (open) => {
   if (!open) return
   activeTab.value = 'basic'
   form.title = props.item?.title ?? ''
-  form.industry = props.item?.industry ?? ''
+  form.industryId = props.item?.industryId ?? ''
+  form.client = props.item?.client ?? ''
   form.location = props.item?.location ?? ''
   form.area = props.item?.area ?? ''
   form.year = props.item?.year ?? ''
   form.system = props.item?.system ?? ''
+  form.systemNote = ''
   form.img = props.item?.img ?? ''
   form.lead = ''
   form.chipsText = ''
   form.bgImage = ''
-  infoRows.value = []
-  body.value = ''
+  bodyBlocks.value = []
   images.value = []
 
   if (!props.item) return
   void runKeyed('detail', async () => {
     const row = await catalogApi.caseDetail(props.item!.id)
     form.title = row.title ?? ''
-    form.industry = row.industry ?? ''
+    form.industryId = row.industryId ?? ''
+    form.client = row.client ?? ''
     form.location = row.location ?? ''
     form.area = row.area ?? ''
     form.year = row.year ?? ''
     form.system = row.system ?? ''
+    form.systemNote = row.systemNote ?? ''
     form.img = row.img ?? ''
     form.lead = row.lead ?? ''
     form.chipsText = (row.chips ?? []).join(', ')
     form.bgImage = row.bgImage ?? ''
-    infoRows.value = (row.infoRows ?? []).map((item) => ({
-      k: String(item.k ?? ''),
-      v: String(item.v ?? ''),
-      sub: String(item.sub ?? '')
-    }))
-    body.value = row.body ?? ''
+    bodyBlocks.value = row.bodyBlocks ?? []
     images.value = (row.images ?? []).map((item) => ({
       img: String(item.img ?? ''),
       caption: String(item.caption ?? ''),
@@ -108,17 +120,6 @@ watch(visible, (open) => {
     }))
   })
 })
-
-/** 项目信息行：站点既有的业主/行业/地点/面积/体系字段一键带入（避免手工敲） */
-function fillInfoRows() {
-  const rows: InfoRow[] = []
-  if (form.title.trim()) rows.push({ k: '项目', v: form.title.trim(), sub: '' })
-  if (form.industry.trim()) rows.push({ k: '行业', v: form.industry.trim(), sub: '' })
-  if (form.location.trim()) rows.push({ k: '地点', v: form.location.trim(), sub: '' })
-  if (form.area.trim()) rows.push({ k: '地坪面积', v: form.area.trim(), sub: '' })
-  if (form.system.trim()) rows.push({ k: '使用体系', v: form.system.trim(), sub: '' })
-  infoRows.value = rows
-}
 
 const submit = debounce(() => {
   if (!props.siteId) {
@@ -132,17 +133,19 @@ const submit = debounce(() => {
 
   const payload: CasePayload = {
     title: form.title.trim(),
-    industry: form.industry.trim(),
+    industryId: form.industryId,
+    client: form.client.trim(),
     location: form.location.trim(),
     area: form.area.trim(),
     year: form.year.trim(),
     system: form.system.trim(),
+    systemNote: form.systemNote.trim(),
     img: form.img.trim(),
     lead: form.lead.trim(),
     chips: splitList(form.chipsText),
     bgImage: form.bgImage.trim(),
-    infoRows: infoRows.value.filter((item) => item.k.trim() || item.v.trim()),
-    body: body.value,
+    body: blocksToText(bodyBlocks.value),
+    bodyBlocks: bodyBlocks.value,
     images: images.value.filter((item) => item.img.trim() || item.caption.trim())
   }
 
@@ -170,21 +173,41 @@ const submit = debounce(() => {
           <el-row :gutter="8">
             <el-col :span="12">
               <el-form-item label="行业">
-                <el-input v-model="form.industry" maxlength="40" placeholder="如 电子制造" />
+                <el-select
+                  v-model="form.industryId"
+                  filterable
+                  clearable
+                  placeholder="选择行业分类"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="industry in industries"
+                    :key="industry.id"
+                    :label="industry.name"
+                    :value="industry.id"
+                  />
+                </el-select>
               </el-form-item>
             </el-col>
+            <el-col :span="12">
+              <el-form-item label="业主">
+                <el-input v-model="form.client" maxlength="80" placeholder="如 海康威视" />
+              </el-form-item>
+            </el-col>
+          </el-row>
+          <el-row :gutter="8">
             <el-col :span="12">
               <el-form-item label="项目地点">
                 <el-input v-model="form.location" maxlength="40" placeholder="如 浙江杭州" />
               </el-form-item>
             </el-col>
-          </el-row>
-          <el-row :gutter="8">
-            <el-col :span="8">
+            <el-col :span="12">
               <el-form-item label="地坪面积">
                 <el-input v-model="form.area" maxlength="20" placeholder="如 35,000 ㎡" />
               </el-form-item>
             </el-col>
+          </el-row>
+          <el-row :gutter="8">
             <el-col :span="8">
               <el-form-item label="完成年份">
                 <el-input v-model="form.year" maxlength="10" placeholder="如 2022" />
@@ -195,6 +218,11 @@ const submit = debounce(() => {
                 <el-input v-model="form.system" maxlength="60" placeholder="如 ForinCrete SL-ESD" />
               </el-form-item>
             </el-col>
+            <el-col :span="8">
+              <el-form-item label="体系备注">
+                <el-input v-model="form.systemNote" maxlength="60" placeholder="副项，如 重载耐化学" />
+              </el-form-item>
+            </el-col>
           </el-row>
           <el-form-item label="卡片图片">
             <ImageField v-model="form.img" source="案例 · 卡片图片" placeholder="/static/... 或点击上传" />
@@ -202,7 +230,14 @@ const submit = debounce(() => {
 
           <el-divider content-position="left">详情页头部（留空则按卡片字段派生）</el-divider>
           <el-form-item label="导语">
-            <el-input v-model="form.lead" type="textarea" :rows="2" maxlength="240" show-word-limit placeholder="详情页首屏导语" />
+            <el-input
+              v-model="form.lead"
+              type="textarea"
+              :rows="2"
+              maxlength="240"
+              show-word-limit
+              placeholder="详情页首屏导语"
+            />
           </el-form-item>
           <el-row :gutter="8">
             <el-col :span="12">
@@ -225,27 +260,10 @@ const submit = debounce(() => {
 
           <section class="detail-block">
             <div class="block-head">
-              <span class="block-title">项目信息</span>
-              <div class="head-ops">
-                <el-button link type="primary" size="small" @click="fillInfoRows">按卡片字段带入</el-button>
-                <el-button link type="primary" size="small" @click="infoRows.push({ k: '', v: '', sub: '' })">
-                  加一行
-                </el-button>
-              </div>
-            </div>
-            <div v-for="(item, index) in infoRows" :key="`ir-${index}`" class="row-item">
-              <el-input v-model="item.k" placeholder="字段，如 业主" style="width: 120px" />
-              <el-input v-model="item.v" placeholder="值，如 海康威视" style="width: 200px" />
-              <el-input v-model="item.sub" placeholder="补充说明（可空）" />
-              <el-button link type="danger" size="small" @click="infoRows.splice(index, 1)">删除</el-button>
-            </div>
-          </section>
-
-          <section class="detail-block">
-            <div class="block-head">
               <span class="block-title">案例正文</span>
+              <span class="c-mute hint">支持图片 / 视频 / 表格，图片与视频上传到素材库</span>
             </div>
-            <PlainTextEditor v-model="body" placeholder="按段落书写：项目背景、使用的体系、施工范围与结果" :height="220" />
+            <NewsBodyEditor v-model="bodyBlocks" :source="editorSource" :height="320" />
           </section>
 
           <section class="detail-block">
@@ -260,10 +278,10 @@ const submit = debounce(() => {
                 加一张
               </el-button>
             </div>
-            <div v-for="(item, index) in images" :key="`im-${index}`" class="row-item">
-              <ImageField v-model="item.img" source="案例 · 项目画面" placeholder="图片地址或上传" class="row-img" />
-              <el-input v-model="item.caption" placeholder="图注" style="width: 160px" />
-              <el-input v-model="item.note" placeholder="角标说明" style="width: 110px" />
+            <div v-for="(image, index) in images" :key="`im-${index}`" class="row-item">
+              <ImageField v-model="image.img" source="案例 · 项目画面" placeholder="图片地址或上传" class="row-img" />
+              <el-input v-model="image.caption" placeholder="图注" style="width: 160px" />
+              <el-input v-model="image.note" placeholder="角标说明" style="width: 110px" />
               <el-button link type="danger" size="small" @click="images.splice(index, 1)">删除</el-button>
             </div>
           </section>
@@ -280,7 +298,7 @@ const submit = debounce(() => {
 
 <style scoped lang="scss">
 .detail-pane {
-  max-height: 52vh;
+  max-height: 56vh;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -304,11 +322,6 @@ const submit = debounce(() => {
   justify-content: space-between;
 }
 
-.head-ops {
-  display: flex;
-  gap: $sp-1;
-}
-
 .block-title {
   font-weight: 500;
 }
@@ -319,22 +332,7 @@ const submit = debounce(() => {
   gap: 4px;
 }
 
-.img-field {
-  display: flex;
-  align-items: center;
-  gap: $sp-1;
-  width: 100%;
-
-  .el-input {
-    flex: 1;
-  }
-}
-
-.img-preview {
-  width: 64px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 2px;
-  flex: none;
+.row-img {
+  flex: 1;
 }
 </style>

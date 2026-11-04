@@ -3,13 +3,15 @@
  *
  * 字段即表字段的写入投影：产品 = 卡片字段（名称/中文名/系列/行业/标签/图片/说明）
  * + 详情字段（导语/标签/大图/系统说明/构造/特点/色卡/常见问题，均可空）；
- * 案例 = 卡片字段（标题/行业/地点/面积/年份/体系/图片）+ 详情字段（导语/标签/大图/
- * 项目信息行/正文/项目画面）。正文一律纯文本按换行拆段；结构化字段为 JSON 数组。
- * slug 创建后不可修改（编辑 DTO 不收 slug）。
+ * 案例 = 卡片字段（标题/行业/业主/地点/面积/年份/体系/图片）+ 详情字段（导语/标签/大图/
+ * 结构化正文/项目画面）。正文以 bodyBlocks 结构化块为准（与新闻同一套 ArticleBlock），
+ * body 是服务端派生的纯文本列；行业只能传 industryId（或命中已有分类的名称快照），
+ * 自由文本一律 400；infoRows 由服务端按字段生成，DTO 不收。slug 创建后不可修改。
  */
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsArray, IsInt, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator'
-import { SLUG_PATTERN } from '../news-faq/dto'
+import { Type } from 'class-transformer'
+import { IsArray, IsInt, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateNested } from 'class-validator'
+import { ArticleBlockDto, SLUG_PATTERN } from '../news-faq/dto'
 
 export class CreateIndustryDto {
   @ApiProperty({ description: '站点 ID' })
@@ -278,11 +280,23 @@ export class CreateCaseDto {
   @MaxLength(200)
   title: string
 
-  @ApiPropertyOptional({ description: '行业' })
+  @ApiPropertyOptional({ description: '行业分类 ID（ProductIndustry.id；与 industry 二选一，优先使用）' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(36)
+  industryId?: string
+
+  @ApiPropertyOptional({ description: '行业分类名（兼容字段：必须精确命中已有分类，未命中返回 400；不接受自由文本）' })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   industry?: string
+
+  @ApiPropertyOptional({ description: '业主 / 客户' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  client?: string
 
   @ApiPropertyOptional({ description: '项目地点' })
   @IsOptional()
@@ -302,11 +316,17 @@ export class CreateCaseDto {
   @MaxLength(20)
   year?: string
 
-  @ApiPropertyOptional({ description: '使用体系' })
+  @ApiPropertyOptional({ description: '使用体系主项' })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   system?: string
+
+  @ApiPropertyOptional({ description: '使用体系副项 / 备注' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  systemNote?: string
 
   @ApiPropertyOptional({ description: '卡片图片地址' })
   @IsOptional()
@@ -332,20 +352,31 @@ export class CreateCaseDto {
   @MaxLength(300)
   bgImage?: string
 
-  @ApiPropertyOptional({ description: '项目信息行（glass-card rows [{k,v,sub?}]）' })
-  @IsOptional()
-  @IsArray()
-  infoRows?: Record<string, unknown>[]
-
-  @ApiPropertyOptional({ description: '案例正文纯文本（按换行拆段）' })
+  @ApiPropertyOptional({ description: '案例正文纯文本（bodyBlocks 为空时的历史回落，按换行拆段）' })
   @IsOptional()
   @IsString()
   body?: string
+
+  @ApiPropertyOptional({
+    description: '案例正文结构化块（段落 / 小标题 / 图片 / 表格 / 视频，按顺序渲染）',
+    type: [ArticleBlockDto]
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ArticleBlockDto)
+  bodyBlocks?: ArticleBlockDto[]
 
   @ApiPropertyOptional({ description: '项目画面（env-grid items）' })
   @IsOptional()
   @IsArray()
   images?: Record<string, unknown>[]
+
+  @ApiPropertyOptional({ description: '抓取 / 录入来源页 URL（采集脚本用，手工录入留空）' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  sourceUrl?: string
 
   @ApiPropertyOptional({ description: 'URL 片段（缺省自动生成 case-YYYYMMDD-序号；创建后不可修改）' })
   @IsOptional()
@@ -367,11 +398,23 @@ export class UpdateCaseDto {
   @MaxLength(200)
   title?: string
 
-  @ApiPropertyOptional({ description: '行业' })
+  @ApiPropertyOptional({ description: '行业分类 ID（传空串 = 取消分类）' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(36)
+  industryId?: string
+
+  @ApiPropertyOptional({ description: '行业分类名（兼容字段：必须精确命中已有分类，未命中返回 400）' })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   industry?: string
+
+  @ApiPropertyOptional({ description: '业主 / 客户' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  client?: string
 
   @ApiPropertyOptional({ description: '项目地点' })
   @IsOptional()
@@ -391,11 +434,17 @@ export class UpdateCaseDto {
   @MaxLength(20)
   year?: string
 
-  @ApiPropertyOptional({ description: '使用体系' })
+  @ApiPropertyOptional({ description: '使用体系主项' })
   @IsOptional()
   @IsString()
   @MaxLength(200)
   system?: string
+
+  @ApiPropertyOptional({ description: '使用体系副项 / 备注' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  systemNote?: string
 
   @ApiPropertyOptional({ description: '卡片图片地址' })
   @IsOptional()
@@ -421,20 +470,28 @@ export class UpdateCaseDto {
   @MaxLength(300)
   bgImage?: string
 
-  @ApiPropertyOptional({ description: '项目信息行' })
-  @IsOptional()
-  @IsArray()
-  infoRows?: Record<string, unknown>[]
-
-  @ApiPropertyOptional({ description: '案例正文纯文本' })
+  @ApiPropertyOptional({ description: '案例正文纯文本（bodyBlocks 为空时的历史回落）' })
   @IsOptional()
   @IsString()
   body?: string
+
+  @ApiPropertyOptional({ description: '案例正文结构化块（传空数组 = 清空为纯文本回落）', type: [ArticleBlockDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ArticleBlockDto)
+  bodyBlocks?: ArticleBlockDto[]
 
   @ApiPropertyOptional({ description: '项目画面' })
   @IsOptional()
   @IsArray()
   images?: Record<string, unknown>[]
+
+  @ApiPropertyOptional({ description: '抓取 / 录入来源页 URL' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  sourceUrl?: string
 
   @ApiPropertyOptional({ description: '列表排序' })
   @IsOptional()

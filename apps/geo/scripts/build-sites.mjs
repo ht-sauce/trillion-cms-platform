@@ -861,7 +861,7 @@ function collectStaticRefs(dir) {
       if (stat.isDirectory()) walk(full)
       else if (f.endsWith('.html')) {
         const html = fs.readFileSync(full, 'utf8')
-        for (const m of html.matchAll(/\/static\/[a-zA-Z0-9/._-]+/g)) refs.add(m[0])
+        for (const m of html.matchAll(/\/static\/[\w/.-]+/g)) refs.add(m[0])
       }
     }
   }
