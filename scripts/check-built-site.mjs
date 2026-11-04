@@ -90,10 +90,11 @@ for (const file of pages) {
     if (!fs.existsSync(path.join(siteDir, src))) add('image', file, `缺图 ${src}`)
   }
 
-  // 5) NAP 电话口径
-  const phones = html.match(/029[-\s]?\d{3}[-\s]?\d{5}/g) || []
+  // 5) NAP 电话口径：检查脚本不绑定具体站点（旧实现硬编码了仁爱医院站的 029 电话），
+  //    仅列出页面中出现的电话号码供人工核对与页脚 NAP 一致性，不计入失败
+  const phones = html.match(/\d{3,4}[-\s]?\d{7,8}/g) || []
   for (const p of phones) {
-    if (p !== '029-82531111') add('nap-phone', file, `电话变体 ${p}`)
+    console.log(`  [info] ${path.relative(siteDir, file)} 电话号码（人工核对）：${p}`)
   }
 
   // 6) 标签闭合粗检
@@ -119,7 +120,6 @@ const CHECKS = [
   'jsonld-parse',
   'link',
   'image',
-  'nap-phone',
   'tags'
 ]
 let failed = false

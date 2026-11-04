@@ -20,12 +20,32 @@ export interface NewsArticleItem {
   publishDate: string
   /** 页面发布状态（published / pending / missing / draft） */
   status: string
+  /** 封面图（素材库 publicUrl，/static/... 形态；可空） */
+  cover?: string | null
+}
+
+/** 新闻正文块（段落 / 小标题 / 图片，ADR-053；服务端白名单收口同口径） */
+export interface ArticleBlock {
+  /** 块类型 */
+  kind: 'paragraph' | 'heading' | 'image'
+  /** 段落 / 小标题文本 */
+  text?: string
+  /** 图片地址（素材库 publicUrl，/static/... 形态） */
+  src?: string
+  /** 图片替代文本 */
+  alt?: string
+  /** 图片说明（渲染为图注） */
+  caption?: string
+  /** 小标题层级（2~4，缺省 2） */
+  level?: number
 }
 
 /** 新闻文章详情（含正文，编辑回显用） */
 export interface NewsArticleDetail extends NewsArticleItem {
-  /** 正文纯文本（段落间 \n 分隔） */
+  /** 正文纯文本（body 的派生列，段落间 \n 分隔） */
   content: string
+  /** 正文结构化块（历史数据为空数组，按 content 纯文本回显） */
+  body?: ArticleBlock[]
   /** URL 片段（创建时可留空由服务端按标题生成） */
   slug: string
 }
@@ -34,9 +54,12 @@ export interface NewsArticleDetail extends NewsArticleItem {
 export interface NewsArticlePayload {
   title: string
   summary?: string
-  /** 发布日期（YYYY-MM-DD，服务端强校验：必填且不允许早于今天） */
+  /** 发布日期（YYYY-MM-DD；创建时不允许早于今天，编辑现有日期不受限） */
   publishDate: string
+  /** 正文纯文本（body 的派生列，服务端以 body 为准） */
   content?: string
+  /** 正文结构化块 */
+  body?: ArticleBlock[]
   slug?: string
 }
 

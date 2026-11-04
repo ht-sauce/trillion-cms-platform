@@ -126,7 +126,16 @@ onMounted(async () => {
       <el-table-column label="案例" min-width="220">
         <template #default="{ row }">
           <div class="case-cell">
-            <img v-if="row.img" :src="resolveMediaUrl(row.img)" :alt="row.title" class="case-thumb" />
+            <el-image
+              v-if="row.img"
+              :src="resolveMediaUrl(row.img)"
+              :preview-src-list="[resolveMediaUrl(row.img)]"
+              :alt="row.title"
+              fit="cover"
+              preview-teleported
+              hide-on-click-modal
+              class="case-thumb"
+            />
             <span class="case-title">{{ row.title }}</span>
           </div>
         </template>

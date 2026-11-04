@@ -66,7 +66,22 @@ export function normalizePagePath(input: string): string {
 }
 
 /**
- * 统一入口：当前页面路径（**剥站点前缀 + 归一化**）
+ * 解码路由路径（中文 slug 页面的必经处理）：
+ * vue-router 在 SSR 下给出的 `route.path` 保留百分号编码形态（`/news/%E8%81%9A...`），
+ * 直接拿去查页面接口会对编码串再 encodeURIComponent（`%25E8...` 双重编码）→ 查无此页 404。
+ * decodeURI 幂等（已解码串原样返回）且不解码 `/ ? & #` 等结构字符，对路径安全。
+ */
+function decodeRoutePath(input: string): string {
+  try {
+    return decodeURI(input)
+  } catch {
+    /** 含孤立 % 等非法序列时按原样返回 */
+    return input
+  }
+}
+
+/**
+ * 统一入口：当前页面路径（**解码 + 剥站点前缀 + 归一化**）
  *
  * 为什么必须有且只有一个入口（ADR-049 / ADR-050 的两次现身）：
  *   本地回环形态 URL 是 `/forintech/news/...`（前缀 = 站点标识），
@@ -79,13 +94,15 @@ export function normalizePagePath(input: string): string {
 export function useCurrentPath(): ComputedRef<string> {
   const route = useRoute()
   const { context } = useSiteContext()
-  return computed(() => normalizePagePath(stripSitePrefix(route.path, context.value.prefix)))
+  return computed(() => normalizePagePath(stripSitePrefix(decodeRoutePath(route.path), context.value.prefix)))
 }
 
 /** 当前路由路径（首页为 /）——useCurrentPath 的非响应式别名，仅限无法使用 computed 的场景 */
 export function usePagePath(): string {
   const route = useRoute()
-  const raw = Array.isArray(route.params.slug) ? route.params.slug.join('/') : String(route.params.slug || '')
+  const raw = Array.isArray(route.params.slug)
+    ? route.params.slug.map((seg) => decodeRoutePath(seg)).join('/')
+    : decodeRoutePath(String(route.params.slug || ''))
   return normalizePagePath(raw ? `/${raw}` : '/')
 }
 

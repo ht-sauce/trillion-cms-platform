@@ -115,4 +115,12 @@ export class NewsFaqController {
   removeFaq(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.removeFaq(user, id)
   }
+
+  // ---------------- 批量重建 ----------------
+
+  @Post('rebuild')
+  @ApiOperation({ summary: '批量重建派生页面（导入/修复用）：全部文章与问答补建或刷新详情页 + 重算列表页，统一发布一次' })
+  rebuild(@CurrentUser() user: AuthUser, @Query('siteId') siteId: string) {
+    return this.service.rebuild(user, siteId)
+  }
 }

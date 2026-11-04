@@ -5,7 +5,7 @@
  * 站点切换与默认站点逻辑与素材管理（files.vue）一致
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { newsFaqApi, sitesApi, type NewsArticleItem, type SiteItem } from '~/config/api'
+import { newsFaqApi, resolveMediaUrl, sitesApi, type NewsArticleItem, type SiteItem } from '~/config/api'
 import { BADGE_META } from '~/config/menu'
 import { PAGINATION_LAYOUT, PAGE_SIZE_DEFAULT, PAGE_SIZE_OPTIONS } from '~/config/pagination'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
@@ -108,6 +108,20 @@ onMounted(async () => {
     </div>
 
     <el-table v-loading="isLoading()" :data="list" border size="small" style="width: 100%" empty-text="暂无新闻">
+      <el-table-column label="封面" width="86">
+        <template #default="{ row }">
+          <el-image
+            v-if="row.cover"
+            :src="resolveMediaUrl(row.cover)"
+            :preview-src-list="[resolveMediaUrl(row.cover)]"
+            fit="cover"
+            preview-teleported
+            hide-on-click-modal
+            class="cover-thumb"
+          />
+          <span v-else class="c-mute">—</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="title" label="标题" min-width="200" show-overflow-tooltip />
       <el-table-column min-width="220" show-overflow-tooltip>
         <template #header><TermHint term="pageAddress" /></template>
@@ -153,6 +167,13 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="scss">
+.cover-thumb {
+  width: 64px;
+  height: 40px;
+  border-radius: 2px;
+  cursor: zoom-in;
+}
+
 .bar {
   display: flex;
   align-items: center;

@@ -8,7 +8,8 @@
  * 列表接口不返回详情字段，编辑打开时拉单条详情回显
  */
 import { ElMessage } from 'element-plus'
-import { catalogApi, resolveMediaUrl, type ProductIndustryItem, type ProductItem, type ProductPayload } from '~/config/api'
+import { catalogApi, type ProductIndustryItem, type ProductItem, type ProductPayload } from '~/config/api'
+import ImageField from './ImageField.vue'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
 
 /** 系统说明行 */
@@ -234,15 +235,7 @@ const submit = debounce(() => {
             <el-input v-model="form.tagsText" placeholder="用逗号分隔，如：耐冲洗, 耐腐蚀" />
           </el-form-item>
           <el-form-item label="卡片图片">
-            <div class="img-field">
-              <el-input v-model="form.img" placeholder="/assets/img/forintech/xxx.webp" />
-              <img
-                v-if="form.img"
-                :src="resolveMediaUrl(form.img)"
-                alt="卡片图片预览"
-                class="img-preview"
-              />
-            </div>
+            <ImageField v-model="form.img" placeholder="/static/... 或点击上传" />
           </el-form-item>
 
           <el-divider content-position="left">详情页头部（留空则回落卡片字段）</el-divider>
@@ -264,7 +257,7 @@ const submit = debounce(() => {
             </el-col>
             <el-col :span="12">
               <el-form-item label="头部大图">
-                <el-input v-model="form.bgImage" placeholder="留空用卡片图片" />
+                <ImageField v-model="form.bgImage" placeholder="留空用卡片图片" />
               </el-form-item>
             </el-col>
           </el-row>

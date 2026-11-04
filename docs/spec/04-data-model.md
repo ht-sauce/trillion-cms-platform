@@ -254,14 +254,15 @@ apps/server/prisma/
 
 | 表 | 字段 | 关键约束 |
 | -- | ---- | -------- |
-| `NewsArticle` 新闻文章 | `siteId` / `title`(200) / `summary`(500，缺省取正文首段截断) / `content`(**Text 纯文本，\n 分段**) / `publishDate`(10，`YYYY-MM-DD`，不允许早于今天) / `slug`(120) / `status`(20，默认 `published`) / `pageId`(Int?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId])` |
+| `NewsArticle` 新闻文章 | `siteId` / `title`(200) / `summary`(500，缺省取正文首段截断) / `content`(**Text 纯文本**，`body` 的派生列) / `body`(**JSON 结构化正文块**：段落 / 小标题 / 图片，可空) / `cover`(300，封面图，可空) / `publishDate`(10，`YYYY-MM-DD`，创建时不允许早于今天) / `slug`(120) / `status`(20，默认 `published`) / `pageId`(String?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId])` |
 | `FaqItem` 问答条目 | `siteId` / `question`(200) / `category`(100) / `answer`(**Text 纯文本，\n 分段**) / `slug`(120，形态 `q{三位序号}`) / `status`(20，默认 `published`) / `pageId`(Int?) / `createdAt` / `updatedAt` | `@@unique([siteId, slug])`；`@@index([siteId, category])` |
 
 设计口径：
 
 - **`pageId` 为 `Page` 弱引用（不建外键）**：与「发布产物可被站点编辑器独立删除」的现实一致；引用完整性由业务层保障——编辑时 `pageId` 为空或页面缺失会按 slug **补建/挂接**页面。
 - **`slug` 创建后不可修改**（编辑 DTO 不收 slug），访问地址 `path = /news/{slug}`、`/faq/{slug}` 由 slug 拼出，保证 URL 稳定性（GEO 前提）。
-- **正文是纯文本按 `\n` 分段**，不用富文本（REQUIREMENTS 禁项）；发布时拆为 `article-body` 段落块 / `faq-detail` 段落。
+- **问答正文是纯文本按 `\n` 分段**（REQUIREMENTS 禁项：不引入富文本）；发布时拆为 `faq-detail` 段落。
+- **新闻正文是结构化块数组 `body`**（ADR-053）：`[{kind:'paragraph'|'heading'|'image'}]`，发布时直接写入 `article-body.blocks`；`content` 是块的段落文本派生列（摘要、meta description、检索、GEO 取文读它），历史数据 `body=null` 时回落按 `content` 分行拆段落。图片 `src` 只认 `/static/`（素材库）、`/assets/`、`http(s)`，其余在 `common/utils/article-body.ts` 白名单里丢弃。
 - **时间字段**：`createdAt` / `updatedAt` 走 `@db.DateTime(0)` 惯例，接口输出经 `formatDateTime`（中国时区）；`publishDate` 是业务日期字符串（`VarChar 10`），不走 DATETIME。
 - 管理面「保存即发布」：`status` 恒为 `published`，编辑 DTO 不收 `status`。
 

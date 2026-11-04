@@ -28,6 +28,7 @@ import {
 } from '../../common/utils/block-instances'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
+import { resolveArticleBlocks, type ArticleBlock } from '../../common/utils/article-body'
 
 /** 相关问答最多条数 */
 export const RELATED_FAQ_MAX = 8
@@ -45,6 +46,8 @@ export interface NewsDetail {
   title: string
   summary: string
   publishDate: string
+  /** 封面图（素材库 publicUrl；列表卡片缩略图） */
+  cover: string | null
 }
 
 /** 问答详情投影（从 FaqItem 表映射；id 为表主键，seq 为 slug qNNN 的全局序号） */
@@ -107,6 +110,24 @@ export class NewsFaqSyncService {
 
   // ---------------- 详情页模板与块组合 ----------------
 
+  /**
+   * 栏目兜底骨架（栏目无任何 detail 页时的降级模板，ADR-052 第 5 条）：
+   * 只含块 key 与空数据——站点文案为零，内容全部由 build*Blocks 的字段覆盖填充。
+   * 没有它，栏目第一个详情页会以「空模板」派生出空块组合，且后续页面克隆这个空页，整栏目全空。
+   */
+  private static readonly FALLBACK_TEMPLATES: Record<string, BlockInstanceInput[]> = {
+    '/news': [
+      { id: 'fallback-hero', key: 'hero-dark', data: {}, enabled: true },
+      { id: 'fallback-meta', key: 'article-meta', data: {}, enabled: true },
+      { id: 'fallback-body', key: 'article-body', data: {}, enabled: true }
+    ],
+    '/faq': [
+      { id: 'fallback-head', key: 'section-head', data: {}, enabled: true },
+      { id: 'fallback-body', key: 'article-body', data: {}, enabled: true },
+      { id: 'fallback-related', key: 'faq-list', data: {}, enabled: true }
+    ]
+  }
+
   /** 站点内某栏目的详情页结构模板：取最早创建的 detail 页面（块骨架 + 固定文案的唯一来源） */
   async loadDetailTemplate(siteId: string, section: string): Promise<BlockInstanceInput[]> {
     const page = await this.prisma.page.findFirst({
@@ -114,7 +135,9 @@ export class NewsFaqSyncService {
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: { blocks: true }
     })
-    return normalizeBlockInstances(page?.blocks)
+    const template = normalizeBlockInstances(page?.blocks)
+    /** 模板缺失或为空（如栏目第一个详情页正在创建）时退回程序化骨架 */
+    return template.length ? template : NewsFaqSyncService.FALLBACK_TEMPLATES[section] || []
   }
 
   /**
@@ -124,7 +147,15 @@ export class NewsFaqSyncService {
    * 沿用旧页面（编辑既有页）或模板（新建页），不在此处硬编码。
    */
   buildArticleDetailBlocks(
-    input: { title: string; summary: string; publishDate: string; paragraphs: string[] },
+    input: {
+      title: string
+      summary: string
+      publishDate: string
+      paragraphs: string[]
+      cover?: string | null
+      /** 结构化正文块（段落/小标题/图片）；空则回落 paragraphs 纯文本（历史数据） */
+      body?: ArticleBlock[] | null
+    },
     template: BlockInstanceInput[],
     oldBlocks?: unknown
   ): BlockInstanceInput[] {
@@ -137,6 +168,9 @@ export class NewsFaqSyncService {
       h1: input.title,
       lead: truncate(input.summary, LEAD_MAX)
     }
+    /** 封面图：表字段优先；空则保留模板/旧页背景（编辑清空 = 回落） */
+    if (input.cover) hero.bgImage = input.cover
+    else if (input.cover === null) delete hero.bgImage
     /** 新建页没有可继承的 eyebrow/orgline，用日期兜底（均为可选字段，空则不渲染） */
     if (!base.eyebrow) hero.eyebrow = input.publishDate
     if (hero.h1Grad && !input.title.includes(String(hero.h1Grad))) delete hero.h1Grad
@@ -144,7 +178,7 @@ export class NewsFaqSyncService {
     const overrides: Record<string, Record<string, unknown> | null> = {
       'hero-dark': hero,
       'article-meta': { date: input.publishDate },
-      'article-body': { blocks: input.paragraphs.map((text) => ({ kind: 'paragraph', text })) }
+      'article-body': { blocks: resolveArticleBlocks(input.body ?? null, input.paragraphs) }
     }
     return withStableIds(assembleFromTemplate(template, overrides), oldBlocks)
   }
@@ -202,7 +236,7 @@ export class NewsFaqSyncService {
   async loadNewsDetails(siteId: string): Promise<NewsDetail[]> {
     const rows = await this.prisma.newsArticle.findMany({
       where: { siteId, status: 'published' },
-      select: { id: true, pageId: true, slug: true, title: true, summary: true, publishDate: true }
+      select: { id: true, pageId: true, slug: true, title: true, summary: true, publishDate: true, cover: true }
     })
     return rows
       .map((row) => ({
@@ -211,7 +245,8 @@ export class NewsFaqSyncService {
         path: joinPath('/news', row.slug),
         title: row.title,
         summary: row.summary,
-        publishDate: row.publishDate
+        publishDate: row.publishDate,
+        cover: row.cover
       }))
       .sort((a, b) => {
         if (a.publishDate !== b.publishDate) return a.publishDate < b.publishDate ? 1 : -1
@@ -257,7 +292,8 @@ export class NewsFaqSyncService {
         href: detail.path,
         title: detail.title,
         summary: detail.summary,
-        publishDate: detail.publishDate
+        publishDate: detail.publishDate,
+        cover: detail.cover || ''
       }))
       const next = normalizeBlockInstances(listPage.blocks).map((inst) =>
         inst.key === 'post-list' ? { ...inst, data: { ...inst.data, items } } : inst

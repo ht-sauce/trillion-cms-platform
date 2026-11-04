@@ -16,6 +16,7 @@
  * - 站点访问边界沿用 site-scope：assertSiteAccess 越权即 403；详情直读表按 row.siteId 归属鉴权
  */
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import { Prisma } from '@prisma/client'
 import { PrismaService } from '../../prisma/prisma.service'
 import { ContentEditorService } from '../content/editor.service'
 import { PublishService } from '../publish/publish.service'
@@ -23,6 +24,7 @@ import type { AuthUser } from '../../common/decorators/current-user.decorator'
 import { assertSiteAccess } from '../../common/utils/site-scope'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
+import { articleBlocksToText, normalizeArticleBody } from '../../common/utils/article-body'
 import type { BlockInstanceInput } from '../../common/utils/block-instances'
 import { parseFaqSeq, pad3, splitParagraphs, truncate, NewsFaqSyncService } from './news-faq-sync.service'
 import type { CreateArticleDto, CreateFaqDto, UpdateArticleDto, UpdateFaqDto } from './dto'
@@ -39,6 +41,7 @@ interface ArticleRow {
   publishDate: string
   status: string
   pageId: string | null
+  cover?: string | null
 }
 
 interface FaqRow {
@@ -86,7 +89,8 @@ export class NewsFaqService {
       summary: row.summary,
       publishDate: row.publishDate,
       status: row.status,
-      pageId: row.pageId
+      pageId: row.pageId,
+      cover: row.cover
     }))
 
     return { list, total, page, pageSize }
@@ -107,7 +111,10 @@ export class NewsFaqService {
       publishDate: row.publishDate,
       status: row.status,
       slug: row.slug,
-      content: row.content
+      content: row.content,
+      /** 结构化正文块（历史数据 body 为 null 时返回空数组，前端按 content 纯文本回显） */
+      body: Array.isArray(row.body) ? row.body : [],
+      cover: row.cover
     }
   }
 
@@ -126,15 +133,22 @@ export class NewsFaqService {
     if (slugTaken) throw new BadRequestException(`已存在相同 slug 的文章：${slug}`)
     await this.assertPathFree(siteId, joinPath(channel.path, slug))
 
-    const paragraphs = splitParagraphs(dto.content)
-    const summary = dto.summary?.trim() || truncate(paragraphs.join(''), SUMMARY_MAX)
+    const paragraphs = splitParagraphs(dto.content ?? '')
+    const body = normalizeArticleBody(dto.body)
+    /** 正文文本以 body 的段落为准（body 为空则用 content 纯文本）：摘要缺省值、meta description 复用 */
+    const plainText = body.length ? articleBlocksToText(body) : paragraphs.join('\n')
+    const resolvedParagraphs = body.length ? splitParagraphs(plainText) : paragraphs
+    if (!plainText.trim()) throw new BadRequestException('正文不能为空')
+    const summary = dto.summary?.trim() || truncate(resolvedParagraphs.join(''), SUMMARY_MAX)
 
     const row = await this.prisma.newsArticle.create({
       data: {
         siteId,
         title: dto.title,
         summary,
-        content: dto.content,
+        content: plainText,
+        body: body.length ? toJsonInput(body) : undefined,
+        cover: dto.cover || null,
         publishDate: dto.publishDate,
         slug,
         /** 管理端保存免审核：直接发布态 */
@@ -144,7 +158,14 @@ export class NewsFaqService {
 
     const template = await this.sync.loadDetailTemplate(siteId, '/news')
     const blocks = this.sync.buildArticleDetailBlocks(
-      { title: dto.title, summary, publishDate: dto.publishDate, paragraphs },
+      {
+        title: dto.title,
+        summary,
+        publishDate: dto.publishDate,
+        paragraphs: resolvedParagraphs,
+        body,
+        cover: dto.cover
+      },
       template
     )
     const pageId = await this.ensureDetailPage({
@@ -176,20 +197,35 @@ export class NewsFaqService {
     const title = dto.title ?? row.title
     const summary = dto.summary !== undefined ? dto.summary : row.summary
     const publishDate = dto.publishDate ?? row.publishDate
-    const content = dto.content !== undefined ? dto.content : row.content
+    /** 正文：body 是主数据（传了就整体覆盖），content 只在 body 为空时保留原文 */
+    const body = dto.body !== undefined ? normalizeArticleBody(dto.body) : normalizeArticleBody(row.body)
+    const content = body.length
+      ? articleBlocksToText(body)
+      : dto.content !== undefined
+        ? dto.content
+        : row.content
+    const paragraphs = splitParagraphs(content)
+    /** 封面：传 null = 显式清空（回落模板背景） */
+    const cover = dto.cover !== undefined ? dto.cover : row.cover
 
     await this.prisma.newsArticle.update({
       where: { id: row.id },
-      data: { title, summary, publishDate, content }
+      data: {
+        title,
+        summary,
+        publishDate,
+        content,
+        body: body.length ? toJsonInput(body) : Prisma.DbNull,
+        cover
+      }
     })
 
-    const paragraphs = splitParagraphs(content)
     const template = await this.sync.loadDetailTemplate(row.siteId, '/news')
     const linked = await this.findLinkedPage(row.pageId, row.siteId, '/news/')
     let pageId: string
     if (linked) {
       const blocks = this.sync.buildArticleDetailBlocks(
-        { title, summary, publishDate, paragraphs },
+        { title, summary, publishDate, paragraphs, body, cover },
         template,
         linked.blocks
       )
@@ -199,7 +235,10 @@ export class NewsFaqService {
       })
       pageId = linked.id
     } else {
-      const blocks = this.sync.buildArticleDetailBlocks({ title, summary, publishDate, paragraphs }, template)
+      const blocks = this.sync.buildArticleDetailBlocks(
+        { title, summary, publishDate, paragraphs, body, cover },
+        template
+      )
       pageId = await this.ensureDetailPage({
         siteId: row.siteId,
         section: '/news',
@@ -422,6 +461,107 @@ export class NewsFaqService {
     const affectedPages = await this.sync.syncAfterFaqChange(row.siteId, [], [row.category])
     const publishTaskId = await this.publishAffected(user, row.siteId, affectedPages)
     return { id: row.id, pageId: linked?.id ?? null, affectedPages, publishTaskId }
+  }
+
+  // ---------------- 批量重建 ----------------
+
+  /**
+   * 批量重建派生页面（数据导入 / 修复用）：为全部表记录补建或刷新详情页，
+   * 重算 /news 与 /faq 两个列表页，最后**统一发布一次**——避免逐条导入触发 N 次构建。
+   */
+  async rebuild(user: AuthUser, siteId: string) {
+    assertSiteAccess(user, siteId)
+    const newsTemplate = await this.sync.loadDetailTemplate(siteId, '/news')
+    const faqTemplate = await this.sync.loadDetailTemplate(siteId, '/faq')
+
+    // 1) 新闻：逐条补建/刷新详情页
+    const newsPageIds: string[] = []
+    const articles = await this.prisma.newsArticle.findMany({ where: { siteId }, orderBy: { publishDate: 'asc' } })
+    for (const row of articles) {
+      const paragraphs = splitParagraphs(row.content)
+      const body = normalizeArticleBody(row.body)
+      const linked = await this.findLinkedPage(row.pageId, siteId, '/news/')
+      const input = {
+        title: row.title,
+        summary: row.summary,
+        publishDate: row.publishDate,
+        paragraphs,
+        body,
+        cover: row.cover
+      }
+      if (linked) {
+        const blocks = this.sync.buildArticleDetailBlocks(input, newsTemplate, linked.blocks)
+        await this.prisma.page.update({
+          where: { id: linked.id },
+          data: { title: row.title, summary: row.summary, blocks: toJsonInput(blocks) }
+        })
+        newsPageIds.push(linked.id)
+      } else {
+        const blocks = this.sync.buildArticleDetailBlocks(input, newsTemplate)
+        const pageId = await this.ensureDetailPage({
+          siteId,
+          section: '/news',
+          label: '新闻资讯',
+          slug: row.slug,
+          title: row.title,
+          summary: row.summary,
+          status: row.status,
+          blocks
+        })
+        await this.prisma.newsArticle.update({ where: { id: row.id }, data: { pageId } })
+        newsPageIds.push(pageId)
+      }
+    }
+
+    // 2) 问答：逐条补建/刷新详情页（related 按分类从表反查）
+    const faqPageIds: string[] = []
+    const faqDetails = await this.sync.loadFaqDetails(siteId)
+    const faqs = await this.prisma.faqItem.findMany({ where: { siteId }, orderBy: { slug: 'asc' } })
+    for (const row of faqs) {
+      const paragraphs = splitParagraphs(row.answer)
+      const related = faqDetails.filter((item) => item.category === row.category && item.id !== row.id)
+      const linked = await this.findLinkedPage(row.pageId, siteId, '/faq/')
+      const input = { question: row.question, category: row.category, paragraphs, related }
+      if (linked) {
+        const blocks = this.sync.buildFaqDetailBlocks(input, faqTemplate, linked.blocks)
+        await this.prisma.page.update({
+          where: { id: linked.id },
+          data: { title: row.question, blocks: toJsonInput(blocks) }
+        })
+        faqPageIds.push(linked.id)
+      } else {
+        const blocks = this.sync.buildFaqDetailBlocks(input, faqTemplate)
+        const summary = truncate(paragraphs.join(''), SUMMARY_MAX)
+        const pageId = await this.ensureDetailPage({
+          siteId,
+          section: '/faq',
+          label: '高频问答',
+          slug: row.slug,
+          title: row.question,
+          summary,
+          status: row.status,
+          blocks
+        })
+        await this.prisma.faqItem.update({ where: { id: row.id }, data: { pageId } })
+        faqPageIds.push(pageId)
+      }
+    }
+
+    // 3) 重算两个列表页（全量 detail 重算后统一刷新指纹）
+    const affectedNews = await this.sync.syncAfterArticleChange(siteId, newsPageIds)
+    const categories = [...new Set(faqs.map((row) => row.category))]
+    const affectedFaq = await this.sync.syncAfterFaqChange(siteId, faqPageIds, categories)
+    const affectedPages = [...new Set([...newsPageIds, ...faqPageIds, ...affectedNews, ...affectedFaq])]
+    for (const pageId of affectedPages) await this.editor.refreshContentHash(pageId)
+
+    // 4) 统一发布一次
+    const publishTaskId = await this.publishAffected(user, siteId, affectedPages)
+    return {
+      articles: articles.length,
+      faqs: faqs.length,
+      affectedPages: affectedPages.length,
+      publishTaskId
+    }
   }
 
   // ---------------- 内部 ----------------

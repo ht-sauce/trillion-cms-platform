@@ -184,6 +184,11 @@ a, button, summary, [onclick],
 .post .ptag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--teal-lt);border:1px solid #BFE9E3;color:#0B5A54;margin-bottom:8px}
 .post h4{font-size:14.8px;font-weight:800;margin-bottom:7px;line-height:1.55}
 .post p{font-size:12.8px;color:var(--ink-3);line-height:1.8}
+/* 有封面的条目：日期 / 缩略图 / 文本三列（2026-11-04，ADR-053） */
+.post.has-cover{grid-template-columns:104px 176px 1fr;align-items:start}
+.post .pthumb{width:176px;height:112px;margin:0;border-radius:var(--r-md);overflow:hidden;background:#F1F5F9;border:1px solid var(--line)}
+.post .pthumb img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+.post:hover .pthumb img{transform:scale(1.03)}
 .post.lead-post{grid-template-columns:120px 1fr;padding:24px 26px;background:linear-gradient(135deg,#F7FBFB,#fff);border-color:#CBE5E1}
 .post.lead-post h3{font-size:18px;font-weight:800;margin-bottom:9px;line-height:1.5}
 .post.lead-post p{font-size:13.2px;color:var(--ink-2);line-height:1.9}
@@ -249,6 +254,14 @@ a, button, summary, [onclick],
 .artbody p{margin-bottom:16px}
 .artbody p:last-child{margin-bottom:0}
 .artbody b,.artbody strong{color:var(--ink);font-weight:800}
+/* 正文小标题与内文图片（2026-11-04，ADR-053） */
+.artbody .art-h{font-weight:800;color:var(--ink);line-height:1.5;margin:28px 0 12px}
+.artbody .art-h2{font-size:18px}
+.artbody .art-h3{font-size:16px}
+.artbody .art-h4{font-size:15px}
+.artbody .art-fig{margin:22px 0}
+.artbody .art-fig img{width:100%;height:auto;display:block;border-radius:var(--r-md);border:1px solid var(--line);background:#F1F5F9}
+.artbody .art-fig figcaption{margin-top:8px;font-size:12.4px;color:var(--ink-3);text-align:center;line-height:1.7}
 
 /* ---------- 上一条 / 下一条 ---------- */
 .pn{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
@@ -307,6 +320,8 @@ a, button, summary, [onclick],
   .kitem{grid-template-columns:1fr;gap:10px}
   .steps{grid-template-columns:1fr}
   .post,.post.lead-post{grid-template-columns:1fr;gap:8px}
+  .post.has-cover{grid-template-columns:1fr;gap:10px}
+  .post .pthumb{width:100%;height:190px}
   .qa .qt{font-size:13.4px}
 }
 

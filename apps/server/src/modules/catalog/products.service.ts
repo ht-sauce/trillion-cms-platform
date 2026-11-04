@@ -318,6 +318,22 @@ export class ProductsService {
     return { id: row.id, pageId, affectedPages }
   }
 
+  /**
+   * 批量重建派生页面（数据导入 / 修复用）：为全部产品补建或刷新详情页，
+   * 重算 /products 列表页，最后统一发布一次——避免逐条导入触发 N 次构建。
+   */
+  async rebuild(user: AuthUser, siteId: string) {
+    assertSiteAccess(user, siteId)
+    const rows = await this.prisma.product.findMany({ where: { siteId }, orderBy: { sort: 'asc' } })
+    const pageIds: string[] = []
+    for (const row of rows) {
+      const pageId = await this.deriveDetailPage(row.id)
+      if (pageId) pageIds.push(pageId)
+    }
+    const affectedPages = await this.syncAndPublish(user, siteId, pageIds)
+    return { products: rows.length, affectedPages, publishTaskId: null, affected: affectedPages }
+  }
+
   // ---------------- 内部 ----------------
 
   /** 按表数据派生/更新产品详情页，返回页面 id（页面缺失时创建） */

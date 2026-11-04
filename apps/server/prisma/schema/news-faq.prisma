@@ -9,8 +9,12 @@ model NewsArticle {
   title String @db.VarChar(200)
   /// 摘要（缺省由正文首段截断；发布时同步到 Page.summary 供 meta description / llms.txt 复用）
   summary String @default("") @db.VarChar(500)
-  /// 正文纯文本，按 \n 分段（发布时拆为 article-body 段落块）
+  /// 正文纯文本，按 \n 分段（由 body 的段落文本派生，供摘要 / 检索 / GEO 取文；无 body 的历史数据仍以此为准）
   content String @db.Text
+  /// 正文结构化块（段落 / 小标题 / 图片，按顺序渲染为 article-body 的 blocks；可空＝沿用 content 纯文本）
+  body Json?
+  /// 封面图（素材库 publicUrl，/static/... 形态）：详情页首屏背景与后台列表缩略图；可空
+  cover String? @map("cover") @db.VarChar(300)
   /// 发布日期（YYYY-MM-DD，不允许早于今天）
   publishDate String @map("publish_date") @db.VarChar(10)
   /// URL 片段，创建后不可修改（访问地址 /news/{slug}）

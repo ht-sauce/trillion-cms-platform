@@ -8,7 +8,8 @@
  * 列表接口不返回详情字段，编辑打开时拉单条详情回显
  */
 import { ElMessage } from 'element-plus'
-import { catalogApi, resolveMediaUrl, type CaseItem, type CasePayload } from '~/config/api'
+import { catalogApi, type CaseItem, type CasePayload } from '~/config/api'
+import ImageField from './ImageField.vue'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
 
 /** 项目信息行（详情页 glass-card） */
@@ -196,15 +197,7 @@ const submit = debounce(() => {
             </el-col>
           </el-row>
           <el-form-item label="卡片图片">
-            <div class="img-field">
-              <el-input v-model="form.img" placeholder="/assets/img/forintech/xxx.webp" />
-              <img
-                v-if="form.img"
-                :src="resolveMediaUrl(form.img)"
-                alt="卡片图片预览"
-                class="img-preview"
-              />
-            </div>
+            <ImageField v-model="form.img" placeholder="/static/... 或点击上传" />
           </el-form-item>
 
           <el-divider content-position="left">详情页头部（留空则按卡片字段派生）</el-divider>
@@ -219,7 +212,7 @@ const submit = debounce(() => {
             </el-col>
             <el-col :span="12">
               <el-form-item label="头部大图">
-                <el-input v-model="form.bgImage" placeholder="留空用卡片图片" />
+                <ImageField v-model="form.bgImage" placeholder="留空用卡片图片" />
               </el-form-item>
             </el-col>
           </el-row>
@@ -268,8 +261,7 @@ const submit = debounce(() => {
               </el-button>
             </div>
             <div v-for="(item, index) in images" :key="`im-${index}`" class="row-item">
-              <el-input v-model="item.img" placeholder="图片地址" style="width: 240px" />
-              <img v-if="item.img" :src="resolveMediaUrl(item.img)" alt="画面预览" class="img-preview" />
+              <ImageField v-model="item.img" placeholder="图片地址或上传" class="row-img" />
               <el-input v-model="item.caption" placeholder="图注" style="width: 160px" />
               <el-input v-model="item.note" placeholder="角标说明" style="width: 110px" />
               <el-button link type="danger" size="small" @click="images.splice(index, 1)">删除</el-button>

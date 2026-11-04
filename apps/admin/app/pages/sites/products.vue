@@ -215,7 +215,16 @@ onMounted(async () => {
           <el-table-column label="产品" min-width="220">
             <template #default="{ row }">
               <div class="prod-cell">
-                <img v-if="row.img" :src="resolveMediaUrl(row.img)" :alt="row.name" class="prod-thumb" />
+                <el-image
+              v-if="row.img"
+              :src="resolveMediaUrl(row.img)"
+              :preview-src-list="[resolveMediaUrl(row.img)]"
+              :alt="row.name"
+              fit="cover"
+              preview-teleported
+              hide-on-click-modal
+              class="prod-thumb"
+            />
                 <div class="prod-meta">
                   <span class="prod-name">{{ row.name }}</span>
                   <span class="c-mute">{{ row.cnName }}</span>

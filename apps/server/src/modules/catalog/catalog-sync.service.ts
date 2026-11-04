@@ -90,13 +90,42 @@ export class CatalogSyncService {
   // ---------------- 详情页模板与块组合 ----------------
 
   /** 站点内某栏目的详情页结构模板：取最早创建的 detail 页面（块骨架 + 固定文案的唯一来源） */
+  /**
+   * 栏目兜底骨架（栏目无任何 detail 页时的降级模板，ADR-052 第 5 条）：
+   * 只含块 key 与空数据，站点文案为零；没有它，栏目第一个详情页会以「空模板」
+   * 派生出空块组合，且后续页面克隆这个空页，整栏目全空。
+   */
+  private static readonly FALLBACK_TEMPLATES: Record<string, BlockInstanceInput[]> = {
+    '/products': [
+      { id: 'fallback-hero', key: 'hero-dark', data: {}, enabled: true },
+      { id: 'fallback-intro-head', key: 'section-head', data: {}, enabled: true },
+      { id: 'fallback-intro', key: 'vcard-grid', data: {}, enabled: true },
+      { id: 'fallback-layer-head', key: 'section-head', data: {}, enabled: true },
+      { id: 'fallback-layer', key: 'layer-stack', data: {}, enabled: true },
+      { id: 'fallback-feature-head', key: 'section-head', data: {}, enabled: true },
+      { id: 'fallback-feature', key: 'feature-cards', data: {}, enabled: true },
+      { id: 'fallback-color-head', key: 'section-head', data: {}, enabled: true },
+      { id: 'fallback-color', key: 'color-palette', data: {}, enabled: true },
+      { id: 'fallback-telbar', key: 'telbar', data: {}, enabled: true }
+    ],
+    '/cases': [
+      { id: 'fallback-hero', key: 'hero-dark', data: {}, enabled: true },
+      { id: 'fallback-card', key: 'glass-card', data: {}, enabled: true },
+      { id: 'fallback-body', key: 'article-body', data: {}, enabled: true },
+      { id: 'fallback-grid-head', key: 'section-head', data: {}, enabled: true },
+      { id: 'fallback-grid', key: 'env-grid', data: {}, enabled: true }
+    ]
+  }
+
   async loadDetailTemplate(siteId: string, section: string): Promise<BlockInstanceInput[]> {
     const page = await this.prisma.page.findFirst({
       where: { siteId, kind: 'detail', path: { startsWith: `${section}/` } },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: { blocks: true }
     })
-    return normalizeBlockInstances(page?.blocks)
+    const template = normalizeBlockInstances(page?.blocks)
+    /** 模板缺失或为空（如栏目第一个详情页正在创建）时退回程序化骨架 */
+    return template.length ? template : CatalogSyncService.FALLBACK_TEMPLATES[section] || []
   }
 
   /**

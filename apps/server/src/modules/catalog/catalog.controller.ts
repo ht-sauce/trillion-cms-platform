@@ -141,4 +141,18 @@ export class CatalogController {
   removeCase(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.cases.removeCase(user, id)
   }
+
+  // ---------------- 批量重建 ----------------
+
+  @Post('products/rebuild')
+  @ApiOperation({ summary: '批量重建产品派生页面（导入/修复用）：全部产品补建或刷新详情页 + 重算列表页，统一发布一次' })
+  rebuildProducts(@CurrentUser() user: AuthUser, @Query('siteId') siteId: string) {
+    return this.products.rebuild(user, siteId)
+  }
+
+  @Post('cases/rebuild')
+  @ApiOperation({ summary: '批量重建案例派生页面（导入/修复用）：全部案例补建或刷新详情页 + 重算列表页，统一发布一次' })
+  rebuildCases(@CurrentUser() user: AuthUser, @Query('siteId') siteId: string) {
+    return this.cases.rebuild(user, siteId)
+  }
 }

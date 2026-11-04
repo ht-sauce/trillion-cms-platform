@@ -8,7 +8,9 @@
  * 新增文章恒排最前、永远命中大卡样式，与既有条目的字号 / 对齐不一致；
  * 全部条目统一普通卡（h4）样式，site.css 中 .lead-post 样式保留但不再使用。
  *
- * 数据字段：items[{title, summary, publishDate, href}]（新闻去分类，不再有 category / ptag）
+ * 数据字段：items[{title, summary, publishDate, href, cover?}]（新闻去分类，不再有 category / ptag）
+ * 2026-11-04（ADR-053）：条目增加 `cover` 封面缩略图（素材库 publicUrl）；有封面时
+ * `.post` 变三列（日期 / 缩略图 / 文本），无封面维持两列，问答列表等其他用法零影响。
  *
  * 分页（客户端）：pageSize 默认 10；SSG / SSR 初始只渲染第 1 页，
  * window 访问只在 onMounted 里解析 location.search 的 page 参数后对 items 切片。
@@ -54,7 +56,7 @@ const pages = computed(() =>
 defineBlock({
   key: 'post-list',
   name: '新闻列表',
-  hint: '新闻 / 资讯列表：统一条目卡片，超过每页条数时显示分页',
+  hint: '新闻 / 资讯列表：统一条目卡片（可选封面缩略图），超过每页条数时显示分页',
   fields: [
     { key: 'pageSize', label: '每页条数', type: 'number', hint: '默认 10' },
     {
@@ -67,7 +69,8 @@ defineBlock({
           { key: 'title', label: '标题', type: 'text' },
           { key: 'summary', label: '摘要', type: 'textarea' },
           { key: 'publishDate', label: '发布日期', type: 'text' },
-          { key: 'href', label: '链接', type: 'url' }
+          { key: 'href', label: '链接', type: 'url' },
+          { key: 'cover', label: '封面图', type: 'file', hint: '素材库地址（/static/...）；留空则无缩略图' }
         ]
       }
     }
@@ -78,8 +81,17 @@ defineBlock({
 <template>
   <template v-if="pageItems.length">
     <div class="posts">
-      <NuxtLink v-for="item in pageItems" :key="item.title" class="post" :to="item.href || '#'">
+      <NuxtLink
+        v-for="item in pageItems"
+        :key="item.title"
+        class="post"
+        :class="{ 'has-cover': Boolean(item.cover) }"
+        :to="item.href || '#'"
+      >
         <div class="pd">{{ item.publishDate }}</div>
+        <figure v-if="item.cover" class="pthumb">
+          <img :src="item.cover" :alt="item.title" loading="lazy" decoding="async" />
+        </figure>
         <div class="pc">
           <h4>{{ item.title }}</h4>
           <p v-if="item.summary">{{ item.summary }}</p>

@@ -385,7 +385,8 @@ function requestPage(port, urlPath, hostHeader, timeoutMs = 30_000) {
       {
         host: '127.0.0.1',
         port,
-        path: urlPath,
+        /** 路径含非 ASCII（中文 slug）时必须编码，node:http 会拒绝未转义路径 */
+        path: encodeURI(urlPath),
         method: 'GET',
         headers: { host: hostHeader, accept: 'text/html,application/xhtml+xml,*/*' }
       },
@@ -844,6 +845,52 @@ if (backup) {
 }
 
 rmrf(genDir)
+
+/**
+ * /static 素材库引用本地化（ADR-049 产物自包含）：
+ * 页面图片统一走素材库（URL 形如 /static/<yyyy>/<mm>/<uuid>.<ext>，GEO 的 /static 路由同源代理到服务端），
+ * 但产物必须自包含——把本站页面引用到的 /static 文件拉取进产物目录（sites/<slug>/static/...），
+ * 离线演示 / CDN 直传 / 服务端不可达时图片不丢；site-entry 中间件对带扩展名路径按文件直出，天然命中。
+ */
+function collectStaticRefs(dir) {
+  const refs = new Set()
+  const walk = (d) => {
+    for (const f of fs.readdirSync(d)) {
+      const full = path.join(d, f)
+      const stat = fs.statSync(full)
+      if (stat.isDirectory()) walk(full)
+      else if (f.endsWith('.html')) {
+        const html = fs.readFileSync(full, 'utf8')
+        for (const m of html.matchAll(/\/static\/[a-zA-Z0-9/._-]+/g)) refs.add(m[0])
+      }
+    }
+  }
+  walk(dir)
+  return refs
+}
+
+const staticRefs = collectStaticRefs(finalDir)
+if (staticRefs.size) {
+  const apiBase = String(process.env.NUXT_PUBLIC_API_BASE || '')
+  const serverBase = apiBase.replace(/\/geoserver\/?$/, '') || apiBase
+  let pulled = 0
+  let missed = 0
+  for (const ref of staticRefs) {
+    const dest = path.join(finalDir, ref)
+    if (fs.existsSync(dest)) continue
+    try {
+      const res = await fetch(`${serverBase}${ref}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const buf = Buffer.from(await res.arrayBuffer())
+      fs.mkdirSync(path.dirname(dest), { recursive: true })
+      fs.writeFileSync(dest, buf)
+      pulled += 1
+    } catch {
+      missed += 1
+    }
+  }
+  console.log(`[build] /static 本地化：引用 ${staticRefs.size} 个，拉取 ${pulled}，未命中 ${missed}`)
+}
 
 console.log(`[build] 完成：${siteSlug} 共 ${targets.length} 页 → ${path.relative(root, finalDir)}`)
 console.log('[build] 详细路由与归档信息见 _trillion.json，回退数据保留于 .old 与 .history')
