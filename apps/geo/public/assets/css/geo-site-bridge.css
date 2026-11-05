@@ -284,6 +284,18 @@
   padding-top: 0;
 }
 
+/* ---- 首屏与正文衔接改用窄档留白（2026-11-05） ----
+ * 首屏块（hero-dark / scene-hero）下紧跟的第一个 .site-section，其上内边距
+ * 原先取预设的 clamp(44px, 5vw, 72px)，大屏会撑到 72px，头图与正文之间
+ * 空白过大。这里沿用项目的 clamp 响应式写法，只把范围收窄到窄档：
+ *   小屏约 28px → 大屏最多 44px。
+ * 只作用于紧跟首屏的第一个节；页面其余节的节奏仍由各预设维持
+ * （flush-top 等显式提示优先级更高时照旧生效）。 */
+.hero + .site-section,
+.sh-scene-hero + .site-section {
+  padding-top: clamp(28px, 3vw, 44px);
+}
+
 /* ---- 页内锚点联动（2026-11-03）：hero chips 与下方区块互跳 ----
  * BlockRenderer 给每个渲染单元的 section 挂 id="blk-<实例id>"，
  * hero 的 chips 命中区块标题时渲染成 a.chip-link 页内锚点。
