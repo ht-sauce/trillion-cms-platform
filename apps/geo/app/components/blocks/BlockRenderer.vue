@@ -262,17 +262,79 @@ const items = computed(() => {
 
   return units
 })
+
+const productGroups = computed(() =>
+  props.context.page?.path === '/products'
+    ? items.value.filter((item) => item.enabled && item.key === 'product-card' && item.head?.data.title)
+    : []
+)
+const activeProductGroup = ref('')
+const selectedProductGroup = computed(() =>
+  productGroups.value.some((item) => item.id === activeProductGroup.value)
+    ? activeProductGroup.value
+    : productGroups.value[0]?.id
+)
+
+function selectProductFromHash() {
+  const group = productGroups.value.find((item) => window.location.hash === `#blk-${item.id}`)
+  if (group) activeProductGroup.value = group.id
+}
+
+function onProductTabKey(event: KeyboardEvent, index: number) {
+  const count = productGroups.value.length
+  let next = index
+  if (event.key === 'ArrowRight') next = (index + 1) % count
+  else if (event.key === 'ArrowLeft') next = (index + count - 1) % count
+  else if (event.key === 'Home') next = 0
+  else if (event.key === 'End') next = count - 1
+  else return
+  event.preventDefault()
+  const group = productGroups.value[next]
+  activeProductGroup.value = group.id
+  document.getElementById(`product-tab-${group.id}`)?.focus()
+}
+
+onMounted(() => {
+  selectProductFromHash()
+  window.addEventListener('hashchange', selectProductFromHash)
+})
+onBeforeUnmount(() => window.removeEventListener('hashchange', selectProductFromHash))
 </script>
 
 <template>
   <div class="blocks">
     <template v-for="item in items" :key="item.id || item.key">
+      <div v-if="item.id === productGroups[0]?.id" class="site-section product-tabs-section">
+        <div class="wrap">
+          <div class="product-tabs" role="tablist" aria-label="产品行业分类">
+            <button
+              v-for="(group, index) in productGroups"
+              :id="`product-tab-${group.id}`"
+              :key="group.id"
+              type="button"
+              role="tab"
+              :aria-selected="selectedProductGroup === group.id"
+              :aria-controls="`blk-${group.id}`"
+              :tabindex="selectedProductGroup === group.id ? 0 : -1"
+              @click="activeProductGroup = group.id"
+              @keydown="onProductTabKey($event, index)"
+            >
+              {{ group.head?.data.title }}
+            </button>
+          </div>
+        </div>
+      </div>
       <!-- 节奏容器（ADR-036 补充）：块自身只描述内容，section 由渲染器按清单/页面提示包裹 -->
       <section
         v-if="item.enabled && item.section !== 'none'"
         :id="item.id ? `blk-${item.id}` : undefined"
+        :role="productGroups.includes(item) ? 'tabpanel' : undefined"
+        :aria-labelledby="productGroups.includes(item) ? `product-tab-${item.id}` : undefined"
+        :hidden="productGroups.includes(item) && selectedProductGroup !== item.id"
+        :tabindex="productGroups.includes(item) ? 0 : undefined"
         class="site-section"
         :class="{
+          'product-tab-panel': productGroups.includes(item),
           alt: item.section === 'alt' || item.section === 'alt-flush',
           'flush-top': item.section === 'plain-flush' || item.section === 'alt-flush',
           'site-section--head': item.section === 'head'
@@ -280,7 +342,13 @@ const items = computed(() => {
         :data-block-key="item.key"
       >
         <div class="wrap">
-          <div v-if="item.head && !item.head.component" class="block-missing" :data-block-key="item.head.key">
+          <div v-if="productGroups.includes(item)" class="product-group-intro">
+            <component :is="item.head?.context.pageTitle ? 'h1' : 'h2'" class="product-group-title">
+              {{ item.head?.data.title }}
+            </component>
+            <p v-if="item.head?.data.desc" class="product-group-desc">{{ item.head.data.desc }}</p>
+          </div>
+          <div v-else-if="item.head && !item.head.component" class="block-missing" :data-block-key="item.head.key">
             块不可用：{{ item.head.key }}（块定义已删除或代码未编译通过）
           </div>
           <component
@@ -324,6 +392,77 @@ const items = computed(() => {
  */
 .blocks {
   display: block;
+}
+
+.product-tabs-section {
+  padding-bottom: 24px;
+}
+
+.product-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+
+  button {
+    flex: 0 0 auto;
+    padding: 16px 24px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--ink-2);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+
+    &[aria-selected='true'] {
+      border-bottom-color: var(--brand);
+      color: var(--brand);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: -4px;
+    }
+  }
+}
+
+.product-tab-panel {
+  padding-top: 0;
+  scroll-margin-top: 96px;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+.product-group-intro {
+  margin-bottom: 24px;
+}
+
+.product-group-title {
+  margin: 0 0 16px;
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1.3;
+}
+
+.product-group-desc {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.9;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .product-tabs button {
+    padding: 16px;
+  }
+
+  .product-group-title {
+    font-size: 24px;
+  }
 }
 
 /**

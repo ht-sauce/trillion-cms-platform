@@ -231,6 +231,7 @@ flowchart LR
 
 ### 4.5 列表与图文
 
+- 产品体系 `/products` 的连续 `section-head + product-card` 分组由 `BlockRenderer` 编排为顶部行业 Tab：按现有块顺序排列，默认选中首组，仅展示当前组；说明置于 Tab 下方、产品网格上方，不再使用分组头的左右两列布局。保留全部分组的 SSR 内容及原块锚点，访问行业锚点时同步切换 Tab；支持方向键、Home/End 和移动端横向滚动。其他页面与块布局不变。行业分组弹窗只维护名称、说明、排序，不提供“更多文案”；保留旧数据字段兼容，产品卡固定使用“了解更多 →”。
 - 普通清单、菜单用 `<ul><li>`；有序步骤用 `<ol><li>`（禁止用 `div` 循环模拟列表）
 - 图文单元用 `<figure>` + `<figcaption>`（如 `BlkGallery` / `BlkEnvGrid` / `BlkCertGrid` / `BlkDeviceRow`）
 - `<img>` **必须写 `alt`**；纯装饰图 `alt=""`；图片 URL 未接入时的占位块用 `role="img"` + `aria-label`

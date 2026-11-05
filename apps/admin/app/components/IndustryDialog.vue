@@ -2,7 +2,7 @@
 /**
  * 行业分组弹窗（新建 / 编辑）
  * 行业分组是 /products 列表页的分组结构：名称 → 分组标题，介绍 → 分组说明，
- * 更多文案 → 分组头的 moreLabel。保存后服务端重算列表页分组并触发发布。
+ * 保存后服务端重算列表页分组并触发发布。
  */
 import { ElMessage } from 'element-plus'
 import { catalogApi, type ProductIndustryItem } from '~/config/api'
@@ -21,7 +21,6 @@ const { loading: saving, run } = useLoading()
 const form = reactive({
   name: '',
   desc: '',
-  moreLabel: '',
   sort: 0
 })
 
@@ -31,7 +30,6 @@ watch(visible, (open) => {
   if (!open) return
   form.name = props.industry?.name ?? ''
   form.desc = props.industry?.desc ?? ''
-  form.moreLabel = props.industry?.moreLabel ?? ''
   form.sort = props.industry?.sort ?? 0
 })
 
@@ -48,7 +46,6 @@ const submit = debounce(() => {
   const payload = {
     name: form.name.trim(),
     desc: form.desc.trim(),
-    moreLabel: form.moreLabel.trim(),
     sort: form.sort
   }
 
@@ -85,9 +82,6 @@ const submit = debounce(() => {
           show-word-limit
           placeholder="这组产品解决的工况问题（分组副标题）"
         />
-      </el-form-item>
-      <el-form-item label="更多文案">
-        <el-input v-model="form.moreLabel" maxlength="40" placeholder="分组头右侧链接文案，留空则不显示" />
       </el-form-item>
       <el-form-item label="排序">
         <el-input-number v-model="form.sort" :min="0" :max="999" size="small" controls-position="right" />
