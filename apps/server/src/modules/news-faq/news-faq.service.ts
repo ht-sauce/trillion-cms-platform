@@ -25,7 +25,7 @@ import { assertSiteAccess } from '../../common/utils/site-scope'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
 import { articleBlocksToText, normalizeArticleBody } from '../../common/utils/article-body'
-import { articleBlocksToHtml, htmlToText, sanitizeArticleHtml } from '../../common/utils/article-html'
+import { articleBlocksToHtml, htmlToText } from '../../common/utils/article-html'
 import type { BlockInstanceInput } from '../../common/utils/block-instances'
 import {
   RELATED_FAQ_MAX,
@@ -150,8 +150,8 @@ export class NewsFaqService {
 
     const paragraphs = splitParagraphs(dto.content ?? '')
     const body = normalizeArticleBody(dto.body)
-    /** 正文整篇 HTML 是主数据；纯文本由它派生（无 HTML 时回落块数组 / content） */
-    const bodyHtml = sanitizeArticleHtml(dto.bodyHtml)
+    /** 正文整篇 HTML 是主数据，原样入库；纯文本由它派生（无 HTML 时回落块数组 / content） */
+    const bodyHtml = typeof dto.bodyHtml === 'string' ? dto.bodyHtml : ''
     const plainText = bodyHtml ? htmlToText(bodyHtml) : body.length ? articleBlocksToText(body) : paragraphs.join('\n')
     const resolvedParagraphs = splitParagraphs(plainText)
     if (!plainText.trim()) throw new BadRequestException('正文不能为空')
@@ -216,7 +216,8 @@ export class NewsFaqService {
     const summary = dto.summary !== undefined ? dto.summary : row.summary
     const publishDate = dto.publishDate ?? row.publishDate
     /** 正文：bodyHtml 是主数据（传了就整体覆盖），纯文本 content 由它派生；无 HTML 时回落块数组 */
-    const bodyHtml = dto.bodyHtml !== undefined ? sanitizeArticleHtml(dto.bodyHtml) : (row.bodyHtml ?? '')
+    const bodyHtml =
+      typeof dto.bodyHtml === 'string' ? dto.bodyHtml : typeof row.bodyHtml === 'string' ? row.bodyHtml : ''
     const body = dto.body !== undefined ? normalizeArticleBody(dto.body) : normalizeArticleBody(row.body)
     const content = bodyHtml
       ? htmlToText(bodyHtml)

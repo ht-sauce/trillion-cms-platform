@@ -212,7 +212,7 @@ flowchart LR
 | ------ | ------------------------------- | ------------------------------------------------------------------------ | ----- |
 | GET    | `/news-faq/articles`            | 文章分页列表（读 `NewsArticle` 表：`?siteId&page&pageSize&keyword`，keyword 模糊匹配 title，按发布日期倒序；行含 `id, path, title, summary, publishDate, status, pageId`） | JWT-A |
 | GET    | `/news-faq/articles/:id/detail` | 单条文章详情（**直读表，不接收 siteId 参数**；返回 `{ id, pageId, path, title, summary, publishDate, status, slug, content, bodyHtml, body }`，`content` 为 `bodyHtml` 派生的纯文本，`body` 为历史块数组（兼容）） | JWT-A |
-| POST   | `/news-faq/articles`            | 新建文章（写表 → 建详情页；`{ siteId, title, summary?, publishDate, content?, bodyHtml?, body?, slug? }`；**正文以 `bodyHtml` 为准**，经 `sanitizeArticleHtml` 白名单化，`content` 由其派生；`body` 仅作历史兼容；`path=/news/{slug}`，slug 缺省自动生成 `news-YYYYMMDD-序号`，冲突 400；`publishDate` 必填且不允许早于今天） | JWT-A |
+| POST   | `/news-faq/articles`            | 新建文章（写表 → 建详情页；`{ siteId, title, summary?, publishDate, content?, bodyHtml?, body?, slug? }`；**正文以 `bodyHtml` 为准，字符串原样存储，不清洗、不归一**，`content` 由其派生；`body` 仅作历史兼容；`path=/news/{slug}`，slug 缺省自动生成 `news-YYYYMMDD-序号`，冲突 400；`publishDate` 必填且不允许早于今天） | JWT-A |
 | PATCH  | `/news-faq/articles/:id`       | 编辑文章（`{ title?, summary?, publishDate?, content?, bodyHtml? }`；`bodyHtml` 传空串 = 清空正文；**slug 创建后不可改**；页面缺失自动补建） | JWT-A |
 | DELETE | `/news-faq/articles/:id`        | 删除文章（删发布产物页面与表记录）                                        | JWT-A |
 | GET    | `/news-faq/faqs`                | 问答分页列表（读 `FaqItem` 表：`?siteId&page&pageSize&keyword&category&featured`，keyword 模糊匹配 question，按 slug 倒序；`featured=1/0` 只看上架 / 只看未上架，缺省不限；行含 `id, path, question, category, status, featured, pageId`） | JWT-A |
@@ -227,7 +227,7 @@ flowchart LR
 
 > 保存即发布：表记录 `status` 恒为 `published`（管理端保存免审核，与站点编辑器保存行为一致）。
 > 发布日期校验：`publishDate` 必填、`/^\d{4}-\d{2}-\d{2}$/` 且**不允许早于今天**（Asia/Shanghai 口径），错误信息为中文（如「发布日期不能早于今天」）。
-> 正文均为纯文本，按换行拆成段落块；新闻去分类（`post-list` / `article-meta` 块已无 category 字段，`/news` 列表 hero chips 置空、独立 pager 移除，分页由 `post-list` 客户端分页承担）。
+> 新闻正文以整篇 `bodyHtml` 为准（ADR-060）：管理表存储与详情回读保留输入字符串原文，包括空白、实体、标签、属性与媒体 URL，不清洗、不归一、不按换行拆块或重排；PATCH 未传保留原值，传空串清空正文。保存路径不再调用 `sanitizeArticleHtml`（ADR-061），站点渲染按存储内容原样输出；`sanitizeArticleHtml` 仅供采集 / 导入脚本使用；`content` 是派生纯文本。问答继续使用其受限 HTML 契约。新闻去分类（`post-list` / `article-meta` 块已无 category 字段，`/news` 列表 hero chips 置空、独立 pager 移除，分页由 `post-list` 客户端分页承担）。
 
 ### 3.14 catalog · 产品体系 / 成功案例（管理面）
 
@@ -248,11 +248,13 @@ flowchart LR
 | DELETE | `/catalog/products/:id`         | 删除产品（删发布产物页面与表记录，重算列表页） | JWT-A |
 | GET    | `/catalog/cases`                | 案例分页列表（`?siteId&page&pageSize&keyword&industry`；行含卡片字段（含 `industryId / client`）+ `path`，**不含详情字段**；响应附带 `industryList`，**来源是行业分类表 `ProductIndustry`**，不再是案例表 distinct） | JWT-A |
 | GET    | `/catalog/cases/:id/detail`     | 单条案例详情（含 `industryId / client / systemNote / bodyHtml / bodyBlocks / body / images / sourceUrl`；`infoRows` 由服务端按字段派生，不入库不收参） | JWT-A |
-| POST   | `/catalog/cases`                | 新建案例（`{ siteId, title, industryId?, industry?, client?, location?, area?, year?, system?, systemNote?, img?, lead?, chips?, bgImage?, bodyHtml?, body?, bodyBlocks?, images?, sourceUrl? }`；**行业只认分类表**：`industryId` 优先，回落 `industry` 名称精确匹配，给了值但未命中返回 400；**正文以 `bodyHtml` 为准**，经 `sanitizeArticleHtml` 白名单化，`body` 由其派生，`bodyBlocks` 仅作历史兼容；slug 缺省 `case-YYYYMMDD-序号`；落表后立即派生详情页） | JWT-A |
+| POST   | `/catalog/cases`                | 新建案例（`{ siteId, title, industryId?, industry?, client?, location?, area?, year?, system?, systemNote?, img?, lead?, chips?, bgImage?, bodyHtml?, body?, bodyBlocks?, images?, sourceUrl? }`；**行业只认分类表**：`industryId` 优先，回落 `industry` 名称精确匹配，给了值但未命中返回 400；**正文以 `bodyHtml` 为准，字符串原样存储，不清洗、不归一**，`body` 由其派生，`bodyBlocks` 仅作历史兼容；slug 缺省 `case-YYYYMMDD-序号`；落表后立即派生详情页） | JWT-A |
 | PATCH  | `/catalog/cases/:id`            | 编辑案例（字段同 POST 且均可选；`bodyHtml` 传空串 = 清空正文；`industryId` 传空串 = 取消分类；slug 不可改；页面缺失自动补建） | JWT-A |
 | DELETE | `/catalog/cases/:id`            | 删除案例（删发布产物页面与表记录，重算列表页） | JWT-A |
 
 > **详情页派生走模板**（[ADR-052](./08-adr.md)）：块结构从站点既有同栏目 detail 页克隆，代码只做字段覆盖，不含任何站点文案。
+> 成功案例详情仅展示当前记录有值的字段；空头图、行业等不得回落到模板内容。独立项目画廊及其标题不输出，历史 `images` 字段保留兼容但不派生画廊；图片通过整篇 `bodyHtml` 展示。项目信息与正文为空时对应分区和分区标题均不输出，通用结构标签只在有内容时出现。
+> 案例 `bodyHtml` 管理表存储与详情回读保留输入字符串原文，包括空白、实体、标签、属性与媒体 URL，不清洗、不归一（本机回环媒体 URL 也不改）；PATCH 未传保留原值，传空串清空正文。发布详情页派生 `article-body.data.html` 时同样**原样输出存储内容**，不再经过 `sanitizeArticleHtml`（ADR-061，该工具仅保留给采集 / 导入脚本）；`body` 是派生纯文本。编辑器显示用的服务端/GEO基址不得回写正文。
 > 响应口径与 §3.13 一致：`data` 含 `affectedPages` 与 `publishTaskId`；仅 `status='published'` 的页面进入发布队列。
 > 产品/案例的 `pageId` 是**保存即自动建页**（不是可选项），因此新建接口的响应里 `pageId` 必定非空。
 

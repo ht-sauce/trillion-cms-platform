@@ -54,6 +54,7 @@
 - **根 scripts/**：`dev.mjs`（开发启动器：先释放端口再并发启动，各工程就绪后打印访问入口清单）、`build.mjs`（构建器：shared 先行，按目标构建）、`db.mjs`（数据库命令分发：`status`/`deploy`/`migrate`/`seed`…）、`site.mjs`（站点命令分发：`build`/`bootstrap`/`check`/`merge`/`assets`/`verify`）、`release.mjs`（**代码**上线器：体检 → 构建 → 生产模式启动 / `--pm2`，**不碰数据库**）、`db-release.mjs`（**数据库**上线器：体检 → `migrate deploy` → 复核，唯一改结构入口）、`pm2-config.mjs`（PM2 配置生成器）、`pack-deploy.mjs` + `deploy-runtime/`（**部署包**打包器与运行时模板，产出仓库根 `deploy/`）、`port-guard.mjs`（端口查询/结束/释放，启动器共用）、`exec.mjs`（以全局配置执行包脚本）、`cli.mjs`（三个分发脚本共用的参数与环境注入）、`pnpm.mjs`（pnpm 调用封装）；零第三方依赖
 - **根命令只有 8 条（强制，ADR-044）**：`dev` / `build` / `db` / `site` / `release` / `bundle` / `lint` / `format`。应用、环境、动作**一律走参数**（`pnpm dev admin --env test`、`pnpm db deploy --env production`、`pnpm site build --site <slug>`）；**禁止再新增 `xxx:yyy` 后缀别名**（历史上 37 条脚本里 29 条是「同一动作 × 环境 / 应用」的笛卡尔积，就是这么长出来的）。新增能力优先挂到已有命令的子命令或参数上；确需新根命令时先改 `docs/spec/07-deployment.md` §3.5 并补 ADR
 - **无每目录 README.md**：目录与文件说明统一维护在 `docs/PROJECT_STRUCTURE.md` 一个全局文件
+- **AI 生成物只落 `aiTest/`（强制）**：AI 产出的临时文件（验证截图、一次性脚本、抓取缓存、验收报告、比对 JSON 等）一律写到仓库根 `aiTest/`，该目录已在 `.gitignore` 中忽略，**不得散落在仓库根、`apps/`、`docs/` 或自建目录**（历史教训：根目录曾堆积 `case-repair-evidence/`、`交付/`、`.claude/` 共 900+ 文件 / 900MB，且未被忽略）。确属长期文档的内容，人工确认后再移入 `docs/`
 - **架构规格统一维护在 `docs/spec/`**（编号体系：`INDEX` + `00`~`09`）。新增/修改组件、数据表、接口、发布流程、部署形态、**站点编辑器与块代码化**前，先改对应编号文档，再动代码；维护责任表见 `docs/spec/INDEX.md` §4
 
 ## 5. 数据库约定

@@ -57,6 +57,7 @@ async function onFileChange(event: Event) {
 <template>
   <div class="img-field">
     <el-input v-model="model" :placeholder="placeholder" clearable />
+    <slot name="action" />
     <el-button size="small" :loading="uploading" @click="pick">上传</el-button>
     <input ref="fileInput" type="file" :accept="accept" class="hidden-input" @change="onFileChange" />
     <el-image

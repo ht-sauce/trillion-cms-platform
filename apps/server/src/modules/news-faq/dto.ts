@@ -141,7 +141,7 @@ export class CreateArticleDto {
   content?: string
 
   @ApiPropertyOptional({
-    description: '正文整篇 HTML（主数据；服务端 sanitizeArticleHtml 白名单化，content 由其派生）'
+    description: '正文整篇 HTML（主数据；原样入库不做改写（ADR-061），content 由其派生）'
   })
   @IsOptional()
   @IsString()

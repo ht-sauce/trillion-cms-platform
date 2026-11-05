@@ -51,5 +51,8 @@ Thumbs.db
 .codebuddy/
 .workbuddy/
 
+# AI 生成的临时/验证产物（截图、报告、脚本草稿等，一律不入库；需要留档请人工判断后再决定是否落到 docs/）
+aiTest/
+
 # 清理留档（站点数据导出，仅供事后追溯，不入库）
 apps/server/_backup*

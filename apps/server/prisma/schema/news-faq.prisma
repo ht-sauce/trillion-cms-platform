@@ -11,7 +11,7 @@ model NewsArticle {
   summary String @default("") @db.VarChar(500)
   /// 正文纯文本，按 \n 分段（由 bodyHtml 去标签派生，供摘要 / 检索 / GEO 取文；无 bodyHtml 的历史数据仍以此为准）
   content String @db.Text
-  /// 正文整篇 HTML（唯一编辑源，渲染时原样输出；服务端 sanitizeArticleHtml 白名单化；可空＝历史数据）
+  /// 正文整篇 HTML（唯一编辑源，保存与渲染均原样输出、不做清洗（ADR-061）；可空＝历史数据）
   bodyHtml String? @map("body_html") @db.Text
   /// 正文结构化块（历史兼容格式：段落 / 小标题 / 图片；新代码不再写入；bodyHtml 为空时回落渲染）
   body Json?

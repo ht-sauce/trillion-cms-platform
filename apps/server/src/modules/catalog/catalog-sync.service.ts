@@ -151,9 +151,7 @@ export class CatalogSyncService {
     '/cases': [
       { id: 'fallback-hero', key: 'hero-dark', data: {}, enabled: true },
       { id: 'fallback-card', key: 'glass-card', data: {}, enabled: true },
-      { id: 'fallback-body', key: 'article-body', data: {}, enabled: true },
-      { id: 'fallback-grid-head', key: 'section-head', data: {}, enabled: true },
-      { id: 'fallback-grid', key: 'env-grid', data: {}, enabled: true }
+      { id: 'fallback-body', key: 'article-body', data: {}, enabled: true }
     ]
   }
 
@@ -209,12 +207,10 @@ export class CatalogSyncService {
 
   /**
    * 案例详情骨架补位：站点的详情模板可能来自早期抓取页（只有 hero + 正文），
-   * 缺少项目信息卡 / 项目画面时按标准顺序补上，否则这些数据无处输出。
    * 区块标题是通用结构标签（不是站点专属文案），模板已有对应块时一律不动。
    */
   private static readonly CASE_SKELETON = {
-    cardTitle: '项目信息',
-    gridTitle: '项目画面'
+    cardTitle: '项目信息'
   }
 
   private ensureCaseSkeleton(template: BlockInstanceInput[]): BlockInstanceInput[] {
@@ -229,54 +225,40 @@ export class CatalogSyncService {
         data: { title: CatalogSyncService.CASE_SKELETON.cardTitle }
       })
     }
-    if (!has('env-grid')) {
-      const articleAt = list.findIndex((block) => block.key === 'article-body')
-      const insertAt = articleAt >= 0 ? articleAt + 1 : list.length
-      list.splice(insertAt, 0, {
-        id: 'skeleton-grid-head',
-        key: 'section-head',
-        enabled: true,
-        data: { title: CatalogSyncService.CASE_SKELETON.gridTitle }
-      })
-      list.splice(insertAt + 1, 0, { id: 'skeleton-grid', key: 'env-grid', enabled: true, data: {} })
-    }
     return list
   }
 
   /**
    * 案例详情页标准块组合（模板骨架 + 表数据）：
    * hero-dark（标题/导语/标签）→ glass-card（项目信息行）→ article-body（正文）
-   * → section-head + env-grid（项目画面）→ telbar
    */
   buildCaseBlocks(item: CaseView, template: BlockInstanceInput[], oldBlocks?: unknown): BlockInstanceInput[] {
-    const current = normalizeBlockInstances(oldBlocks)
-    const skeleton = this.ensureCaseSkeleton(template)
-    const heroBase = (
-      Object.keys(dataOf(current, 'hero-dark')).length ? dataOf(current, 'hero-dark') : dataOf(skeleton, 'hero-dark')
-    ) as Record<string, unknown>
-    const chips = item.chips?.length ? item.chips : [item.area, item.industry].filter(Boolean)
+    const skeleton = this.ensureCaseSkeleton(template).map((block) =>
+      block.key === 'hero-dark' ? { ...block, data: {} } : block
+    )
     const hero: Record<string, unknown> = {
-      ...heroBase,
       h1: item.title,
-      lead: item.lead || item.system,
-      chips,
-      bgImage: item.bgImage || item.img || heroBase.bgImage
+      lead: item.lead || '',
+      chips: item.chips ?? [],
+      /** 头部大图未填时直接复用卡片图片，避免重复上传同一张图 */
+      bgImage: item.bgImage || item.img || ''
     }
-    if (hero.h1Grad && !item.title.includes(String(hero.h1Grad))) delete hero.h1Grad
 
-    const card = dataOf(skeleton, 'glass-card')
     /** 信息行由一级字段统一生成（业主 / 行业 / 地点 / 地坪面积 / 使用体系 / 交付年份） */
     const infoRows = buildCaseInfoRows(item)
     /** 正文整篇 HTML 优先（ADR-060，原样输出）；否则回落历史块数组 / 纯文本分段 */
     const article = item.bodyHtml
       ? { html: item.bodyHtml, blocks: [] as ArticleBlock[] }
-      : { blocks: resolveArticleBlocks(item.bodyBlocks?.length ? item.bodyBlocks : null, splitParagraphs(item.body)) }
+      : {
+          html: '',
+          blocks: resolveArticleBlocks(item.bodyBlocks?.length ? item.bodyBlocks : null, splitParagraphs(item.body))
+        }
 
     const overrides: Record<string, Record<string, unknown> | null> = {
       'hero-dark': hero,
-      'glass-card': infoRows.length ? { rows: infoRows, badge: item.industry || card.badge } : null,
+      'glass-card': infoRows.length ? { rows: infoRows, badge: item.industry || '' } : null,
       'article-body': article.blocks.length || article.html ? article : null,
-      'env-grid': item.images?.length ? { items: item.images } : null
+      'env-grid': null
     }
     return withStableIds(assembleFromTemplate(skeleton, overrides), oldBlocks)
   }

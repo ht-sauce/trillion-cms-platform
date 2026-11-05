@@ -56,7 +56,7 @@ flowchart TB
 | `app/stores/menu.ts`            | Pinia 菜单树：登录后拉取 `/geoserver/menus/tree`（按角色授权过滤），缓存并供布局与面包屑使用      |
 | `app/components/SideMenuNode.vue` | 侧栏菜单递归节点（最多三级，目录可展开/收起，命中路由高亮）                                     |
 | `app/components/*Dialog.vue`    | 业务弹窗组件（会员新增 / 新闻 `NewsDialog` / 问答 `FaqDialog` / 产品 `ProductDialog` / 行业分组 `IndustryDialog` / 案例 `CaseDialog` / 菜单表单 / 角色表单 / 角色菜单授权 / 用户表单）：`defineModel` 控制显隐、`emit('saved')` 通知父页面刷新；新闻弹窗的发布日期必填且**禁选早于今天的日期**（日期选择器禁用过去日期，与服务端 `todayInChina()` 校验同口径），问答无发布日期字段 |
-| `app/components/PlainTextEditor.vue` | **纯文本编辑器（wangEditor 封装，2026-10-14）**：v-model 只暴露**纯文本**——初始化把段落间 `\n` 转 `<p>`，变更时用 `editor.getText()` 输出段落间 `\n`，样式不落库（最终提交只取纯文本，服务端按换行拆段落块）；工具栏精简（标题 + 基础强调，去图片 / 视频 / 表格 / 代码块 / 全屏）；实例 `shallowRef` 持有、`onBeforeUnmount` 时 `destroy()`，外部值异步回显经 watch `setHtml` 同步。新闻正文 / 问答答案用 |
+| `app/components/NewsBodyEditor.vue` | **普通富文本编辑器（ADR-060 / ADR-061）**：新闻正文保存整篇 HTML，支持图片（含左/右环绕与取消环绕）、视频、H2/H3 标题（**不提供 H1 入口**，官方 `headerSelect` 硬编码 H1–H5 无过滤项，故改用原生 `header2`/`header3`）、颜色、对齐、列表与表格；只提供可视化编辑，不提供源码切换。采集时整理成编辑器支持的正文结构，编辑阶段不得再把布局强制转为表格或拆块。**保存原样入库，不做安全清洗与排版改写（ADR-061）**，站点使用同一正文排版样式直接展示；验收必须包含编辑保存后重开及站点视觉对比。问答仍使用独立的 `FaqAnswerEditor.vue`。 |
 | `app/utils/menu-tree.ts`        | 菜单树工具：平铺列表 ↔ 多级树（菜单管理页与角色授权页共用）                                       |
 | `app/utils/tool.ts`             | 交互工具（**两个独立概念**）：时间维度 `debounce` / `throttle`（默认 `leading`，即先触发后防抖）；状态维度 `useLoading()`（`run` / `runKeyed` / `isLoading`） |
 | `app/middleware/auth.global.ts` | 路由级守卫                                                                                        |
@@ -65,6 +65,8 @@ flowchart TB
 | `app/assets/scss/*`             | `tokens.scss`（设计令牌）→ `mixins.scss`（复用片段）→ `main.scss`（Element Plus 暗色覆盖 + 重置） |
 
 ### 2.2 请求链路（强制）
+
+正文编辑器解析时将图片 width/height 属性转为 wangEditor 支持的尺寸样式，保留段落字号、行高与间距等既有排版；样式扩展必须写入解析节点，不依赖解析器未采纳的返回副本。回写媒体地址时剥离 `resolveMediaUrl` 加上的当前基址，不拆分并排图片、不重建布局。
 
 ```mermaid
 sequenceDiagram

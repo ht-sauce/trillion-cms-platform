@@ -116,7 +116,14 @@ const submit = debounce(() => {
 </script>
 
 <template>
-  <el-dialog v-model="visible" :title="editing ? '编辑新闻' : '新建新闻'" width="960px" :close-on-click-modal="false">
+  <el-dialog
+    v-model="visible"
+    :title="editing ? '编辑新闻' : '新建新闻'"
+    width="960px"
+    top="3vh"
+    class="news-dialog"
+    :close-on-click-modal="false"
+  >
     <el-form v-loading="isLoading('detail')" label-width="88px" size="small">
       <el-form-item label="标题" required>
         <el-input v-model="form.title" maxlength="120" placeholder="新闻标题" />
@@ -147,7 +154,7 @@ const submit = debounce(() => {
       <el-form-item label="正文内容">
         <NewsBodyEditor
           v-model="form.bodyHtml"
-          :height="440"
+          :height="320"
           :source="editorSource"
           placeholder="请输入正文，可用工具栏插入字号 / 颜色 / 表格 / 图片 / 视频"
         />
@@ -159,3 +166,12 @@ const submit = debounce(() => {
     </template>
   </el-dialog>
 </template>
+
+<style lang="scss">
+/** 弹窗内容超出视口时只在弹窗体内部滚动（顶部 top=3vh，留出头部与底部按钮）
+ *  弹窗被 teleport 到 body，拿不到 scoped 属性，故用全局块 + 专属类名限定作用域 */
+.news-dialog .el-dialog__body {
+  max-height: calc(100vh - 180px);
+  overflow: auto;
+}
+</style>

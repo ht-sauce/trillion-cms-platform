@@ -19,12 +19,17 @@ import { assertSiteAccess } from '../../common/utils/site-scope'
 import { joinPath } from '../../common/utils/site-path'
 import { toJsonInput } from '../../common/utils/json'
 import { articleBlocksToText, normalizeArticleBody } from '../../common/utils/article-body'
-import { articleBlocksToHtml, htmlToText, sanitizeArticleHtml } from '../../common/utils/article-html'
+import { articleBlocksToHtml, htmlToText } from '../../common/utils/article-html'
 import { CatalogSyncService, CASE_SECTION, type CaseView } from './catalog-sync.service'
 import type { CreateCaseDto, UpdateCaseDto } from './dto'
 
 /** 页面摘要截断长度 */
 const SUMMARY_MAX = 200
+
+/** 案例正文原样入库：实体、标签、属性、图片宽度与媒体 URL 均不改写 */
+function normalizeCaseHtml(raw: unknown): string {
+  return typeof raw === 'string' ? raw : ''
+}
 
 /** 截断（超长以省略号结尾） */
 function truncate(text: string, max: number): string {
@@ -135,7 +140,7 @@ export class CasesService {
     /** 行业只能来自分类表：industryId 优先，回落名称精确匹配，都不命中直接 400 */
     const industry = await this.resolveIndustry(dto.siteId, dto.industryId, dto.industry)
     /** 正文整篇 HTML 是主数据；无 HTML 时回落历史块数组 / 纯文本 */
-    const bodyHtml = sanitizeArticleHtml(dto.bodyHtml)
+    const bodyHtml = normalizeCaseHtml(dto.bodyHtml)
     const bodyBlocks = normalizeArticleBody(dto.bodyBlocks)
     const body = bodyHtml
       ? htmlToText(bodyHtml)
@@ -192,7 +197,7 @@ export class CasesService {
     }
 
     /** 正文：bodyHtml 是主数据（传了就整体覆盖），纯文本由它派生；无 HTML 时回落历史块数组 */
-    const bodyHtml = dto.bodyHtml !== undefined ? sanitizeArticleHtml(dto.bodyHtml) : (row.bodyHtml ?? '')
+    const bodyHtml = dto.bodyHtml !== undefined ? normalizeCaseHtml(dto.bodyHtml) : (row.bodyHtml ?? '')
     const bodyBlocks =
       dto.bodyBlocks !== undefined ? normalizeArticleBody(dto.bodyBlocks) : normalizeArticleBody(row.bodyBlocks)
     const body = bodyHtml

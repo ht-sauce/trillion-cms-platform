@@ -40,57 +40,226 @@
  * ========================================================================== */
 
 /* ---- 区块节奏 56px → 34px（原型 post_fix 定稿；追加覆写，不改原声明） ---- */
-:root{
-  --disease-b:#3730A3; /* 银屑病识别色（靛蓝） */
-  --disease-c:#9A4B1F; /* 胎记识别色（赭棕） */
+:root {
+  --disease-b: #3730a3; /* 银屑病识别色（靛蓝） */
+  --disease-c: #9a4b1f; /* 胎记识别色（赭棕） */
 }
-.site-section{ padding:34px 0; }
+.site-section {
+  padding: 34px 0;
+}
 
 /* ---- 三病种切换（disease-switch 块；色系走变量，块 SFC 不出现字面量） ---- */
-.dtabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
-.dtab{appearance:none;font-family:inherit;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:10px 22px;font-size:14.5px;font-weight:700;color:var(--ink-2);cursor:pointer;white-space:nowrap;transition:box-shadow .15s}
-.dtab .ddot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:1px;background:#C6D2DE}
-.dtab[data-d="a"] .ddot{background:var(--teal-dk)}
-.dtab[data-d="b"] .ddot{background:var(--disease-b)}
-.dtab[data-d="c"] .ddot{background:var(--disease-c)}
-.dtab:hover{box-shadow:0 2px 10px rgba(10,22,40,.08)}
-.dtab.on{color:#fff;border-color:transparent}
-.dtab.on[data-d="a"]{background:var(--teal-dk)}
-.dtab.on[data-d="b"]{background:var(--disease-b)}
-.dtab.on[data-d="c"]{background:var(--disease-c)}
-.dtab.on .ddot{background:rgba(255,255,255,.75)}
-.dpanel{display:none;border:1px solid var(--line);border-radius:var(--r-md);background:#fff;padding:24px 26px}
-.dpanel.on{display:block}
-.dpanel .dlead{font-size:14px;color:var(--ink-2);line-height:1.9;margin:0 0 14px}
-.dpanel .chips{margin-bottom:18px}
-.dpanel .chip{color:var(--ink-2);background:#fff;border-color:var(--line)}
-.dlinks{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.dlinks a{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:10px;padding:13px 16px;font-size:13.5px;font-weight:600;color:var(--ink-2);text-decoration:none;background:var(--bg-2)}
-.dlinks a:hover{border-color:#9FB8CE;color:#0A1628}
-.dlinks a span{color:var(--teal-dk);font-weight:800}
-#svc-detail{scroll-margin-top:72px}
+.dtabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.dtab {
+  appearance: none;
+  font-family: inherit;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: box-shadow 0.15s;
+}
+.dtab .ddot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: 1px;
+  background: #c6d2de;
+}
+.dtab[data-d='a'] .ddot {
+  background: var(--teal-dk);
+}
+.dtab[data-d='b'] .ddot {
+  background: var(--disease-b);
+}
+.dtab[data-d='c'] .ddot {
+  background: var(--disease-c);
+}
+.dtab:hover {
+  box-shadow: 0 2px 10px rgba(10, 22, 40, 0.08);
+}
+.dtab.on {
+  color: #fff;
+  border-color: transparent;
+}
+.dtab.on[data-d='a'] {
+  background: var(--teal-dk);
+}
+.dtab.on[data-d='b'] {
+  background: var(--disease-b);
+}
+.dtab.on[data-d='c'] {
+  background: var(--disease-c);
+}
+.dtab.on .ddot {
+  background: rgba(255, 255, 255, 0.75);
+}
+.dpanel {
+  display: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: #fff;
+  padding: 24px 26px;
+}
+.dpanel.on {
+  display: block;
+}
+.dpanel .dlead {
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.9;
+  margin: 0 0 14px;
+}
+.dpanel .chips {
+  margin-bottom: 18px;
+}
+.dpanel .chip {
+  color: var(--ink-2);
+  background: #fff;
+  border-color: var(--line);
+}
+.dlinks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.dlinks a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 13px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: none;
+  background: var(--bg-2);
+}
+.dlinks a:hover {
+  border-color: #9fb8ce;
+  color: #0a1628;
+}
+.dlinks a span {
+  color: var(--teal-dk);
+  font-weight: 800;
+}
+#svc-detail {
+  scroll-margin-top: 72px;
+}
 
 /* ---- 页脚：信息块 + 两列导航 + 二维码位（.fqr） ---- */
-.fqr h4{margin-bottom:14px}
-.fqr .qr-box{width:118px;height:118px;border:1.5px dashed rgba(255,255,255,.28);border-radius:10px;display:grid;place-items:center;font-size:12px;color:#8FA9C6;background:rgba(255,255,255,.04);overflow:hidden}
-.fqr .qr-box img{width:100%;height:100%;object-fit:cover;display:block}
-.fqr p{margin-top:10px;font-size:12px;color:#6C86A6}
+.fqr h4 {
+  margin-bottom: 14px;
+}
+.fqr .qr-box {
+  width: 118px;
+  height: 118px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.28);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  color: #8fa9c6;
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+.fqr .qr-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.fqr p {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #6c86a6;
+}
 
 /* ---- 随访管理 step 竖排修复（theme-b 旧两列网格与 site.css 卡片式冲突） ---- */
-.steps .step{display:block}
+.steps .step {
+  display: block;
+}
 
 /* ---- 医师卡字母头像（doctor-card 的 letter 兜底） ---- */
-.doc .photo{position:relative}
-.doc .photo .ava-letter{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(160deg,#12314F,#0A1628)}
-.doc .photo .ava-letter span{font-size:54px;font-weight:800;color:#7FD8CC;letter-spacing:.05em}
+.doc .photo {
+  position: relative;
+}
+.doc .photo .ava-letter {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(160deg, #12314f, #0a1628);
+}
+.doc .photo .ava-letter span {
+  font-size: 54px;
+  font-weight: 800;
+  color: #7fd8cc;
+  letter-spacing: 0.05em;
+}
 
 /* ---- 百度地图纯展示（bmap-live 块；无密钥静态瓦片 + 整卡新开） ---- */
-.bmap-live{position:relative;margin-top:18px;border-radius:14px;overflow:hidden;border:1px solid var(--line,#dbe4ee);background:#e8eff6;box-shadow:0 10px 26px rgba(15,42,72,.08)}
-.bmap-live img{display:block;width:100%;height:auto}
-.bmap-open{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:flex-end;padding:14px}
-.bmap-open .bmap-chip{background:rgba(15,42,72,.9);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.22);transition:background .18s,transform .18s}
-.bmap-open:hover .bmap-chip{background:var(--teal-dk);transform:translateY(-2px)}
-@media (max-width:720px){.bmap-open{padding:10px}.bmap-open .bmap-chip{font-size:12px;padding:7px 12px}}
+.bmap-live {
+  position: relative;
+  margin-top: 18px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line, #dbe4ee);
+  background: #e8eff6;
+  box-shadow: 0 10px 26px rgba(15, 42, 72, 0.08);
+}
+.bmap-live img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.bmap-open {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 14px;
+}
+.bmap-open .bmap-chip {
+  background: rgba(15, 42, 72, 0.9);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  transition:
+    background 0.18s,
+    transform 0.18s;
+}
+.bmap-open:hover .bmap-chip {
+  background: var(--teal-dk);
+  transform: translateY(-2px);
+}
+@media (max-width: 720px) {
+  .bmap-open {
+    padding: 10px;
+  }
+  .bmap-open .bmap-chip {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+}
 
 /* ---- 新闻详情：article-meta 与 article-body 同节化（2026-10-15） ----
  * 原型 news/*.html 里元信息条与正文同属一个 section（间距只有 .artmeta 的
@@ -98,15 +267,43 @@
  * .site-section（上下各 34px），叠加出 ~88px 空白。此处在桥接层缝合：
  * 压掉 meta 节的下 padding 与「meta 紧跟 body」时 body 节的上 padding，
  * 相邻选择器保证 meta 独立使用时正文节奏不受影响。 */
-.site-section[data-block-key="article-meta"]{padding-bottom:0}
-.site-section[data-block-key="article-meta"] + .site-section[data-block-key="article-body"]{padding-top:0}
+.site-section[data-block-key='article-meta'] {
+  padding-bottom: 0;
+}
+.site-section[data-block-key='article-meta'] + .site-section[data-block-key='article-body'] {
+  padding-top: 0;
+}
+
+/* ---- 成功案例详情：项目信息卡与 article-body 同节化（2026-11-05） ----
+ * 与新闻详情同理：信息卡节下 padding 与正文节上 padding 叠加出 ~88-144px 空白。
+ * 相邻选择器缝合，信息卡独立使用或后接其它块时保持原有节奏。 */
+.site-section[data-block-key='glass-card']:has(+ .site-section[data-block-key='article-body']) {
+  padding-bottom: 0;
+}
+.site-section[data-block-key='glass-card'] + .site-section[data-block-key='article-body'] {
+  padding-top: 0;
+}
 
 /* ---- 页内锚点联动（2026-11-03）：hero chips 与下方区块互跳 ----
  * BlockRenderer 给每个渲染单元的 section 挂 id="blk-<实例id>"，
  * hero 的 chips 命中区块标题时渲染成 a.chip-link 页内锚点。
  * 这里补：平滑滚动、锚点落位的上边距（避开后续可能出现的吸顶件）、
  * 以及链接态 chip 的观感（去掉 a 默认下划线/颜色，悬停给品牌色反馈）。 */
-html{scroll-behavior:smooth}
-.site-section[id]{scroll-margin-top:20px}
-a.chip{text-decoration:none;cursor:pointer;transition:color .18s,border-color .18s,background .18s}
-a.chip:hover{color:var(--brand,#0F62FE);border-color:var(--brand,#0F62FE)}
+html {
+  scroll-behavior: smooth;
+}
+.site-section[id] {
+  scroll-margin-top: 20px;
+}
+a.chip {
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 0.18s,
+    border-color 0.18s,
+    background 0.18s;
+}
+a.chip:hover {
+  color: var(--brand, #0f62fe);
+  border-color: var(--brand, #0f62fe);
+}

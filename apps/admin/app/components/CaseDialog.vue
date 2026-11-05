@@ -4,7 +4,6 @@
  * 规范：弹窗一律独立组件，defineModel 控显隐、emit('saved') 通知父页面刷新
  * 两个页签：
  *   基础信息 —— 卡片字段（标题/行业/业主/地点/面积/年份/使用体系/图片）+ 详情页头部（导语/标签/大图）
- *   详情内容 —— 案例正文（NewsBodyEditor，整篇 HTML，支持图片/视频/表格与双列排版）/ 项目画面（均可空，留空则该区块不输出）
  * 行业只能下拉选择行业分类（ProductIndustry），不允许自由输入；项目信息行由服务端按字段派生。
  * 列表接口不返回详情字段，编辑打开时拉单条详情回显。正文纯文本列由服务端从 HTML 派生。
  */
@@ -13,14 +12,6 @@ import { catalogApi, type CaseItem, type CasePayload, type ProductIndustryItem }
 import ImageField from './ImageField.vue'
 import NewsBodyEditor from './NewsBodyEditor.vue'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
-
-/** 项目画面（详情页 env-grid） */
-interface ImageRow {
-  img: string
-  caption: string
-  note: string
-  alt: string
-}
 
 const visible = defineModel<boolean>({ required: true })
 const props = defineProps<{
@@ -51,7 +42,6 @@ const form = reactive({
 })
 
 const bodyHtml = ref('')
-const images = ref<ImageRow[]>([])
 
 const editing = computed(() => props.item)
 
@@ -82,7 +72,6 @@ watch(visible, (open) => {
   form.chipsText = ''
   form.bgImage = ''
   bodyHtml.value = ''
-  images.value = []
 
   if (!props.item) return
   void runKeyed('detail', async () => {
@@ -100,12 +89,6 @@ watch(visible, (open) => {
     form.chipsText = (row.chips ?? []).join(', ')
     form.bgImage = row.bgImage ?? ''
     bodyHtml.value = row.bodyHtml ?? ''
-    images.value = (row.images ?? []).map((item) => ({
-      img: String(item.img ?? ''),
-      caption: String(item.caption ?? ''),
-      note: String(item.note ?? ''),
-      alt: String(item.alt ?? '')
-    }))
   })
 })
 
@@ -132,8 +115,7 @@ const submit = debounce(() => {
     lead: form.lead.trim(),
     chips: splitList(form.chipsText),
     bgImage: form.bgImage.trim(),
-    bodyHtml: bodyHtml.value,
-    images: images.value.filter((item) => item.img.trim() || item.caption.trim())
+    bodyHtml: bodyHtml.value
   }
 
   return run(async () => {
@@ -154,6 +136,8 @@ const submit = debounce(() => {
     v-model="visible"
     :title="editing ? '编辑案例' : '新建案例'"
     width="880px"
+    top="3vh"
+    class="case-dialog"
     :close-on-click-modal="false"
     destroy-on-close
   >
@@ -221,7 +205,7 @@ const submit = debounce(() => {
             <ImageField v-model="form.img" source="案例 · 卡片图片" placeholder="/static/... 或点击上传" />
           </el-form-item>
 
-          <el-divider content-position="left">详情页头部（留空则按卡片字段派生）</el-divider>
+          <el-divider content-position="left">详情页头部（留空则不展示）</el-divider>
           <el-form-item label="导语">
             <el-input
               v-model="form.lead"
@@ -232,18 +216,20 @@ const submit = debounce(() => {
               placeholder="详情页首屏导语"
             />
           </el-form-item>
-          <el-row :gutter="8">
-            <el-col :span="12">
-              <el-form-item label="头部标签">
-                <el-input v-model="form.chipsText" placeholder="逗号分隔，留空用面积/行业" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="头部大图">
-                <ImageField v-model="form.bgImage" source="案例 · 详情大图" placeholder="留空用卡片图片" />
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <el-form-item label="头部标签">
+            <el-input v-model="form.chipsText" placeholder="逗号分隔，留空不展示" />
+          </el-form-item>
+          <el-form-item label="头部大图">
+            <ImageField
+              v-model="form.bgImage"
+              source="案例 · 详情大图"
+              placeholder="留空则使用卡片图片，也可填入其它素材库地址"
+            >
+              <template #action>
+                <el-button size="small" :disabled="!form.img" @click="form.bgImage = form.img">用卡片图片</el-button>
+              </template>
+            </ImageField>
+          </el-form-item>
         </el-form>
       </el-tab-pane>
 
@@ -256,27 +242,7 @@ const submit = debounce(() => {
               <span class="block-title">案例正文</span>
               <span class="c-mute hint">支持图片 / 视频 / 表格，图片与视频上传到素材库</span>
             </div>
-            <NewsBodyEditor v-model="bodyHtml" :source="editorSource" :height="320" />
-          </section>
-
-          <section class="detail-block">
-            <div class="block-head">
-              <span class="block-title">项目画面</span>
-              <el-button
-                link
-                type="primary"
-                size="small"
-                @click="images.push({ img: '', caption: '', note: '', alt: '' })"
-              >
-                加一张
-              </el-button>
-            </div>
-            <div v-for="(image, index) in images" :key="`im-${index}`" class="row-item">
-              <ImageField v-model="image.img" source="案例 · 项目画面" placeholder="图片地址或上传" class="row-img" />
-              <el-input v-model="image.caption" placeholder="图注" style="width: 160px" />
-              <el-input v-model="image.note" placeholder="角标说明" style="width: 110px" />
-              <el-button link type="danger" size="small" @click="images.splice(index, 1)">删除</el-button>
-            </div>
+            <NewsBodyEditor v-model="bodyHtml" :source="editorSource" :height="480" />
           </section>
         </div>
       </el-tab-pane>
@@ -291,8 +257,6 @@ const submit = debounce(() => {
 
 <style scoped lang="scss">
 .detail-pane {
-  max-height: 56vh;
-  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: $sp-1;
@@ -318,14 +282,13 @@ const submit = debounce(() => {
 .block-title {
   font-weight: 500;
 }
+</style>
 
-.row-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.row-img {
-  flex: 1;
+<style lang="scss">
+/** 弹窗内容超出视口时只在弹窗体内部滚动（顶部 top=3vh，留出头部与底部按钮）
+ *  弹窗被 teleport 到 body，拿不到 scoped 属性，故用全局块 + 专属类名限定作用域 */
+.case-dialog .el-dialog__body {
+  max-height: calc(100vh - 190px);
+  overflow: auto;
 }
 </style>

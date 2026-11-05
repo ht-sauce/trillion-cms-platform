@@ -114,7 +114,7 @@ model CaseStudy {
   infoRows Json? @map("info_rows")
   /// 案例正文纯文本（bodyHtml 去标签派生：段落用 \n 拼接，摘要 / 检索 / GEO 取文口径不变）
   body String @db.Text
-  /// 案例正文整篇 HTML（唯一编辑源，渲染时原样输出；服务端 sanitizeArticleHtml 白名单化；可空＝历史数据）
+  /// 案例正文整篇 HTML（唯一编辑源，保存与渲染均原样输出、不做清洗（ADR-061）；可空＝历史数据）
   bodyHtml String? @map("body_html") @db.Text
   /// 案例正文结构化块（历史兼容的 ArticleBlock 数组，新代码不再写入；bodyHtml 为空时回落渲染）
   bodyBlocks Json? @map("body_blocks")

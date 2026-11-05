@@ -358,7 +358,7 @@ export class CreateCaseDto {
   body?: string
 
   @ApiPropertyOptional({
-    description: '案例正文整篇 HTML（主数据；服务端 sanitizeArticleHtml 白名单化，body 由其派生）'
+    description: '案例正文整篇 HTML（主数据；原样入库不做改写（ADR-061），body 由其派生）'
   })
   @IsOptional()
   @IsString()

@@ -1,9 +1,9 @@
 /**
- * 正文整篇 HTML 白名单化（ADR-060）
+ * 正文整篇 HTML 白名单化（ADR-060；ADR-061 起仅采集 / 导入使用）
  *
- * 正文主数据是整篇 HTML（新闻 `NewsArticle.bodyHtml` / 案例 `CaseStudy.bodyHtml`），
- * 渲染时原样输出，因此这里就是**唯一信任边界**：管理端、采集脚本、历史数据进入数据库前
- * 都必须过一次 `sanitizeArticleHtml`。
+ * 正文主数据是整篇 HTML（新闻 `NewsArticle.bodyHtml` / 案例 `CaseStudy.bodyHtml`）。
+ * **管理端保存与站点渲染均原样输出、不做清洗（ADR-061）**；本工具只在采集 / 导入脚本
+ * 写库前做入库整理，避免把外部站点的脚本或事件属性带进来。
  *
  * 收口方式（与 ADR-053 的块白名单同一安全口径，只是作用在整篇 HTML 上）：
  * - **标签白名单**：p / br / h2~h4 / b / strong / i / em / u / s / del / code / blockquote /
@@ -58,6 +58,7 @@ const ALLOWED_TAGS = new Set([
   'th',
   'td',
   'video',
+  'source',
   'div',
   'section',
   'span'
@@ -67,13 +68,17 @@ const ALLOWED_TAGS = new Set([
 const TAG_ALIAS: Record<string, string> = { h1: 'h2', h5: 'h4', h6: 'h4' }
 
 /** 自闭合（void）标签 */
-const VOID_TAGS = new Set(['br', 'img'])
+const VOID_TAGS = new Set(['br', 'img', 'source'])
 
 /** 各标签允许的非 style 属性 */
 const TAG_ATTRS: Record<string, Set<string>> = {
   img: new Set(['src', 'alt', 'width', 'height']),
   a: new Set(['href', 'title']),
-  video: new Set(['src', 'poster', 'controls'])
+  video: new Set(['src', 'poster', 'controls', 'width', 'height']),
+  source: new Set(['src', 'type']),
+  table: new Set(['border', 'width', 'height', 'cellpadding', 'cellspacing']),
+  th: new Set(['colspan', 'rowspan', 'width', 'height']),
+  td: new Set(['colspan', 'rowspan', 'width', 'height'])
 }
 
 /** style 白名单键 */
@@ -140,13 +145,25 @@ const SRC_PATTERN = /^(\/static\/|\/assets\/|https?:\/\/)/i
 const HREF_PATTERN = /^(\/static\/|\/assets\/|\/|#|https?:\/\/)/i
 
 /** HTML 文本转义 */
-function escapeText(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+function escapeText(text: string, preserveEntities = false): string {
+  return text
+    .replace(preserveEntities ? /&(?!(?:#\d+|#x[\da-f]+|[a-z][\da-z]*);)/gi : /&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
 
 /** 属性值转义（双引号包裹） */
 function escapeAttr(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function decodeAttr(value: string): string {
+  const named: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: '\u00a0' }
+  return value.replace(/&(#x[\da-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi, (entity, name: string) => {
+    if (!name.startsWith('#')) return named[name.toLowerCase()]
+    const code = name[1].toLowerCase() === 'x' ? parseInt(name.slice(2), 16) : Number(name.slice(1))
+    return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : entity
+  })
 }
 
 /** 从 `<` 起始位置找到标签结束的 `>`（跳过引号内的 `>`） */
@@ -175,7 +192,7 @@ function parseAttrs(raw: string): [string, string][] {
   while ((match = re.exec(raw))) {
     const name = match[1].toLowerCase()
     const value = match[3] ?? match[4] ?? match[5] ?? ''
-    attrs.push([name, value])
+    attrs.push([name, decodeAttr(value)])
   }
   return attrs
 }
@@ -252,6 +269,21 @@ function buildOpenTag(rawName: string, rawAttrs: string): { tag: string; html: s
   const allowed = TAG_ATTRS[name]
   const parts: string[] = []
   for (const [attr, value] of parseAttrs(rawAttrs)) {
+    if (attr === 'data-w-e-type') {
+      if (
+        (name === 'div' && value === 'video') ||
+        (name === 'img' && value === 'image') ||
+        (name === 'table' && value === 'table')
+      )
+        parts.push(`${attr}="${value}"`)
+      continue
+    }
+    if (attr === 'data-w-e-is-void' || attr === 'data-w-e-is-inline') {
+      if ((value === '' || value === 'true') && (name === 'img' || (name === 'div' && attr === 'data-w-e-is-void'))) {
+        parts.push(attr)
+      }
+      continue
+    }
     if (attr === 'style') {
       const style = sanitizeStyle(value)
       if (style) parts.push(`style="${escapeAttr(style)}"`)
@@ -269,7 +301,21 @@ function buildOpenTag(rawName: string, rawAttrs: string): { tag: string; html: s
       continue
     }
     if (attr === 'width' || attr === 'height') {
-      if (/^\d{1,5}$/.test(value)) parts.push(`${attr}="${value}"`)
+      if (/^\d{1,5}$/.test(value) || (name !== 'img' && /^(auto|\d{1,3}%)$/.test(value))) {
+        parts.push(`${attr}="${value}"`)
+      }
+      continue
+    }
+    if (attr === 'colspan' || attr === 'rowspan') {
+      if (/^[1-9]\d{0,3}$/.test(value)) parts.push(`${attr}="${value}"`)
+      continue
+    }
+    if (attr === 'border' || attr === 'cellpadding' || attr === 'cellspacing') {
+      if (/^\d{1,4}$/.test(value)) parts.push(`${attr}="${value}"`)
+      continue
+    }
+    if (attr === 'type') {
+      if (/^video\/(mp4|webm|ogg)$/i.test(value)) parts.push(`type="${value}"`)
       continue
     }
     if (attr === 'controls') {
@@ -298,10 +344,10 @@ export function sanitizeArticleHtml(input: unknown): string {
   while (index < source.length) {
     const lt = source.indexOf('<', index)
     if (lt < 0) {
-      out.push(escapeText(source.slice(index)))
+      out.push(escapeText(source.slice(index), true))
       break
     }
-    if (lt > index) out.push(escapeText(source.slice(index, lt)))
+    if (lt > index) out.push(escapeText(source.slice(index, lt), true))
 
     /** 注释整段丢弃 */
     if (source.startsWith('<!--', lt)) {
@@ -312,7 +358,7 @@ export function sanitizeArticleHtml(input: unknown): string {
 
     const gt = findTagEnd(source, lt + 1)
     if (gt < 0) {
-      out.push(escapeText(source.slice(lt)))
+      out.push(escapeText(source.slice(lt), true))
       break
     }
     const raw = source.slice(lt + 1, gt).trim()

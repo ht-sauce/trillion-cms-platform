@@ -66,8 +66,18 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 - [`upload-site-assets.mjs`](../scripts/upload-site-assets.mjs) —— **素材库双轨上传**（ADR-037 轨①）：把 `apps/geo/public/assets/img/**` 图片以 `siteId` 上传进 CMS 素材库（按 `originalName` 幂等判重，结尾做磁盘↔素材库集合对账）；站点页面引用的 `/assets/img/**` 是轨②静态直出，两轨文件名一一对应
 - [`check-built-site.mjs`](../scripts/check-built-site.mjs) —— **站点产物机械检查**（09 §12.3 step7 补充 / §12.4）：对构建产物逐页校验唯一 h1 / title / description / canonical、JSON-LD 可解析、内链完整、图片可达、NAP 电话口径、标签闭合；只做机械校验，**不能替代 §12.5 人眼视觉比对**
 - [`data/import-forintech-cases.mjs`](../scripts/data/import-forintech-cases.mjs) —— **工程案例采集脚本**（一次性，`node scripts/data/import-forintech-cases.mjs`）：抓 `https://sea.forintech.com/zh/casestudies` 列表页与详情页，解析标题 / 导语 / 正文 / 内容图，图片下载后按 `StaticFilesService` 规则落 `uploads/<yyyy>/<mm>/<uuid>.<ext>` 并登记 `StaticFile`（`source='富林泛泰官网 · 工程案例'`），按标题匹配更新存量 `CaseStudy`。**默认 dry-run**，`--apply` 才写库；`--audit-industry` 只读输出行业命中 / 未命中清单；`--normalize-industry` 把历史脏行业回填为分类表；`--show <关键词>` 打印该案例解析出的正文 HTML（调试版式）。**解析口径（ADR-060）**：正文区以「标题首次出现」为起点、页脚 / 原站翻页控件为终点，区间内按 `<img>` 切分并**产出保留排版的整篇 HTML**——按 `<br>` 拆行、字号 ≥20px 判小标题（h2）、行内保留加粗/颜色/字号；图片取 srcSet 里**最高分辨率原图**（小图不被站点放大）；「图 + 短说明」交替或「两图 + 两段短说明」时用 grid 两列容器还原 logo 并排；噪音清单覆盖翻页控件、`项目画廊`、`top of page`、导航菜单段、零宽字符；图片按原始文件名判重（重跑不重复下载）
+- [`data/import-forintech-news.ts`](../scripts/data/import-forintech-news.ts) —— **富林泛泰中文新闻重采脚本**：通过媒体页真实滚动发现中文新闻，读取 `post-description` 正文区，按原顺序生成可视化编辑器支持的段落、图片、列表与行内 HTML，经 `sanitizeArticleHtml` 清洗后写入 `bodyHtml`，由 `htmlToText` 派生纯文本；图片下载并登记本站素材。**默认 dry-run，不写库**，`--first` 核对首篇、`--apply` 先备份再写库；存量按标题匹配并保留 ID/slug/发布日期，缺失文章补建新闻详情页；只更新本站新闻及 `/news` 派生页，不调用四域 rebuild，案例/其他站点新闻/非新闻页面/产品/问答用前后 SHA-256 对账。通过 `pnpm --filter @trillion/server exec tsx <脚本绝对路径> --browser-module <系统临时目录内的 playwright-core/index.mjs>` 执行，支持 `--env` 指定环境；抓取缓存、备份、图片中间文件和报告均放系统临时目录（`--work-dir` 可指定其子目录）。
 - [`data/backfill-body-html.mjs`](../scripts/data/backfill-body-html.mjs) —— **正文块数组 → 整篇 HTML 一次性回填**（ADR-060）：把 `NewsArticle.body` / `CaseStudy.bodyBlocks` 的历史块数组按 `articleBlocksToHtml` 同口径转成 `bodyHtml`（段落/小标题保留行内 html、图片转 `figure`、表格/视频原样）；**默认 dry-run**，`--apply` 才写库；已转换的记录按 `bodyHtml IS NULL` 跳过，幂等可重跑
 - [`data/case-industry-map.json`](../scripts/data/case-industry-map.json) —— **案例 → 行业分类映射表**：`{ 数据源标题: { industry: 分类名, match?: 库里存量标题 } }`；`industry` 必须是 `ProductIndustry.name`，`null` 表示暂不分类（需人工决定）；采集脚本缺映射会中止，不自动建分类
+
+## /case-repair-evidence
+
+- [`editor-verify-20261105/report.md`](../case-repair-evidence/editor-verify-20261105/report.md) —— 当前 dirty 正文保真实现的独立复核：真实 wangEditor 三类撤修复红/绿/反向红、33篇新闻只读往返、案例样本保存重开、26页定向构建、130图验收及异步发布副作用恢复；保留本轮独立备份与日志。
+- [`publish-20261105/report.md`](../case-repair-evidence/publish-20261105/report.md) —— 本轮仅25案例及列表同步构建报告；同目录保留数据/产物备份、构建日志、25篇130图真实Edge本站截图、后台样本保存重开失败与副作用恢复证据、最终保护范围对账，不代表后台保存保真已修复。
+- `publish-preflight-20261105.md` / `preflight-worktree-20261105.zip` —— 本次案例定向发布预检与已有代码变更备份；记录运行状态、16 项回归结果及发布规格冲突阻断，不替代逐篇发布后验收。
+- [`report.md`](../case-repair-evidence/report.md) —— forintech 25 条案例重采交付报告：仅定向更新管理源正文/封面/来源，真实 Edge 原站截图与 wangEditor 全文、图片顺序、输入撤销验证，不发布；包含计数与原站加载限制。
+- `backup.json` / `backup.sha256` / `after-cases.json` / `audit.json` —— 写入前备份、校验摘要、写入后案例及保护范围/素材对账；`<slug>.json` 保存逐篇图文顺序与编辑器验证结果。
+- `<slug>-source.png` / `<slug>-editor*.png` —— 逐篇真实 Edge 原站整页截图、管理后台编辑器及逐图位置截图；断点与首篇/全量核验记录由 `completed.json` / `pilot-verified.json` / `editors-verified.json` 保存。临时采集脚本及认证状态仅在系统 Temp，不入仓库。
 
 ## /docs
 
@@ -193,7 +203,8 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`utils/site-scope.ts`](../apps/server/src/common/utils/site-scope.ts) —— **站点数据权限**：断言与查询过滤（真正的安全边界）
 - [`utils/json.ts`](../apps/server/src/common/utils/json.ts) —— Prisma JSON 字段读写收窄（`toJsonInput` / `fromJson`）
 - [`utils/article-body.ts`](../apps/server/src/common/utils/article-body.ts) —— **正文结构化块（历史兼容格式，ADR-053）**：`ArticleBlock`（paragraph / heading / image / table / video / rich）+ `normalizeArticleBody` 白名单收口（类型、空块、图片地址只认 `/static`、`/assets`、`http(s)`、块数上限）+ `articleBlocksToText` 纯文本派生 + `resolveArticleBlocks`（有 body 用 body，否则按段落回落）。**ADR-060 起降级为历史兼容格式**（新代码写 `bodyHtml`），仍用于旧数据回落与迁移
-- [`utils/article-html.ts`](../apps/server/src/common/utils/article-html.ts) —— **正文整篇 HTML 白名单化（ADR-060，唯一信任边界）**：`sanitizeArticleHtml` 手写 tokenizer 做三层收口——标签白名单（p/br/h2-h4/列表/表格/图片/视频/div·section·span；`h1` 降级为 `h2`、`h5/h6` 降级为 `h4`、script/style 整块丢弃、注释丢弃）、属性白名单（img 只留 src/alt/width/height，a 只留 href/title，video 只留 src/poster/controls，其余只留 `style`）、`style` 按键值白名单解析（排版键 + 值正则，`position`/`top`/`z-index` 等浮层键一律剔除），地址只认站内静态轨与 `http(s)`；未匹配结束标签丢弃、未闭合开始标签收尾补齐。另提供 `htmlToText`（块级标签转换行、去标签派生纯文本）与 `articleBlocksToHtml`（历史块数组 → HTML，迁移用）
+- [`utils/article-html.ts`](../apps/server/src/common/utils/article-html.ts) —— **正文整篇 HTML 白名单化（ADR-060；ADR-061 起仅采集 / 导入脚本使用，后台保存不再调用）**：`sanitizeArticleHtml` 手写 tokenizer 做标签 / 属性 / 样式三层收口；`h1` 降为 `h2`、`h5/h6` 降为 `h4`，script/style 整块及注释丢弃，事件属性与浮层样式剔除，标签栈补齐结构。**幂等保存**：正文保留已有实体、裸字符仍转义；属性实体先解码再校验、重新转义，查询参数与引号不累积转义，实体编码的危险协议仍拒绝。**编辑器兼容白名单**：限定标签与取值的 wangEditor 图片 / 视频 / 表格标记；视频 `src/poster/controls/width/height`、`source` 的安全地址与视频 MIME、表格布局及单元格合并 / 尺寸属性；不放行任意 `data-*`，尺寸与数值属性逐项校验。媒体地址只认 `/static/`、`/assets/` 与 `http(s)`，链接另允许站内路径和锚点；排版样式含安全字号、字重、颜色与布局值。另提供 `htmlToText`（块级换行、去标签派生纯文本）与 `articleBlocksToHtml`（历史块数组 → HTML，纯文本单独转义，迁移用）
+- [`utils/article-html.test.ts`](../apps/server/src/common/utils/article-html.test.ts) —— **正文 HTML 清洗工具回归测试（工具仅采集 / 导入使用，ADR-061）**（`node:test` + `node:assert/strict`）：覆盖连续清洗幂等、正文 / 属性实体与查询参数不重复转义、图片 / 视频包装与 `source` / 尺寸、表格布局与合并单元格保留；验证事件及任意 data 属性、危险尺寸 / MIME / 实体编码协议 / 属性引号注入仍受限，H1 降级与脚本 / 样式清洗不退化，历史块纯文本不被解释成 HTML
 - [`utils/datetime.ts`](../apps/server/src/common/utils/datetime.ts) —— 中国时区时间格式化（输出 `YYYY-MM-DD HH:mm:ss`）
 - [`utils/jwt-expiry.ts`](../apps/server/src/common/utils/jwt-expiry.ts) —— JWT 有效期类型收窄（兼容 jsonwebtoken 的 `StringValue`）
 
@@ -245,7 +256,8 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`catalog.controller.ts`](../apps/server/src/modules/catalog/catalog.controller.ts) —— `/catalog/*` 接口 14 条：行业分组 4 条、产品 5 条、案例 5 条（列表 / 单条详情 / 增删改）
 - [`products.service.ts`](../apps/server/src/modules/catalog/products.service.ts) —— 行业分组 CRUD（**改名时事务内同步改写产品的 `industries` 引用**；有产品引用时删除 400）+ 产品 CRUD + `deriveDetailPage`（**保存即自动建页**，有 `pageId` 走页面更新、无则补建并回写）+ `syncAndPublish`（重算 `/products` 分组 + 只发布 `status='published'` 的页面）
 - [`cases.service.ts`](../apps/server/src/modules/catalog/cases.service.ts) —— 案例 CRUD + `deriveDetailPage` + `syncAndPublish`（只重写 `/cases` 的 `case-grid.items`）
-- [`catalog-sync.service.ts`](../apps/server/src/modules/catalog/catalog-sync.service.ts) —— **派生块同步**：`loadDetailTemplate` 取栏目模板；`buildProductBlocks` / `buildCaseBlocks` 在模板上覆盖字段（`overrides[key] = null` 表示不输出该块，其前的 `section-head` 一并跳过）；`syncProductsList` 重建分组块（定位 product-card 及其紧邻 section-head，前后缀块原样保留，无产品的分组不输出）；`syncCasesList` 只更新 `case-grid.items`
+- [`catalog-sync.service.ts`](../apps/server/src/modules/catalog/catalog-sync.service.ts) —— **派生块同步**：`loadDetailTemplate` 取栏目模板；`buildProductBlocks` 维持产品字段覆盖；`buildCaseBlocks` 首屏仅用当前记录字段（头部大图未填时**复用卡片图片**，不继承模板或旧页头图、标签等内容），行业空不继承信息卡徽标，历史正文回落时清空模板 HTML；历史 `images` 保留兼容但不派生独立画廊，也不补画廊骨架；`overrides[key] = null` 跳过空信息卡、空正文、画廊及其前的 `section-head`；`syncProductsList` 重建分组块（定位 product-card 及其紧邻 section-head，前后缀块原样保留，无产品的分组不输出）；`syncCasesList` 只更新 `case-grid.items`
+- [`catalog-sync.service.test.ts`](../apps/server/src/modules/catalog/catalog-sync.service.test.ts) —— 案例派生与弹窗回归：空字段不继承、历史画廊不输出且数据不变、空分区与标题隐藏、正文图片顺序与历史正文兼容、精简模板补信息卡与 ID 稳定、弹窗不编辑或提交 `images`；同时保护产品与新闻原有行为。运行：在 `apps/server` 执行 `pnpm exec ts-node --transpile-only src/modules/catalog/catalog-sync.service.test.ts`
 - [`dto.ts`](../apps/server/src/modules/catalog/dto.ts) —— 入参 DTO（复用 `news-faq/dto` 的 `SLUG_PATTERN`）
 
 ### src/common/utils（跨模块公共工具）
@@ -392,14 +404,16 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 ### app/components（弹窗一律独立组件，规范见 AGENTS.md §7）
 
+- [`NewsBodyEditor.test.ts`](../apps/admin/app/components/NewsBodyEditor.test.ts) —— 安装版 Edge 中加载真实 wangEditor 与组件解析/序列化逻辑；验证尺寸、对齐、间距、撤销重开和媒体URL边界，`BODY_EDITOR_REVERSE=dimensions|styles|urls` 仅对内存源码撤修复作反向红，不覆盖 dirty 文件；浏览器依赖通过 `BROWSER_TEST_MODULE` 指定。
 - [`SideMenuNode.vue`](../apps/admin/app/components/SideMenuNode.vue) —— 侧栏菜单递归节点（最多三级，目录可展开/收起，命中路由高亮）
 - [`DashboardOverview.vue`](../apps/admin/app/components/DashboardOverview.vue) —— GEO 监控工作台仪表盘（PV/UV + AI 抓取 + 发布任务）；**当前未挂载**：根路径 `/` 改为空白占位页（`pages/index.vue`），需要恢复时在页面模板写 `<DashboardOverview />`
 - [`MemberCreateDialog.vue`](../apps/admin/app/components/MemberCreateDialog.vue) —— 新增站点会员弹窗
-- [`NewsDialog.vue`](../apps/admin/app/components/NewsDialog.vue) —— 新闻新建/编辑弹窗（标题 / 发布日期 / 摘要 / 封面图 `ImageField` / 正文 `NewsBodyEditor`（整篇 HTML）+ 编辑打开时拉单条详情回显正文）
-- [`NewsBodyEditor.vue`](../apps/admin/app/components/NewsBodyEditor.vue) —— **正文编辑器（整篇 HTML，ADR-060）**：v-model 是**整篇正文 HTML 字符串**（不是块数组），入库前由服务端 `sanitizeArticleHtml` 白名单化、站点渲染时原样输出；两种模式——**可视化**（wangEditor：H2/H3 小标题、字号、颜色、对齐、列表、表格、图片、视频；**不提供 H1**，页面唯一 H1 由页面标题承担）与 **HTML 源码**（textarea，供双列等复杂排版直接编辑，两模式互相同步）；图片与视频都走素材库 `filesApi.upload`（库里存 `/static/...`，编辑器内用 `resolveMediaUrl` 显示，上传带 `source` 来源标签）；粘贴的 base64 图片先入库再替换。**防卡死三条铁律**：① 编辑器必须在**可见容器**里初始化（放进 `el-tab-pane` 时必须给该 pane 加 `lazy`，否则 wangEditor 在 `display:none` 中初始化会选区/尺寸异常直至页面无响应）；② `handleChange` 内容与当前 v-model 完全一致时**直接返回**，切断「setHtml → 延迟 change → 回写 → setHtml」循环（wangEditor 的 on-change 有防抖，`syncing` 布尔窗口盖不住）；③ `onBeforeUnmount` 置 `destroyed`，回显 watch 与 change 在组件销毁后一律跳过（弹窗 `destroy-on-close` 时异步回显仍可能到达）
+- [`NewsDialog.vue`](../apps/admin/app/components/NewsDialog.vue) —— 新闻新建/编辑弹窗（标题 / 发布日期 / 摘要 / 封面图 `ImageField` / 正文 `NewsBodyEditor`（整篇 HTML，编辑区 320px）+ 编辑打开时拉单条详情回显正文）；与案例弹窗统一使用 Element Plus `top="3vh"` 设置顶部间距，`.el-dialog__body` 按视口限高（`calc(100vh - 180px)`）**只在内层滚动**，不再超出屏幕。
+- `NewsBodyEditor.vue` 正文样式 —— 仅编辑区与 GEO `site.css` 的 `.art-html` 对齐：14.6px / 1.9、标题、列表文本缩进与间距、表格默认细边 / 8px 内边距；复用管理后台现有字号、间距与颜色令牌，移除图片包裹间距和最小尺寸，不强制图片满宽
+- [`NewsBodyEditor.vue`](../apps/admin/app/components/NewsBodyEditor.vue) —— **单可视化正文编辑器（整篇 HTML，ADR-060）**：新闻 / 案例共用 wangEditor，v-model 为**整篇正文 HTML 字符串**（不是块数组），仅可视化编辑，无源码切换；支持 H2/H3 标题（**不提供 H1 入口**，用官方原生 `header2`/`header3`）、字号、文字色 / 背景色、粗斜下划删除、对齐、列表、表格、图片（含左 / 右环绕与取消环绕）、视频与撤销重做；保存原样入库、不做清洗（ADR-061），站点直接展示正文。**字重保留**：仅对登记的正文编辑器扩展 HTML 解析 / 渲染 / 序列化，保留 `font-weight:600/400`，避免规整成粗体或重复包裹 span。**媒体回显**：纯图片 `figure` 转为编辑器可识别的段落（含图注 / 视频 / 其它内容的 figure 不转换），`img/video/source` 的 src 与视频 poster 经 `resolveMediaUrl` 解析；图片 / 视频上传走 `filesApi.upload` 并带来源标签，粘贴 base64 图片入库后按 Slate 节点替换地址，进行中 / 已失败的图片不重复上传。**回显与历史清理**：空 HTML 初始化后通过 `applyHtml` 统一回显，先 blur 再 setHtml，并清空 undo/redo，避免撤销回到程序加载前；原始值与编辑器 HTML 双快照过滤延迟 change 回声，避免回写循环；编辑器只在可见容器初始化（详情页签 `lazy`），销毁后停止回显与异步实例操作
 - [`ProductDialog.vue`](../apps/admin/app/components/ProductDialog.vue) —— **产品新建/编辑弹窗（2026-11-03）**：两个页签——「基础信息」（名称 / 中文名 / 系列 / 行业分组多选（必填，空则 warning）/ 卡片说明 / 特性标签（逗号分隔）/ 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（系统说明 `{k,v}`、系统构造 `{role,product,thickness,desc,code}`、系统特点 `{title,desc,icon}`、色卡 `{name,hex}` 带色块预览、常见问题 `{q,a}`；均可留空 = 该区块不输出）
 - [`IndustryDialog.vue`](../apps/admin/app/components/IndustryDialog.vue) —— **产品行业分组弹窗（2026-11-03）**：分组名称 / 分组说明（textarea 200 字）/ 更多文案 / 排序
-- [`CaseDialog.vue`](../apps/admin/app/components/CaseDialog.vue) —— **案例新建/编辑弹窗（2026-11 重构）**：两个页签——「基础信息」（标题 / 行业（`el-select` 选取行业分类，filterable 不可新建）/ 业主 / 地点 / 面积 / 年份 / 使用体系主项 + 体系备注 / 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图）与「详情内容」（案例正文 `NewsBodyEditor`（整篇 HTML，ADR-060，支持图片 / 视频 / 表格与双列排版）、项目画面 `{img,caption,note,alt}`）；项目信息行由服务端按一级字段派生，弹窗不再拼装；提交带 `bodyHtml`（纯文本列由服务端派生）。**弹窗开 `destroy-on-close` + 详情页签 `lazy`**：每次打开重建编辑器、且只在页签可见时才初始化（避免编辑器在隐藏容器中初始化导致页面卡死）
+- [`CaseDialog.vue`](../apps/admin/app/components/CaseDialog.vue) —— **案例新建/编辑弹窗（2026-11 重构）**：两个页签——「基础信息」（标题 / 行业（`el-select` 选取行业分类，filterable 不可新建）/ 业主 / 地点 / 面积 / 年份 / 使用体系主项 + 体系备注 / 卡片图片 + 预览 / 导语 / 头部标签 / 头部大图，头部可选字段留空不展示）与「详情内容」（仅案例正文 `NewsBodyEditor`，整篇 HTML，ADR-060，编辑区 480px，支持图片 / 视频 / 表格；无独立项目画面编辑区）；**「头部标签」与「头部大图」各占独立一行**（不再并排挤压），头部大图旁提供「用卡片图片」一键复用卡片图，留空时服务端派生也自动回落卡片图片；项目信息行由服务端按一级字段派生，弹窗不再拼装；提交带 `bodyHtml`（纯文本列由服务端派生），不读取或提交历史 `images`，避免编辑时覆盖历史数据。**弹窗开 `destroy-on-close` + 详情页签 `lazy`**：每次打开重建编辑器、且只在页签可见时才初始化（避免编辑器在隐藏容器中初始化导致页面卡死）
 - [`FaqAnswerEditor.vue`](../apps/admin/app/components/FaqAnswerEditor.vue) —— 问答答案受限富文本编辑器（wangEditor；工具栏仅粗斜下划删除 + 有序无序列表 + 清格式，ADR-058）
 - [`FaqRelatedDialog.vue`](../apps/admin/app/components/FaqRelatedDialog.vue) —— 关联问题弹窗（左候选：关键词搜索 + 分类筛选 + 分页；右已选：按顺序上移/下移/移除，上限 8 条；保存空数组＝恢复「同分类其它问答」自动口径，ADR-057）
 - [`FaqDialog.vue`](../apps/admin/app/components/FaqDialog.vue) —— 高频问答新建/编辑弹窗（问题 / 分类（allow-create 可输入新分类）/ 上架展示开关（默认开）/ 答案 `FaqAnswerEditor`；编辑打开时拉单条详情回显答案）
@@ -517,7 +531,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 > `build-sites.mjs` 的 `computeAppFingerprint()` 已含 `public`，本目录任何变更会变更 `appHash` 并强制 `nuxt build`。
 
 - `public/assets/css/theme-b.css` —— 设计稿原型基础样式（**原样复制，不得改选择器**，09 §7.4.1）
-- `public/assets/css/site.css` —— 设计稿站点级布局样式（同上）
+- `public/assets/css/site.css` —— 设计稿站点级布局样式（沿用原型选择器与主题令牌）；整篇 HTML 正文 `.art-html` 与 `NewsBodyEditor.vue` 对齐基础字体、14.6px / 1.9 行高、标题字重与间距、列表缩进、表格细边与单元格内边距，保留内容内联样式；图片按原尺寸 / 内容宽度展示，仅限制最大宽度，不强制拉满
 - `public/assets/css/presets/` —— 站点级样式预设（ADR-048），由 `themeTokens.stylePreset` 按文件名加载：
   - `industrial.css` —— 工业站暗色工程预设（forintech 初版视觉，ADR-051 后退役不再被引用，保留文件备查）
   - `blueprint.css` —— 「图纸白」亮色预设（forintech 改版视觉，钢蓝 #185FA5 + 安全橙 #E8590C + 等宽规格数字 + 工程网格底，ADR-051；定义 `--on-brand` / `--hero-accent` 变量与交互块对接）
