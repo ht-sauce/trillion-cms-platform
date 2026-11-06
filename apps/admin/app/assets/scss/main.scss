@@ -317,6 +317,27 @@ a {
   gap: $sp-1;
 }
 
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $sp-1;
+}
+
+.filter-bar > .filter-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  margin-inline-start: auto;
+  gap: $sp-1;
+}
+
+.filter-bar > .filter-actions .el-button + .el-button {
+  margin-left: 0;
+}
+
 .mono {
   @include mono-figure;
 }

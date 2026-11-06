@@ -252,6 +252,7 @@ id、site_id、original_name（原始文件名）、storage_path（`uploads/2026
 - **颜色唯一来源（硬规范）**：后台主题色只在 `app/assets/scss/tokens.scss` 定义（主色 light/dark 梯度由 `color.mix()` 自动派生，**禁止全局 `mix()`**——它已被 Dart Sass 弃用，dev/build 会输出 DEPRECATION WARNING 且 Dart Sass 3.0 将移除）；站点主题默认值只在 `app/config/site-defaults.ts`（与后端 `SITE_DEFAULTS.theme` 对齐）；**TS / Vue 中的颜色字面量由 ESLint `no-restricted-syntax` 直接拦截**，防止主题色散落回页面
 - **一屏内滚动（硬规范）**：页面主功能区（布局的 `.content`）固定在一屏内，内容溢出时**只在主功能区内部出现滚动条**，不允许浏览器级整页滚动；实现要点：`.main { min-height: 0; overflow: hidden }` + `html, body { overflow: hidden }`
 - **间距档位（硬规范）**：页面容器 padding/gap、筛选栏 gap、面板标题 padding 统一 `$sp-1`（8px）；只有确需更大间隔才用 `$sp-2`（16px），禁止临时写像素值。目标是单屏展示更多内容
+- **筛选栏左右分区（项目级硬规范）**：筛选输入靠左，查询 / 刷新 / 重置及快捷范围等操作统一靠右；窄屏放不下时按钮组整体换行，换行后仍右对齐，不拆散按钮。统一复用公共筛选栏样式，按钮间距只由 8px gap 控制；本轮落地访问分析与访问记录两个页面，保留既有筛选与请求行为。
 - **Element Plus 尺寸基准**：全局 `size: 'small'`（插件级统一设置），后台"12px 字号 + 紧凑密度"规范与 EP small 档相互印证；组件无需逐个声明 size
 - **分页规范（硬规范）**：所有列表默认每页 **20** 条，档位 **[10, 20, 30, 50, 100]**；前端配置 `app/config/pagination.ts`、服务端常量 `src/common/constants.ts` 两处对齐（服务端对越界 pageSize 回退默认值）；所有列表页必须提供"每页条数"选择
 - **按钮防抖 + loading（硬规范，两个独立概念）**：统一收口在 `app/utils/tool.ts`，**不得混淆、不得自写**

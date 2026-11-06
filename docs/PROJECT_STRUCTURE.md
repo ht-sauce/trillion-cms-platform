@@ -390,6 +390,8 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`mixins.scss`](../apps/admin/app/assets/scss/mixins.scss) —— 面板、等宽数字、省略、密集表格等复用片段
 - [`main.scss`](../apps/admin/app/assets/scss/main.scss) —— 全局 reset + Element Plus **亮色主题**变量覆盖（主色 light/dark 梯度经 `color.mix()` 从 `$c-primary` 派生）+ 紧凑密度规则 + **表单标签与控件垂直对齐**（左侧标签居中，顶部标签留 4px）+ 表格 border 样式基线 + 语义色工具类（`.c-success` / `.c-warning` / `.c-danger` / `.c-primary` / `.c-mute`）+ 专有名词问号与长文本弹层基线（`.term-mark` / `.term-tooltip` / `.text-tooltip`：弹层宽度 150–300px、行高 1.6、自动换行）+ **表格操作列统一规格**（`.ops-col`：`flex-wrap` 换行 + 禁止省略号 + gap 4/6px，页面只给列宽）
 
+公共筛选栏布局由 `main.scss` 的 `.filter-bar` / `.filter-actions` 提供：输入靠左，操作整组靠右，空间不足整体换行仍右对齐，8px gap 与按钮默认外边距重置统一维护。
+
 ### app/config（配置化内容统一在此）
 
 - [`api/http.ts`](../apps/admin/app/config/api/http.ts) —— **请求唯一出口**：baseURL（缺失即报错、指向回环地址时按浏览器主机名自适应以便同局域网访问）、token 注入、401 跳转（`currentRoutePath()` 剥 `/geocms` 前缀后判定，避免基础路径误判）、错误提示、get/post/patch/del/upload；两个地址解析函数——`resolveFileUrl`（`/static/` 素材库 → 服务端 origin）与 `resolveMediaUrl`（`/assets/...` 站点产物图片 → 站点基址 `NUXT_PUBLIC_SITE_BASE`，两类路径语义不同不可混用）
@@ -494,8 +496,8 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`files.vue`](../apps/admin/app/pages/files.vue) —— 素材管理（`static_files` 可视化入口）：站点筛选 + 关键词搜索（文件名 / 地址 / 来源 / 备注）+ 多选上传（图片 ≤2MB、视频 ≤100MB）、图片缩略预览（视频显示播放标记）、**「上传来源」列**（`source`，标注哪个功能传的）、复制访问地址、**ID 固定宽度单行 + 点击复制**、替换（隐藏 file input，accept 限定原文件 MIME，`PUT /files/:id/replace` 替换内容、引用地址不变）、删除
 - [`navigations.vue`](../apps/admin/app/pages/navigations.vue) —— 导航管理（头部主导航 + 页脚四列分组，条目增删排序、站内页面/外部链接二选一，整组全量覆盖保存）
 - [`members/index.vue`](../apps/admin/app/pages/members/index.vue) —— 站点会员管理
-- [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— 访问记录：消费分析下钻及路由查询变化，默认20条分页；loading互斥下版本化串行补查，旧响应及卸载后不回写，站点请求独立；保留DB-IP署名
-- [`monitor/analysis.vue`](../apps/admin/app/pages/monitor/analysis.vue) —— 访问分析：统一筛选、七日默认与快捷范围，summary全量聚合四指标、类别/趋势及Top10榜单、GEO资源/响应/去敏来源/历史地域；趋势图例置顶与网格分离，日期轴按月日/小时简写并保留完整时间tooltip，间距按8px档位；查询版本串行补查、错误/空态；使用已完成查询下钻类别/代理/资源/304与裁剪边界的时间桶，不伪装Host+路径精确下钻
+- [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— 访问记录：复用公共 `.filter-bar` / `.filter-actions`，筛选靠左、查询与重置整组靠右，空间不足整体换行仍右对齐；消费分析下钻及路由查询变化，默认20条分页；loading互斥下版本化串行补查，旧响应及卸载后不回写，站点请求独立；保留DB-IP署名
+- [`monitor/analysis.vue`](../apps/admin/app/pages/monitor/analysis.vue) —— 访问分析：统一筛选、七日默认与快捷范围；日期时间框固定384px不伸展、控件统一28px高，普通筛选128px/站点192px，复用公共 `.filter-bar` / `.filter-actions`，筛选靠左、快捷范围与查询操作各组靠右，空间不足整体换行仍右对齐，间距仅由8px gap控制；summary全量聚合四指标、类别/趋势及Top10榜单、GEO资源/响应/去敏来源/历史地域；趋势图例置顶与网格分离，日期轴按月日/小时简写并保留完整时间tooltip，间距按8px档位；查询版本串行补查、错误/空态；使用已完成查询下钻类别/代理/资源/304与裁剪边界的时间桶，不伪装Host+路径精确下钻
 - [`settings/index.vue`](../apps/admin/app/pages/settings/index.vue) —— 系统设置 · 运行配置（平台级，展示账号与角色/接口基址/时区/静态资源/AI 爬虫策略）
 - [`settings/users.vue`](../apps/admin/app/pages/settings/users.vue) —— 系统设置 · 用户管理（菜单授权，CRUD、角色绑定与启停），已移除站点授权列与站点选项加载
 - [`settings/roles.vue`](../apps/admin/app/pages/settings/roles.vue) —— 系统设置 · 角色管理（平台级，角色增删改查 + 菜单授权树，内置角色受保护）

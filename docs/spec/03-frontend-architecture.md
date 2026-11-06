@@ -127,6 +127,7 @@ sequenceDiagram
 | -------- | ------------------------------------------------------------------------------ |
 | 字号     | `$font-size-base: 12px`                                                        |
 | 间距     | `$sp-1..4` = 8 / 16 / 24 / 32px，**密度优先**，拒绝大留白；页面容器/筛选栏/面板标题统一 `$sp-1` |
+| 筛选分区 | 项目级统一：筛选输入靠左，查询 / 刷新 / 重置及快捷范围等操作靠右。`main.scss` 的 `.filter-bar` 使用 flex 换行与 `$sp-1` gap；直属 `.filter-actions` 以自动起始外边距推至右侧，按钮组不收缩、不拆行，空间不足整体换行后仍右对齐，清除相邻按钮默认外边距。访问分析保留两行筛选与既有控件尺寸，访问记录接入同一公共样式；页面只定义业务控件宽度，不复制分区样式。 |
 | 滚动     | 主功能区（`.content`）**一屏内滚动**：`.main { min-height: 0; overflow: hidden }` + `html, body { overflow: hidden }`，禁止整页滚动 |
 | 组件尺寸 | Element Plus 全局 `size: 'small'`（`plugins/element-plus.ts`），与密度规范一一对应 |
 | 控件高度 | **统一 `$control-height`（28px）**：`.el-input__wrapper` / `.el-select__wrapper` 在 `main.scss` 里显式设高 + `box-sizing: border-box`，**禁止**再给 `.el-input__inner` 单独写 `height`（那会让输入框比下拉框高 4~6px，全后台筛选栏参差，ADR-059） |

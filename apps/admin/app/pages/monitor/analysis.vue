@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page-wrap analysis-page">
-    <div class="filters">
+    <div class="filter-bar">
       <span class="panel-title">访问分析</span>
       <el-select v-model="siteId" placeholder="全部站点" clearable class="filter-site">
         <el-option v-for="site in sites" :key="site.id" :label="site.name" :value="site.id" />
@@ -195,11 +195,13 @@ onBeforeUnmount(() => {
       <el-select v-model="accessCategory" placeholder="访问类别" clearable>
         <el-option v-for="item in ACCESS_CATEGORY_OPTIONS" :key="item.value" v-bind="item" />
       </el-select>
-      <el-button @click="quickRange(1)">今天</el-button>
-      <el-button @click="quickRange(7)">最近 7 天</el-button>
-      <el-button @click="quickRange(30)">最近 30 天</el-button>
+      <div class="filter-actions">
+        <el-button @click="quickRange(1)">今天</el-button>
+        <el-button @click="quickRange(7)">最近 7 天</el-button>
+        <el-button @click="quickRange(30)">最近 30 天</el-button>
+      </div>
     </div>
-    <div class="filters">
+    <div class="filter-bar">
       <el-input v-model="clientIp" placeholder="客户端 IP" clearable @keyup.enter="onSearch" />
       <el-input v-model="path" placeholder="路径包含" clearable @keyup.enter="onSearch" />
       <el-select v-model="resourceType" placeholder="资源类型" clearable>
@@ -207,9 +209,11 @@ onBeforeUnmount(() => {
       </el-select>
       <el-input v-model="agentToken" placeholder="代理标识" clearable @keyup.enter="onSearch" />
       <el-input-number v-model="status" :controls="false" placeholder="状态码" />
-      <el-button type="primary" :loading="isLoading()" @click="onSearch">查询</el-button>
-      <el-button :loading="isLoading()" @click="onSearch">刷新</el-button>
-      <el-button @click="onReset">重置</el-button>
+      <div class="filter-actions">
+        <el-button type="primary" :loading="isLoading()" @click="onSearch">查询</el-button>
+        <el-button :loading="isLoading()" @click="onSearch">刷新</el-button>
+        <el-button @click="onReset">重置</el-button>
+      </div>
     </div>
     <div class="notice">
       仅统计到达 GEO 且已保存的请求，不代表 PV/UV、AI 引用、曝光或转化。AI 身份为 UA
@@ -399,18 +403,21 @@ onBeforeUnmount(() => {
 .analysis-page {
   gap: $sp-1;
 }
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: $sp-1;
-}
-.filters .el-input,
-.filters .el-select {
+.filter-bar .el-input,
+.filter-bar .el-select,
+.filter-bar .el-input-number {
+  flex: 0 0 auto;
   width: calc($sp-4 * 4);
 }
-.filters .filter-site {
+.filter-bar .filter-site {
   width: calc($sp-4 * 6);
+}
+.filter-bar :deep(.el-date-editor) {
+  flex: 0 0 auto;
+  width: calc($sp-4 * 12);
+  max-width: 100%;
+  height: $control-height;
+  box-sizing: border-box;
 }
 .notice {
   color: $c-text-mute;

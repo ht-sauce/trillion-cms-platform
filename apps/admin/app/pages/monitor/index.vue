@@ -159,8 +159,10 @@ onBeforeUnmount(() => {
         :controls="false"
         placeholder="状态码"
       />
-      <el-button type="primary" :loading="isLoading()" @click="onSearch">查询</el-button>
-      <el-button @click="onReset">重置</el-button>
+      <div class="filter-actions">
+        <el-button type="primary" :loading="isLoading()" @click="onSearch">查询</el-button>
+        <el-button @click="onReset">重置</el-button>
+      </div>
     </div>
 
     <el-table v-loading="isLoading()" :data="list" border empty-text="暂无访问明细">
@@ -235,13 +237,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped lang="scss">
-.filter-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: $sp-1;
-}
-
 .filter-site {
   width: calc($sp-4 * 6);
 }
