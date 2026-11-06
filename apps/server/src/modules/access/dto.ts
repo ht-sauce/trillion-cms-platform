@@ -4,7 +4,7 @@
  */
 import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator'
 import { Transform } from 'class-transformer'
-import { ApiPropertyOptional } from '@nestjs/swagger'
+import { ApiPropertyOptional, OmitType } from '@nestjs/swagger'
 
 export const RESOURCE_TYPES = ['page', 'asset', 'llms', 'sitemap', 'robots', 'payload', 'other'] as const
 export const ACCESS_CATEGORIES = ['browser', 'search_bot', 'ai_bot', 'unknown'] as const
@@ -172,3 +172,5 @@ export class QueryAccessEventDto {
   @IsOptional()
   pageSize?: number
 }
+
+export class QueryAccessSummaryDto extends OmitType(QueryAccessEventDto, ['page', 'pageSize'] as const) {}

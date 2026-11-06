@@ -19,6 +19,7 @@
     "@trillion/shared": "workspace:*",
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
+    "echarts": "^6.1.0",
     "element-plus": "^2.13.0",
     "pinia": "^3.0.0"
   },

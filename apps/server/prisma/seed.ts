@@ -221,7 +221,14 @@ async function main() {
   /** 内容域父菜单（容器，本身不可点击）：让「内容 / 页面」与「块库」等同级并列 */
   const contentRoot = await upsertMenu({ title: '内容管理', parentId: null, path: null, sort: 3 })
   const members = await upsertMenu({ title: '会员管理', parentId: null, path: '/members', sort: 4 })
-  const monitor = await upsertMenu({ title: 'GEO 监控', parentId: null, path: '/monitor', sort: 5 })
+  const monitorRoot = await upsertMenu({ title: 'GEO 监控', parentId: null, path: null, sort: 5 })
+  const monitorAnalysis = await upsertMenu({
+    title: '访问分析',
+    parentId: monitorRoot.id,
+    path: '/monitor/analysis',
+    sort: 10
+  })
+  const monitor = await upsertMenu({ title: '访问记录', parentId: monitorRoot.id, path: '/monitor', sort: 20 })
   const settings = await upsertMenu({ title: '系统设置', parentId: null, path: null, sort: 6 })
   const settingsBasic = await upsertMenu({ title: '运行配置', parentId: settings.id, path: '/settings', sort: 1 })
   const settingsUsers = await upsertMenu({ title: '用户管理', parentId: settings.id, path: '/settings/users', sort: 2 })
@@ -261,6 +268,8 @@ async function main() {
     sitesDemands.id,
     contentRoot.id,
     members.id,
+    monitorRoot.id,
+    monitorAnalysis.id,
     monitor.id,
     settings.id,
     settingsBasic.id,
@@ -283,6 +292,8 @@ async function main() {
     navigationMenu.id,
     filesMenu.id,
     members.id,
+    monitorRoot.id,
+    monitorAnalysis.id,
     monitor.id
   ]
 

@@ -340,7 +340,10 @@ MenuPermissionGuard 按启用 Menu.path + RoleMenu 校验，未声明拒绝；�
 | 当前方法/路径 | 入参与响应 data | 鉴权与状态 |
 | --- | --- | --- |
 | POST `/internal/access-events` | CreateAccessEventDto：04 §3.7 请求字段，siteId/referer/browserVersion/agentToken/vendor/status 可选；occurredAt 字符串≤40；返回 `{ id }` | 当前以 x-internal-token 比对服务端 internalToken，缺配置/缺凭据/错误均 403；校验错误 400，保存失败 500；草稿指定 HTTP 200 |
-| GET `/access-events` | page/pageSize、siteId≤36、from/to、clientIp≤64、path≤256、resourceType/accessCategory 枚举、agentToken≤64、status 整数；返回 `{ list, total, page, pageSize }`，行含请求/响应及 country/region/city/geoSource/geoDbVersion/geoStatus | JWT-A + `/monitor` 启用菜单授权；未登录 401，无菜单 403；不按用户站点列表过滤，不提供统计接口 |
+| GET `/access-events` | page/pageSize、siteId≤36、from/to、clientIp≤64、path≤256、resourceType/accessCategory 枚举、agentToken≤64、status 整数；返回 `{ list, total, page, pageSize }`，行含请求/响应及 country/region/city/geoSource/geoDbVersion/geoStatus | JWT-A + `/monitor` 访问记录启用菜单授权；未登录 401，无菜单 403；不按用户站点列表过滤 |
+| GET `/access-events/summary` | 同明细业务筛选，不消费分页；from/to 缺省最近 7 天，非法、倒置、跨度超过 90 天返回 400；返回范围、粒度、四项 totals、categories、trend、crawlers/pages/referrers/locations Top10、resources 与 statuses | JWT-A + `/monitor/analysis`；只读数据库侧聚合 GeoAccessEvent，不新增采集/事实表，不与旧埋点相加；未登录 401、无菜单 403 |
+
+聚合口径：请求数含所有资源；页面为 resourceType=page；AI 为 accessCategory=ai_bot 的声明身份；异常为 4xx/5xx 或 aborted 的并集，一条计一次。状态按 2xx/304/其他3xx/4xx/5xx/unknown 互斥分组，中断另列。趋势按中国时区短范围小时/长范围日聚合；完成查询的空时间桶可补零，查询失败不能假装零流量。页面按 host+path 分组，爬虫仅搜索/AI 类，来源从去敏 Referer 解析外部域名，缺失为未提供来源；地域使用历史快照并保留未知。不称 PV/UV、引用、真人、直接访问或获客。原明细非法日期行为本轮不顺带修改。
 
 内部字段长度与枚举见 04 §3.7；status 中断可空、durationMs 非负，时间输出走 formatDateTime。当前 parseDateTime 已区分 ISO 的 Z/偏移并保留毫秒，无时区输入按中国时间解析，非法日期返回 null；create 在解析失败时回退当前时间，查询忽略非法时间条件，不能将解析函数拒绝非法日期等同接口返回 400。GEO 的 00-access.ts/utils/access.ts 已接入调用，服务端 AccessModule 已注册，不再保留“未注册”差异；完整采集与真实数据库写入仍待联调。
 

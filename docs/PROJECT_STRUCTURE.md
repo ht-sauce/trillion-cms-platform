@@ -169,6 +169,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`schema/migrations/20261106120000_add_geo_inbound_monitoring/migration.sql`](../apps/server/prisma/schema/migrations/20261106120000_add_geo_inbound_monitoring/migration.sql) —— 入站与需求表迁移；2026-11-06 核实 development 已应用，本轮未修改文件
 - [`schema/migrations/20261106150000_add_geo_status/migration.sql`](../apps/server/prisma/schema/migrations/20261106150000_add_geo_status/migration.sql) —— 独立增量添加 geo_status(16)，非空默认 unknown；已部署 development，旧迁移校验和不变，验证范围见 04 §3.7
 - [`schema/migrations/20261106160000_remove_legacy_overview_menu/migration.sql`](../apps/server/prisma/schema/migrations/20261106160000_remove_legacy_overview_menu/migration.sql) —— 事务内定向删除 path=/ 的旧总览菜单 1 条及其 RoleMenu 2 条；已部署 development，其余菜单/授权不变，不执行种子
+- [`schema/migrations/20261106170000_split_geo_monitor_menu/migration.sql`](../apps/server/prisma/schema/migrations/20261106170000_split_geo_monitor_menu/migration.sql) —— GEO 监控拆为父目录、访问分析与访问记录；原记录 ID/路径/授权保留，不批量补授角色；本地 development 已应用，未操作测试/生产，验收账号单独显式配置目录与分析权限
 - [`schema/news-faq.prisma`](../apps/server/prisma/schema/news-faq.prisma) —— `NewsArticle` 新闻文章表、`FaqItem` 问答条目表（**管理源**，见 04 §8；`pageId` 为发布产物 `Page` 弱引用，`[siteId, slug]` 唯一）
 - [`schema/catalog.prisma`](../apps/server/prisma/schema/catalog.prisma) —— `ProductIndustry` 产品行业分组、`Product` 产品、`CaseStudy` 成功案例（**管理源**，见 04 §9；`Product.industries` 存分组名数组以便多分组归属、`series` 是第二种分类维度；详情字段一律 `Json?`——MySQL 的 JSON/TEXT 列不允许 DEFAULT；`[siteId, slug]` / `[siteId, name]` 唯一）
 - [`schema/publish-task.prisma`](../apps/server/prisma/schema/publish-task.prisma) —— `PublishTask` 发布构建任务（队列与日志）
@@ -307,10 +308,10 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 ### src/modules/access（轻量入站监控，当前实施中）
 
 - [`access.module.ts`](../apps/server/src/modules/access/access.module.ts) —— 访问记录与地域解析服务注册，已接入 AppModule；注册不代表真实数据库与完整采集链路验收
-- [`access.controller.ts`](../apps/server/src/modules/access/access.controller.ts) —— 单条内部保存 `/internal/access-events`、菜单授权分页 `/access-events`；当前无统计接口，契约登记见 05 §7.1
-- [`access.service.ts`](../apps/server/src/modules/access/access.service.ts) —— 单条写入、Host 站点解析、必要筛选分页；ISO 保留时区/毫秒，无时区输入按中国时间解析，拒绝非法日期；保存及返回地域状态/库版本，查询不重算历史；完整采集链路仍待联调
+- [`access.controller.ts`](../apps/server/src/modules/access/access.controller.ts) —— 内部保存、`/monitor` 菜单授权分页与 `/monitor/analysis` 独立授权 summary；契约见 05 §7.1
+- [`access.service.ts`](../apps/server/src/modules/access/access.service.ts) —— 单条写入、Host 站点解析、必要筛选分页与数据库侧有界 summary 聚合；默认中国时区七个自然日、最长连续90自然日，趋势补零、榜单Top10、状态/来源/地域快照，失败不伪装零流量；聚合日期使用保留毫秒的 UTC 字符串参数绑定，避免全局 Date.toJSON 覆盖影响 Prisma 原始查询；查询不重算历史地域
 - [`geo-ip.service.ts`](../apps/server/src/modules/access/geo-ip.service.ts) —— 保存时 maxmind 读取 DB-IP City Lite MMDB；名称类型兼容 Names，区分非法/非公网/未命中/不可用/异常/命中，保留已加载库版本；本机真实读取已有 6 个公网及 5 个控制样本证据，非数据库联调验收；reader/加载 Promise 按进程缓存，替库需重启并复核，不支持自动热替库（07 §3.3.1）
-- [`dto.ts`](../apps/server/src/modules/access/dto.ts) —— 请求快照与分页筛选 DTO；状态码 query 十进制整数转换，空串忽略，非法值仍由 IsInt 拒绝；地址去敏及代理口径待联调
+- [`dto.ts`](../apps/server/src/modules/access/dto.ts) —— 请求快照、分页与去除分页的 summary 筛选 DTO；summary 成对校验时间，非法/倒置/超长范围400；状态码十进制整数转换，原分页非法日期口径不顺带改变
 
 ### src/modules/demands（需求收集，当前实施中）
 
@@ -397,7 +398,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`api/files.ts`](../apps/admin/app/config/api/files.ts) —— 静态文件上传/列表/删除/替换（`replace` → `PUT /files/:id/replace`，URL 不变仅换文件）接口
 - [`api/content.ts`](../apps/admin/app/config/api/content.ts) —— 栏目与页面接口
 - [`api/members.ts`](../apps/admin/app/config/api/members.ts) —— 站点会员接口
-- [`api/access.ts`](../apps/admin/app/config/api/access.ts) —— 当前实施草稿：入站请求分页 API/字段类型，不提供统计分析
+- [`api/access.ts`](../apps/admin/app/config/api/access.ts) —— 入站分页与只读 summary API，剔除聚合请求分页字段；精确声明 totals/四类趋势/状态/榜单/来源/地域与geoStatus类型及状态字典
 - [`api/demands.ts`](../apps/admin/app/config/api/demands.ts) —— 需求列表/详情/跟进与 IP 禁用/解禁封装；路径、UUID 寻址及 clientIp/ban 字段已与服务端静态对齐（05 §7.2），真实数据库与浏览器交互联调仍待验收
 - [`api/publish.ts`](../apps/admin/app/config/api/publish.ts) —— 发布任务接口 + 产物状态（`artifacts`，含 `task` = 最新构建任务）、单页回退（`rollback`）、GEO 索引更新（`repair`，界面旧称「产物修复」）、产物包下载（`download`）
 - [`api/editor.ts`](../apps/admin/app/config/api/editor.ts) —— 站点内容编辑器接口：内容树、目录/页面增删改与上下移、整页草稿读写与丢弃、内容指纹重算
@@ -452,6 +453,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`RoleFormDialog.vue`](../apps/admin/app/components/RoleFormDialog.vue) —— 角色新建/编辑弹窗（内置角色标识与状态受保护）
 - [`RoleMenusDialog.vue`](../apps/admin/app/components/RoleMenusDialog.vue) —— 角色菜单授权弹窗（勾选子级自动含上级）
 - [`AdminUserFormDialog.vue`](../apps/admin/app/components/AdminUserFormDialog.vue) —— 后台用户新建/编辑弹窗（角色绑定 + 启停），已移除站点授权选择与载荷
+- [`AccessChart.vue`](../apps/admin/app/components/AccessChart.vue) —— ECharts按需折线/条形图，亮色SCSS令牌转CSS变量；尺寸监听、点击事件和卸载销毁，不独立请求数据
 - [`BlockDataForm.vue`](../apps/admin/app/components/BlockDataForm.vue) —— **动态块数据表单**：按 `BlockFieldSchema` 递归渲染 text/textarea/number/switch/select/file/url/link/list/group，`list` 支持增删与上下移；对外暴露 `collectMissing()` 供保存前收集未填必填项
 - [`ChannelFormDialog.vue`](../apps/admin/app/components/ChannelFormDialog.vue) —— 目录新建/编辑弹窗（名称 + URL 片段 + 排序）
 - [`PageFormDialog.vue`](../apps/admin/app/components/PageFormDialog.vue) —— 页面新建/编辑弹窗（标题/URL 片段/所属目录/类型/摘要；已发布页锁定 slug 与目录）
@@ -492,7 +494,8 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`files.vue`](../apps/admin/app/pages/files.vue) —— 素材管理（`static_files` 可视化入口）：站点筛选 + 关键词搜索（文件名 / 地址 / 来源 / 备注）+ 多选上传（图片 ≤2MB、视频 ≤100MB）、图片缩略预览（视频显示播放标记）、**「上传来源」列**（`source`，标注哪个功能传的）、复制访问地址、**ID 固定宽度单行 + 点击复制**、替换（隐藏 file input，accept 限定原文件 MIME，`PUT /files/:id/replace` 替换内容、引用地址不变）、删除
 - [`navigations.vue`](../apps/admin/app/pages/navigations.vue) —— 导航管理（头部主导航 + 页脚四列分组，条目增删排序、站内页面/外部链接二选一，整组全量覆盖保存）
 - [`members/index.vue`](../apps/admin/app/pages/members/index.vue) —— 站点会员管理
-- [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— GEO 入站请求筛选/分页明细，不做统计；地区结果保留官方“IP Geolocation by DB-IP”署名链接；loading 互斥下版本化串行补查最新条件，旧响应不回写，失败仍补查、卸载停止回写；站点名与明细并行加载，不由站点请求失败阻断明细；真实采集链路验收另行完成
+- [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— 访问记录：消费分析下钻及路由查询变化，默认20条分页；loading互斥下版本化串行补查，旧响应及卸载后不回写，站点请求独立；保留DB-IP署名
+- [`monitor/analysis.vue`](../apps/admin/app/pages/monitor/analysis.vue) —— 访问分析：统一筛选、七日默认与快捷范围，summary全量聚合四指标、类别/趋势及Top10榜单、GEO资源/响应/去敏来源/历史地域；趋势图例置顶与网格分离，日期轴按月日/小时简写并保留完整时间tooltip，间距按8px档位；查询版本串行补查、错误/空态；使用已完成查询下钻类别/代理/资源/304与裁剪边界的时间桶，不伪装Host+路径精确下钻
 - [`settings/index.vue`](../apps/admin/app/pages/settings/index.vue) —— 系统设置 · 运行配置（平台级，展示账号与角色/接口基址/时区/静态资源/AI 爬虫策略）
 - [`settings/users.vue`](../apps/admin/app/pages/settings/users.vue) —— 系统设置 · 用户管理（菜单授权，CRUD、角色绑定与启停），已移除站点授权列与站点选项加载
 - [`settings/roles.vue`](../apps/admin/app/pages/settings/roles.vue) —— 系统设置 · 角色管理（平台级，角色增删改查 + 菜单授权树，内置角色受保护）
@@ -570,6 +573,8 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 2026-11-06 权限续作：按 REQUIREMENTS §9、05 §2 与用户授权同步 02 及地图；全部管理业务控制器接入登录 + 菜单守卫，移除 siteIds/platform 业务拒绝和站点授权 UI，保留归属、模板副本、会员/内部身份与防锁死。历史“限平台级/按用户站点隔离”条目不再作为业务权限要求。数据库 site_ids 历史列暂留，无结构迁移，无自动菜单补授、无发布。
 
 权限验证脚本 [`aiTest/menu-permissions.test.ts`](../aiTest/menu-permissions.test.ts) 为忽略入库的本地测试：路由元数据全覆盖、真实 Nest HTTP 的401/403/跨站非平台读写、主动筛选、DTO/身份字段、目录与预览归属、会员身份、防锁死、模板权限防伪造。运行目录 apps/server：`node -r ts-node/register/transpile-only --test ../../aiTest/menu-permissions.test.ts`（NODE_PATH 指向该应用 node_modules，TS_NODE_PROJECT 指向该应用 tsconfig.json，保留 Nest 装饰器元数据）。Prisma 替身不代表真实数据库验收。
+
+访问分析本地验收脚本 [`aiTest/access-analysis-live.mjs`](../aiTest/access-analysis-live.mjs)：仅 development 回环地址与开发库，凭据沿用环境变量或种子源码内存读取；先确认账号角色独占，再按已有授权判断401/403/200前置状态，显式补齐GEO父目录与分析菜单。成功保留仅该账号必要授权，失败撤回本次新增项；真实 Edge 浏览器验证菜单导航、聚合、空态、今天、缩放与304下钻，仅500错误场景使用响应替身。首轮及已有授权重跑均通过，证据/截图/交付记录仅落aiTest，不执行种子、迁移或生产发布。
 
 ### app/utils
 

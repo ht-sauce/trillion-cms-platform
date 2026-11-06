@@ -30,6 +30,21 @@ const resourceType = ref<AccessResourceType | ''>('')
 const accessCategory = ref<AccessCategory | ''>('')
 const agentToken = ref('')
 const status = ref<number>()
+const route = useRoute()
+
+function applyRouteQuery() {
+  const text = (key: string) => (typeof route.query[key] === 'string' ? (route.query[key] as string) : '')
+  siteId.value = text('siteId')
+  dateRange.value = text('from') && text('to') ? [text('from'), text('to')] : null
+  clientIp.value = text('clientIp')
+  path.value = text('path')
+  resourceType.value = ACCESS_RESOURCE_OPTIONS.find((option) => option.value === text('resourceType'))?.value || ''
+  accessCategory.value = ACCESS_CATEGORY_OPTIONS.find((option) => option.value === text('accessCategory'))?.value || ''
+  agentToken.value = text('agentToken')
+  status.value = /^\d+$/.test(text('status')) ? Number(text('status')) : undefined
+}
+
+applyRouteQuery()
 let requestVersion = 0
 let disposed = false
 
@@ -39,7 +54,7 @@ const categoryLabels = new Map(ACCESS_CATEGORY_OPTIONS.map((option) => [option.v
 
 async function loadSites() {
   const result = await sitesApi.list({ pageSize: 100 })
-  sites.value = result.list.map((item) => ({ id: item.id, name: item.name }))
+  if (!disposed) sites.value = result.list.map((item) => ({ id: item.id, name: item.name }))
 }
 
 async function load() {
@@ -96,6 +111,13 @@ function locationText(row: AccessEventItem) {
 }
 
 watch([page, pageSize], load)
+watch(
+  () => route.query,
+  () => {
+    applyRouteQuery()
+    reloadFromFirstPage()
+  }
+)
 onMounted(async () => {
   await Promise.allSettled([loadSites(), load()])
 })
@@ -107,7 +129,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="page-wrap">
     <div class="filter-bar">
-      <span class="panel-title">GEO 监控</span>
+      <span class="panel-title">访问记录</span>
       <el-select v-model="siteId" class="filter-site" placeholder="全部站点" clearable>
         <el-option v-for="s in sites" :key="s.id" :label="s.name" :value="s.id" />
       </el-select>

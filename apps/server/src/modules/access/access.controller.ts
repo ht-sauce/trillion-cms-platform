@@ -8,7 +8,7 @@ import { Body, Controller, ForbiddenException, Get, Headers, HttpCode, Post, Que
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { ConfigService } from '@nestjs/config'
 import { AccessService } from './access.service'
-import { CreateAccessEventDto, QueryAccessEventDto } from './dto'
+import { CreateAccessEventDto, QueryAccessEventDto, QueryAccessSummaryDto } from './dto'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
 import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
 import { RequireMenu } from '../../common/decorators/require-menu.decorator'
@@ -36,6 +36,15 @@ export class AccessController {
   @ApiOperation({ summary: '入站请求分页明细（筛选 + 分页）' })
   list(@Query() query: QueryAccessEventDto) {
     return this.service.list(query)
+  }
+
+  @Get('access-events/summary')
+  @ApiBearerAuth()
+  @UseGuards(AdminAuthGuard, MenuPermissionGuard)
+  @RequireMenu('/monitor/analysis')
+  @ApiOperation({ summary: '入站请求访问分析（全量筛选聚合）' })
+  summary(@Query() query: QueryAccessSummaryDto) {
+    return this.service.summary(query)
   }
 
   /** 内部令牌缺失或错误一律拒绝，不提供「未配置即放行」的裸奔分支 */
