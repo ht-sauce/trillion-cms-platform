@@ -1,12 +1,11 @@
 export function demandLoader() {
   type Widget = { open: (trigger: HTMLElement) => void }
   const scope = window as typeof window & {
-    TrillionDemandLoader?: boolean
+    TrillionDemand?: { mountDemand: () => Promise<void>; openDemand: (trigger: HTMLElement) => Promise<void> }
     TrillionDemandWidget?: (apiBase: string) => Promise<Widget>
   }
   const script = document.currentScript as HTMLScriptElement | null
-  if (!script || scope.TrillionDemandLoader) return
-  scope.TrillionDemandLoader = true
+  if (!script || scope.TrillionDemand) return
   let apiBase: string
   let widgetUrl: string
   try {
@@ -24,25 +23,9 @@ export function demandLoader() {
   }
   let widget: Widget | undefined
   let preparing: Promise<void> | undefined
-  function target(event: Event): HTMLAnchorElement | null {
-    const element = event.target as Element | null
-    const anchor = element?.closest?.('a[data-contact-action="demand"]') as HTMLAnchorElement | null
-    if (
-      !anchor ||
-      anchor.closest('header, nav') ||
-      anchor.hasAttribute('download') ||
-      (anchor.target && anchor.target !== '_self')
-    )
-      return null
-    try {
-      const url = new URL(anchor.href, window.location.href)
-      return url.origin === window.location.origin && /\/contact\/?$/.test(url.pathname) ? anchor : null
-    } catch {
-      return null
-    }
-  }
   function prepare() {
-    if (widget || preparing) return
+    if (widget) return Promise.resolve()
+    if (preparing) return preparing
     preparing = (async () => {
       if (!scope.TrillionDemandWidget) {
         await new Promise<void>((resolve, reject) => {
@@ -68,44 +51,17 @@ export function demandLoader() {
       }
       if (!scope.TrillionDemandWidget) throw new Error('组件不可用')
       widget = await scope.TrillionDemandWidget(apiBase)
-    })()
-      .catch(() => {})
-      .finally(() => {
-        preparing = undefined
-      })
+    })().finally(() => {
+      preparing = undefined
+    })
+    return preparing
   }
-  document.addEventListener('pointerover', (event) => {
-    if (target(event)) prepare()
-  })
-  document.addEventListener('focusin', (event) => {
-    if (target(event)) prepare()
-  })
-  document.addEventListener(
-    'click',
-    (event) => {
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        event.altKey
-      )
-        return
-      const anchor = target(event)
-      if (!anchor) return
-      if (!widget) {
-        prepare()
-        return
-      }
-      try {
-        widget.open(anchor)
-        event.preventDefault()
-        event.stopPropagation()
-      } catch {
-        return
-      }
-    },
-    true
-  )
+  scope.TrillionDemand = {
+    mountDemand: prepare,
+    async openDemand(trigger) {
+      await prepare()
+      widget!.open(trigger)
+    }
+  }
+  void prepare().catch(() => {})
 }

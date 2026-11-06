@@ -507,7 +507,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 ### 工程文件
 
 - [`package.json`](../apps/geo/package.json) —— 依赖与脚本（含 `build:sites` 增量 SSG（根命令 `pnpm site build` 调它）、`blocks:sync` 块代码落盘、`start:prod`：`node .output/server/index.mjs` 供上线器常驻 SSR）
-- [`nuxt.config.ts`](../apps/geo/nuxt.config.ts) —— SSG 产物目录、prerender 钩子（从服务端拉路由清单）、构建期环境变量、开发端口（读注入的 `PORT`）、组件自动导入（**`pathPrefix: false`**，否则 `blocks/BlockXxx.vue` 注册名带前缀导致 Block 渲染链路失效）
+- [`nuxt.config.ts`](../apps/geo/nuxt.config.ts) —— SSG 产物目录、prerender 钩子、构建期环境变量、开发端口（读注入的 `PORT`）；Nuxt/Nitro与Vite同源开发代理按配置API origin/pathname派生，生产不启用；组件自动导入 `pathPrefix: false`
 - [`tsconfig.json`](../apps/geo/tsconfig.json) —— TS 配置
 - [`eslint.config.mjs`](../apps/geo/eslint.config.mjs) —— ESLint 配置
 
@@ -532,6 +532,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 - [`PageRender.vue`](../apps/geo/app/components/PageRender.vue) —— 页面渲染：加载数据 → 注入 GEO 元数据（meta/JSON-LD/canonical，统一经 `useHead` 注入，模板内禁止写 `<script>`）→ 渲染 Block（`time` 发布时间在此；页头 `h1` 只在「无首屏块且首块非 section-head」时兜底渲染，判定见 `utils/page-title.ts`，ADR-056）
 - [`MemberBadge.client.vue`](../apps/geo/app/components/MemberBadge.client.vue) —— 会员入口（客户端 island：静态站登录后由浏览器调用 member API；登录表单含 `label` 绑定）
+- [`DemandWidget.client.vue`](../apps/geo/app/components/DemandWidget.client.vue) —— 根组件统一挂载：首页与主体页共用需求主体，开发API使用同源origin+配置pathname，生产保留绝对基址；初始化错误显式展示，不执行导航降级
 - [`blocks/BlockRenderer.vue`](../apps/geo/app/components/blocks/BlockRenderer.vue) —— Block 分发渲染器：`import.meta.glob('./Blk*.vue')` 构建期收集块组件表，按 `Blk<PascalCase(key)>` 动态解析（不用 `resolveComponent`，缺失块渲染为显式占位而非静默空白），跳过停用块，输出 `data-block-id`；产品体系 `/products` 的行业分组编排为顶部 Tab，默认首组、说明下置，保留 SSR 全量内容与锚点切换，支持键盘和移动端横向滚动
 - [`blocks/Blk*.vue`（41 个，构建期由 `scripts/sync-blocks.mjs` 落盘，gitignore）](../apps/geo/app/components/blocks/) —— 内容块组件。**HTML 结构复用设计稿原型类名（09 §7.4.1，ADR-036）**：`BlkAnchorBar` `BlkArticleBody` `BlkArticleMeta` `BlkCaseCard` `BlkCertGrid` `BlkDataTable` `BlkDeviceRow` `BlkDoctorCard` `BlkEntityBanner` `BlkEnvGrid` `BlkFaqDetail` `BlkFaqIndex` `BlkFaqList` `BlkFeatureCards` `BlkFlowChain` `BlkGallery` `BlkGlassCard` `BlkHeroDark` `BlkHeroPanel` `BlkHotFaq` `BlkIndexList` `BlkJobList` `BlkLegalDoc` `BlkListRows` `BlkNapGrid` `BlkNotice` `BlkPager` `BlkPathCards` `BlkPostList` `BlkRelatedFaq` `BlkRouteRows` `BlkSectionHead` `BlkServiceCard` `BlkSideNews` `BlkSourceGrid` `BlkStatBar` `BlkStepTimeline` `BlkTagline` `BlkTermCards` `BlkTrustGrid` `BlkVisitCards`
 - [`frame/FrameTopBar.vue`](../apps/geo/app/components/frame/FrameTopBar.vue) —— 框架块·门诊信息条（数据来自 `Site.openingHours` / `medicalInsurance`；DOM 对齐原型 `.top`）
@@ -551,17 +552,20 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 ### server/middleware（当前入口与未验收边界）
 
-- [`site-entry.ts`](../apps/geo/server/middleware/site-entry.ts) —— 既有 Host 站点定位、SSG 直出与 SSR 兜底；访问日志由前置 00-access.ts 采集，widget 版本资源在产物查找前放行；本轮仅核对文档，不改代码/入口缓存策略，不验收运行链路
+- [`site-entry.ts`](../apps/geo/server/middleware/site-entry.ts) —— Host站点定位、生产SSG直出与SSR兜底；Nuxt开发模式放行源码渲染，避免旧SSG覆盖当前组件/资产；访问日志由前置00-access.ts采集，widget版本资源在产物查找前放行
 - [`00-access.ts`](../apps/geo/server/middleware/00-access.ts) / [`../utils/access.ts`](../apps/geo/server/utils/access.ts) —— 采集入口调用 observeAccess/recordAccess，直接读取 `TRUSTED_PROXIES` 并使用既有内部令牌逐条异步上报；服务端 AccessModule 已注册。具体能力亦见本地图后文，代码接入不代表 finish/close、去敏、可信代理或真实数据库保存链路已验收（05 §7.1、07 §3.3.1）
-- [`../widget/loader.ts`](../apps/geo/widget/loader.ts) —— 独立轻量加载器：显式按钮事件委托、意向懒加载、准备成功才拦截；顶部导航、电话/邮件、外站、新窗口与加载失败保持原跳转，不依赖 hydration/storage
-- [`../widget/widget.ts`](../apps/geo/widget/widget.ts) —— Shadow DOM + 原生 dialog 的聊天外观需求表单；按服务端 widget-config、captcha id/image 与 SubmitDemandDto 请求，四栏任填、错误保留输入、网络不确定失败复用提交快照/幂等键、焦点及移动端内滚动；不发访客 token、不写需求到站点产物
-- [`../widget/mark-actions.ts`](../apps/geo/widget/mark-actions.ts) —— Vite 编译时兼容未带标记的旧 hero-dark/scene-hero/telbar 行动按钮，本站 /contact 才启用；真实块源已有稳定标记时不重复附加，不扫描文案、不涉及顶部导航
-- [`hero-dark.vue`](../apps/server/prisma/blocks/hero-dark.vue) / [`scene-hero.vue`](../apps/server/prisma/blocks/scene-hero.vue) / [`telbar.vue`](../apps/server/prisma/blocks/telbar.vue) —— 种子块源与 development forintech 本站数据库副本均保存站内 /contact 行动按钮的条件标记；只定向合并标记，不覆盖本站其他样式/结构，不修改同步生成的 Blk 文件
+- [`../widget/loader.ts`](../apps/geo/widget/loader.ts) —— 独立外链加载器：暴露 TrillionDemand.mountDemand/openDemand，幂等准备与失败重试，不监听 document 事件、不绑定页面按钮
+- [`../widget/widget.ts`](../apps/geo/widget/widget.ts) —— Shadow DOM + 原生 dialog 的聊天外观需求表单；桌面上限 400px、13px 字号及紧凑间距，按钮「提交需求」；成功隐藏引导和表单，仅展示「已收到您的需求，我们会尽快与您联系」，重新打开恢复引导；四栏任填、错误保留输入、网络不确定失败复用提交快照/幂等键、焦点及移动端内滚动；不发访客 token、不写需求到站点产物
+- [`../app/utils/demand.ts`](../apps/geo/app/utils/demand.ts) —— 自有站点组件直接初始化既有Shadow DOM主体并复用Promise，失败清理Promise允许重试；按钮openDemand(trigger)直接打开，不加载外链、不判断点击、不preventDefault、不href降级
+- [`hero-dark.vue`](../apps/server/prisma/blocks/hero-dark.vue) / [`scene-hero.vue`](../apps/server/prisma/blocks/scene-hero.vue) / [`telbar.vue`](../apps/server/prisma/blocks/telbar.vue) —— 真实块源显式调用 openDemand；scene-hero 与本地 BlkSceneHero 同步 ghost 入口透明白字（常态/hover/focus/disabled），避免原生按钮灰底；当前目录 BlkHeroDark/BlkSceneHero/BlkTelbar 从真实源同步事件，不做构建期补标记，不执行数据库或站点发布
 - [`forintech.json`](../scripts/data/forintech.json) —— 建站描述首页次按钮同步「联系我们 → /contact」；现有 development 首页以数据库 scene-hero 为真实来源，本轮定向更新其次按钮，核对其他主体页，横幅提交需求及顶部电话/导航保留
 - [`forintech-actions.test.mjs`](../aiTest/forintech-actions.test.mjs) / [`forintech-actions-update.mjs`](../aiTest/forintech-actions-update.mjs) —— 本地忽略入库的先红后绿回归与定向更新脚本；备份本站页面/块、编译校验后更新稳定标记与内容指纹，导航/站点/授权保持，publishedHash 不伪写；本地 SSG 重建不代表生产发布
 - [`forintech-artifacts.test.mjs`](../aiTest/forintech-artifacts.test.mjs) / [`forintech-built-browser.mjs`](../aiTest/forintech-built-browser.mjs) / [`forintech-actions-verification.md`](../aiTest/forintech-actions-verification.md) —— 117 条正式产物机械检查、独立本地浏览器点击检查与部分验收记录；浏览器未通过项单独列出，不等同于全部主体页交互验收
 - [`../server/routes/demand-widget/v1/[asset].get.ts`](../apps/geo/server/routes/demand-widget/v1/[asset].get.ts) —— 版本化 loader.js/widget.js 独立脚本响应，公开短缓存、nosniff；site-entry 在站点产物查找前放行此资源，避免旧 SSG 资源副本覆盖主体更新
-- [`../app/app.vue`](../apps/geo/app/app.vue) / [`../nuxt.config.ts`](../apps/geo/nuxt.config.ts) —— 根组件只注入 defer 外链 loader 与现有 API 基址；既有块编译转换前置按钮标记。首次接入旧页面仍需一次发布，当前未发布、不改 nginx、未执行数据库联调
+- [`../app/app.vue`](../apps/geo/app/app.vue) / [`../nuxt.config.ts`](../apps/geo/nuxt.config.ts) —— 根组件统一DemandWidget；Vite剥离defineBlock、不动态补标记，开发同源代理；独立外链资源保留，当前目录开发验证不更新旧SSG/数据库/nginx
+- [`demand-direct.test.mjs`](../aiTest/demand-direct.test.mjs) / [`demand-direct-browser.mjs`](../aiTest/demand-direct-browser.mjs) —— 本轮最小红绿测试及3002首页/主体页真实按钮、验证码、关闭焦点和导航验证；证据均落aiTest，旧demand-explicit测试为已替代行为的历史记录
+- [`demand-compact.test.mjs`](../aiTest/demand-compact.test.mjs) —— 仅本地 3002 的紧凑弹窗回归：入口常态/hover/disabled/打开后透明白字、提交互斥、成功隐藏引导、重开与移动端限高；先红后绿，验证码及成功响应替身不写数据库，截图与 JSON 证据同落 aiTest，不代表生产验收。
+- development 本地需求链路：`DemandWidget.client.vue` 取已解析的本站上下文，`widget.ts` 显式发送 X-Development-Site；`demands.controller.ts` 仅 development 回环直连且回环来源允许此头，`demands.service.ts` 按 active slug 归属，生产/test 保持域名校验与真实 sourceUrl 核对。`aiTest/demand-development.test.ts` 覆盖本地通过、未知站点/远程/生产拒绝及来源一致性；`aiTest/demand-local-browser.mjs` 验证首页/主体页五个入口、单挂载和同源请求，`aiTest/demand-local-db.mjs` 只读回查development验收需求；证据见 `aiTest/demand-local-verification.md`。仅使用既有端口与回环地址，不改hosts或数据库结构，不代表生产验收。
 
 2026-11-06 权限续作：按 REQUIREMENTS §9、05 §2 与用户授权同步 02 及地图；全部管理业务控制器接入登录 + 菜单守卫，移除 siteIds/platform 业务拒绝和站点授权 UI，保留归属、模板副本、会员/内部身份与防锁死。历史“限平台级/按用户站点隔离”条目不再作为业务权限要求。数据库 site_ids 历史列暂留，无结构迁移，无自动菜单补授、无发布。
 

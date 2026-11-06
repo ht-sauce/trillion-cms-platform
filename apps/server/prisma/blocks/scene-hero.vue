@@ -13,6 +13,7 @@
  *   不靠 JS 插入节点——爬虫拿到的是全部场景，而不是首屏那一屏。
  */
 import { computed, ref } from 'vue'
+import { openDemand } from '~/utils/demand'
 
 const props = defineProps<{ data: Record<string, any>; context: any }>()
 
@@ -113,15 +114,23 @@ defineBlock({
         <p class="sh-lead">{{ data.lead }}</p>
         <div class="sh-acts">
           <template v-for="action in data.actions || []" :key="action.label">
-            <a
-              v-if="action.href"
-              :href="action.href"
+            <button
+              v-if="/^\/contact\/?$/.test(String(action.href))"
+              type="button"
               class="sh-btn"
               :class="action.primary ? 'primary' : 'ghost'"
-              :data-contact-action="/^\/contact\/?$/.test(String(action.href)) ? 'demand' : undefined"
+              @click="openDemand($event.currentTarget)"
             >
               {{ action.label }}
-            </a>
+            </button>
+            <NuxtLink
+              v-else-if="action.href"
+              :to="action.href"
+              class="sh-btn"
+              :class="action.primary ? 'primary' : 'ghost'"
+            >
+              {{ action.label }}
+            </NuxtLink>
             <span v-else class="sh-btn" :class="action.primary ? 'primary' : 'ghost'">{{ action.label }}</span>
           </template>
         </div>
@@ -286,11 +295,16 @@ h1 :deep(em) {
 }
 .sh-btn.ghost {
   border-color: rgba(255, 255, 255, 0.28);
+  background: transparent;
   color: #fff;
+  opacity: 1;
 }
-.sh-btn.ghost:hover {
+.sh-btn.ghost:hover,
+.sh-btn.ghost:focus-visible,
+.sh-btn.ghost:disabled {
   border-color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  background: transparent;
+  color: #fff;
 }
 .sh-scenes {
   display: flex;

@@ -16,6 +16,7 @@
  * 用途：正文结束后的转化收口。文案只陈述事实，不写效果承诺。
  */
 import type { BlockContext } from '@trillion/shared'
+import { openDemand } from '~/utils/demand'
 
 defineProps<{ data: Record<string, any>; context: BlockContext }>()
 
@@ -59,12 +60,20 @@ defineBlock({
       <p v-if="data.desc">{{ data.desc }}</p>
     </div>
     <template v-for="action in data.actions || []" :key="action.label">
+      <button
+        v-if="/^\/contact\/?$/.test(String(action.href))"
+        type="button"
+        class="btn"
+        :class="action.primary === false ? 'btn-line' : 'btn-teal'"
+        @click="openDemand($event.currentTarget)"
+      >
+        {{ action.label }}
+      </button>
       <NuxtLink
-        v-if="!isNonLink(action.href)"
+        v-else-if="!isNonLink(action.href)"
         class="btn"
         :class="action.primary === false ? 'btn-line' : 'btn-teal'"
         :to="action.href"
-        :data-contact-action="/^\/contact\/?$/.test(String(action.href)) ? 'demand' : undefined"
       >
         {{ action.label }}
       </NuxtLink>

@@ -142,6 +142,8 @@ flowchart TB
 
 > 服务端启动时用 **zod 校验**关键变量，缺失或非法直接启动失败（`apps/server/src/config/env.validation.ts`）。
 
+GEO 需求组件在 Nuxt 开发模式下使用同源 API 地址：pathname 从 `NUXT_PUBLIC_API_BASE` 派生，Nuxt/Nitro `devProxy` 与 Vite `server.proxy` 将该前缀转发到配置 API origin，不写端口字面量、不新增预览端口。代理保留原 Host、Origin 与 Referer，不伪造站点来源、不注入内部令牌。开发模式 site-entry 不读取旧 SSG，使用当前 Nuxt 源码与开发资产。仅 development 的回环页面显式发送已解析本站 slug（`X-Development-Site`）；服务端同时检查运行环境、回环直连 IP、回环来源，满足后按 active slug 定位本站，否则保持域名归属校验。生产不接受此头作为站点凭据，验证码、限流、幂等、来源一致性与 sourceUrl 校验不放宽。3002 验收只用 localhost 的站点前缀，不访问生产域名、不改 hosts、不修改数据库结构。
+
 ### 3.3.1 入站监控 / 需求配置与未验收边界（2026-11-06）
 
 - `TRUSTED_PROXIES`、`DBIP_CITY_MMDB` 已在 `env/.env.example` 登记，并作为可选字符串进入服务端 zod 配置。根 `config/index.mjs` 通过 `...config.vars` 注入现有值，没有额外默认代理网段或路径派生；本轮仅同步说明，不修改配置值、密钥或应用代码。

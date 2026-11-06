@@ -182,15 +182,16 @@ flowchart LR
 ### 3.3.1 独立需求 widget（2026-11-06）
 
 - 按 REQUIREMENTS §7.3 与已确认方案实现，不修改服务端幂等、数据库、nginx 或执行站点发布。公开契约以当前 demands 控制器、服务和 DTO 为准，05 中此前“未接入/待裁决”快照不作为本轮前端入参依据。
-- `app.vue` 经 `useHead` 仅注入 `/demand-widget/v1/loader.js` 外链 defer 标签与 `data-api-base`（来自现有 runtimeConfig），不挂 Vue widget，不依赖 hydration。版本化资源由 GEO 独立路由输出，不从某个站点的旧 SSG 资源副本读取；资源路由需先于 site-entry 放行，后续主体更新不要求重发页面。首次补 loader/标记仍需另行一次发布，本轮不执行。
-- `widget/loader.ts` 只按显式 `data-contact-action` 做事件委托；在 pointerover/focusin 时懒加载主体与匿名配置，未准备成功的点击保留原 href，不提前 preventDefault，不拦截修饰键/新窗口、电话、邮件、外站或顶部导航。已准备成功后打开窗口并拦截该按钮跳转；失败可再次准备，不阻塞正文。
-- 指定按钮标记保存在真实 `hero-dark`、`scene-hero`、`telbar` 块源及种子模板：行动按钮 href 为站内 `/contact`（允许尾斜杠）才输出 `data-contact-action="demand"`；Vite 转换仅兼容未带标记的旧块，已有标记不重复附加。不直接编辑同步生成的 Blk 文件，不扫描文案或所有联系链接，FrameSiteHeader 不参与。
+- 自有站点 `app.vue` 统一挂载 `DemandWidget.client.vue`，首页和所有主体页共用一个需求组件；组件直接初始化已有 Shadow DOM 主体，不再加载外链 loader。跨页面导航复用组件与初始化 Promise，不重复挂载表单。Nuxt 开发模式的 site-entry 放行源码渲染，不直出旧 SSG HTML/资产；生产缓存入口不变。独立外链资源仍保留，本轮不发布旧 SSG 产物。
+- `widget/loader.ts` 暴露独立 `window.TrillionDemand.mountDemand()` / `openDemand(trigger)`，初始化幂等、准备失败可重试；不注册 document 点击、pointerover 或 focusin 监听。独立外链接入保留，外部调用方显式调用打开接口，loader 自动准备主体但不绑定页面按钮。
+- `hero-dark`、`scene-hero`、`telbar` 块中 `/contact`（允许尾斜杠）指定入口渲染为原生 `button type="button"`，直接 `openDemand($event.currentTarget)`；普通链接保持导航，电话/邮件保留原展示行为，顶部导航不变。打开函数不检查点击/修饰键、不 preventDefault、不 href 降级、不猜测按钮；不注册 document 点击拦截或构建期补标记。块源与当前目录生成块同步修改，不写数据库。
 - forintech 本地补齐：首页 scene-hero 次按钮「国内项目 → /cases」改为「联系我们 → /contact」，主按钮不变；核对其他主体页同类 hero 联系按钮，横幅「提交需求」名称不变、打开 widget，顶部「电话咨询」不变。只定向更新 development 本站块/页面与本地 SSG 产物，不执行生产发布、迁移或全量种子。
 - `widget/widget.ts` 为独立无框架主体，Shadow DOM 隔离，固定欢迎语、需求与四栏联系方式、服务端图片验证码；保留输入、错误局部展示、不持久化身份、不轮询、不写站点正文/索引/JSON-LD。用原生 dialog 管理模态焦点、Escape、关闭返回触发按钮，移动端限制可视高度且窗口内滚动。
+- 本地首页 `scene-hero` 联系入口在常态、hover、focus 与 disabled 态保持透明背景和白字；打开窗口不禁用入口。需求弹窗桌面宽度上限 400px，字号 13px，头部/正文 12px 内边距，收紧表单间距并保留移动端内滚动。按钮文案为「提交需求」；成功隐藏欢迎引导和表单，仅显示「已收到您的需求，我们会尽快与您联系」，关闭后重新打开恢复引导和空表单。本轮只验证本地 3002，成功响应使用替身，不写数据库、不访问生产域名。
 - `GET <apiBase>/demands/widget-config` 解包 `{ code, message, data }`，消费 `version/widgetKey/siteName/captchaPath/submitPath`，widgetKey 仅为站点匿名标识、不发送为权限凭据。配置路径只允许同 API origin 的根相对地址。`GET captcha` 消费 `id/image`；图片为服务端验证码 data URL，不是外部装饰图片。
 - `POST submit` 白名单字段：`description`（trim 后 2–5000）、`contactName`（64）、`phone`（32）、`wechat`（64）、`email`（128）、`otherContact`（255）、`sourceUrl`（512）、`submitKey`（8–64）、`captchaId`（64）、`captchaCode`（16）；联系方式 trim 后至少一栏非空，空可选项不发送。sourceUrl 仅 origin + pathname、不含查询/片段。服务端来源映射站点，不发送 siteId。
 - 提交期间互斥并禁用编辑/刷新，网络失败保留同一份提交快照和 submitKey 重试；明确业务失败后允许修改或刷新验证码，同一内容仍沿用 submitKey，内容变化另建标识。仅 code=0 且返回记录 id 才显示收到，成功后重置下一次需求；验证码不会因网络错误自动刷新/消耗，避免掩盖保存成功但响应丢失的幂等重试。
-- 验证先覆盖实际序列化脚本、接口解包/字段/失败幂等、标记边界、导航降级、Shadow DOM/焦点与移动端，再做 GEO lint、类型和构建。替身接口测试不等于真实数据库联调或上线验收。
+- 开发需求 API 基址使用浏览器 origin + 配置 API pathname，经 Nuxt/Nitro 与 Vite 开发代理转发至配置的绝对 API origin。回环入口由已解析的本站上下文显式发送 `X-Development-Site` slug，不发送 siteId、不改真实来源；服务端仅在 development 且直连及来源均为回环时按 active slug 归属，sourceUrl 仍核对真实来源主机。生产忽略此开发头，仍使用配置绝对基址与既有域名来源校验。最小回归覆盖按钮直调、单挂载、开发代理、本地归属和生产拒绝，再在既有 3002 本地页面真实提交并回读 development 库；不另起预览端口、不访问生产域名、不改 hosts。
 
 ### 3.3 已确认的约束（勿回退）
 

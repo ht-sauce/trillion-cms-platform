@@ -7,10 +7,13 @@
  * 原因见下方 nitro.prerender 注释（prerender 会把页面路径烘焙成构建期静态文件表，短路 SSR 并使缓存路径 500）。
  */
 import { stripDefineBlockCall } from '@trillion/shared'
-import { markDemandActions } from './widget/mark-actions'
 
 /** 开发端口：由启动器注入的 PORT（源自 config/ports.mjs），避免与管理后台争抢 Nuxt 默认 3000 */
 const devPort = Number(process.env.PORT || 0)
+const apiUrl = process.env.NUXT_PUBLIC_API_BASE ? new URL(process.env.NUXT_PUBLIC_API_BASE) : undefined
+const devProxy = apiUrl
+  ? { [`${apiUrl.pathname.replace(/\/$/, '')}/`]: { target: apiUrl.origin, changeOrigin: false } }
+  : undefined
 
 /** 匹配「组件目录」与「块目录」的路径片段（Windows 用反斜杠，故两种分隔符都要认） */
 const COMPONENT_PATH_PATTERN = '[\\\\/]components[\\\\/]'
@@ -53,6 +56,7 @@ export default defineNuxtConfig({
   },
 
   vite: {
+    server: { proxy: devProxy },
     plugins: [
       /**
        * 块代码里的 `defineBlock({...})` 是**声明标记**，不是运行时函数：
@@ -69,20 +73,15 @@ export default defineNuxtConfig({
         transform(code: string, id: string) {
           if (!id.includes('components')) return null
           if (!new RegExp(`${COMPONENT_PATH_PATTERN}blocks[\\\\/]`).test(id)) return null
-          const name = id
-            .split('?')[0]
-            .replace(/^.*[\\/]/, '')
-            .replace(/^Blk|\.vue$/g, '')
-          const key = name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-          const marked = markDemandActions(code, key)
-          if (!code.includes('defineBlock') && marked === code) return null
-          return { code: stripDefineBlockCall(marked), map: null }
+          if (!code.includes('defineBlock')) return null
+          return { code: stripDefineBlockCall(code), map: null }
         }
       }
     ]
   },
 
   nitro: {
+    devProxy: devProxy,
     output: {
       /**
        * 客户端资源目录（构建脚本设为 sites/.<slug>.gen 中间目录，合并后随产物发布）

@@ -98,6 +98,7 @@ function findProduct(slug: string, pathname: string): { abs: string; rel: string
 }
 
 export default defineEventHandler(async (event) => {
+  if (import.meta.dev) return
   const { req, res } = event.node
   const host = (req.headers.host || '').split(':')[0]
 

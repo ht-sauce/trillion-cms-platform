@@ -32,6 +32,7 @@ import {
 interface PublicContext {
   ip: string
   siteKeys: string[]
+  developmentSite?: string
   entryCounted?: boolean
 }
 
@@ -47,7 +48,7 @@ export class DemandsService {
     context.ip = normalizeIp(context.ip)
     return this.rateLimit.exclusive(`ip:${context.ip}`, async () => {
       await this.assertPublicAccess(context.ip, 'captcha', !context.entryCounted)
-      await this.resolveSite(context.siteKeys)
+      await this.resolveSite(context)
       return this.captcha.create(context.ip)
     })
   }
@@ -56,7 +57,7 @@ export class DemandsService {
     const ip = normalizeIp(context.ip)
     return this.rateLimit.exclusive(`ip:${ip}`, async () => {
       await this.assertPublicAccess(ip, 'submit', !context.entryCounted)
-      const site = await this.resolveSite(context.siteKeys)
+      const site = await this.resolveSite(context)
       return this.rateLimit.exclusive(`captcha:${dto.captchaId}`, () =>
         this.saveSubmission(dto, { ...context, ip }, site.id)
       )
@@ -152,7 +153,7 @@ export class DemandsService {
   }
 
   async widgetConfig(context: PublicContext) {
-    const site = await this.resolveSite(context.siteKeys)
+    const site = await this.resolveSite(context)
     return {
       version: 1,
       widgetKey: site.slug,
@@ -263,11 +264,13 @@ export class DemandsService {
     }
   }
 
-  private async resolveSite(keys: string[]) {
-    const key = keys[0]
+  private async resolveSite(context: PublicContext) {
+    const key = context.siteKeys[0]
     if (key) {
       const site = await this.prisma.site.findFirst({
-        where: { status: 'active', OR: [{ domain: key }, { domains: { some: { domain: key } } }] },
+        where: context.developmentSite
+          ? { status: 'active', slug: context.developmentSite }
+          : { status: 'active', OR: [{ domain: key }, { domains: { some: { domain: key } } }] },
         select: { id: true, name: true, slug: true }
       })
       if (site) return site

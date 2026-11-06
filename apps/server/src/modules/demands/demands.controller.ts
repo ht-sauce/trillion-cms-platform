@@ -23,7 +23,7 @@ import type { Request } from 'express'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
 import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
 import { RequireMenu } from '../../common/decorators/require-menu.decorator'
-import { isTrustedProxy, resolveClientIp } from '../../common/utils/ip'
+import { isTrustedProxy, normalizeIp, resolveClientIp } from '../../common/utils/ip'
 import type { AppConfig } from '../../config/configuration'
 import { CreateIpBanDto, QueryDemandDto, QueryIpBanDto, SubmitDemandDto, UpdateDemandDto } from './dto'
 import { DemandsService } from './demands.service'
@@ -118,7 +118,17 @@ export class DemandsController {
     const peerIp = request.socket.remoteAddress || ''
     const forwarded = this.header(request, 'x-forwarded-for')
     const ip = resolveClientIp(peerIp, forwarded, this.config.get<string[]>('trustedProxies') || [])
-    return { ip, siteKeys: this.siteKeys(request), entryCounted: countedRequests.has(request) }
+    const siteKeys = this.siteKeys(request)
+    const localHosts = ['localhost', '127.0.0.1', '[::1]']
+    const developmentSite =
+      this.config.get('env') === 'development' &&
+      ['127.0.0.1', '::1'].includes(normalizeIp(peerIp)) &&
+      (this.header(request, 'origin') || this.header(request, 'referer')) &&
+      siteKeys.length === 1 &&
+      localHosts.includes(siteKeys[0])
+        ? this.header(request, 'x-development-site')?.trim()
+        : undefined
+    return { ip, siteKeys, developmentSite, entryCounted: countedRequests.has(request) }
   }
 
   private siteKeys(request: Request): string[] {

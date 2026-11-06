@@ -23,6 +23,7 @@
  */
 import { computed } from 'vue'
 import type { BlockContext } from '@trillion/shared'
+import { openDemand } from '~/utils/demand'
 
 const props = defineProps<{ data: Record<string, any>; context: BlockContext }>()
 
@@ -148,13 +149,16 @@ defineBlock({
             <span v-if="isNonLink(action.href)" class="btn" :class="action.primary ? 'btn-teal' : 'btn-line'">
               {{ action.label }}
             </span>
-            <NuxtLink
-              v-else
-              :to="action.href || '#'"
+            <button
+              v-else-if="/^\/contact\/?$/.test(String(action.href))"
+              type="button"
               class="btn"
               :class="action.primary ? 'btn-teal' : 'btn-line'"
-              :data-contact-action="/^\/contact\/?$/.test(String(action.href)) ? 'demand' : undefined"
+              @click="openDemand($event.currentTarget)"
             >
+              {{ action.label }}
+            </button>
+            <NuxtLink v-else :to="action.href || '#'" class="btn" :class="action.primary ? 'btn-teal' : 'btn-line'">
               {{ action.label }}
             </NuxtLink>
           </template>
@@ -178,13 +182,16 @@ defineBlock({
             <span v-if="isNonLink(action.href)" class="btn" :class="action.primary ? 'btn-teal' : 'btn-line'">
               {{ action.label }}
             </span>
-            <NuxtLink
-              v-else
-              :to="action.href || '#'"
+            <button
+              v-else-if="/^\/contact\/?$/.test(String(action.href))"
+              type="button"
               class="btn"
               :class="action.primary ? 'btn-teal' : 'btn-line'"
-              :data-contact-action="/^\/contact\/?$/.test(String(action.href)) ? 'demand' : undefined"
+              @click="openDemand($event.currentTarget)"
             >
+              {{ action.label }}
+            </button>
+            <NuxtLink v-else :to="action.href || '#'" class="btn" :class="action.primary ? 'btn-teal' : 'btn-line'">
               {{ action.label }}
             </NuxtLink>
           </template>

@@ -1,15 +1,21 @@
 export function demandWidget() {
   const scope = window as typeof window & {
-    TrillionDemandWidget?: (apiBase: string) => Promise<{ open: (trigger: HTMLElement) => void }>
+    TrillionDemandWidget?: (
+      apiBase: string,
+      developmentSite?: string
+    ) => Promise<{ open: (trigger: HTMLElement) => void }>
   }
-  scope.TrillionDemandWidget = async (apiBase) => {
+  scope.TrillionDemandWidget = async (apiBase, developmentSite) => {
     async function request<T>(url: string, body?: Record<string, string>): Promise<T> {
       const response = await fetch(url, {
         method: body ? 'POST' : 'GET',
         credentials: 'omit',
         cache: 'no-store',
         referrerPolicy: 'origin',
-        headers: body ? { 'Content-Type': 'application/json' } : undefined,
+        headers: {
+          ...(body ? { 'Content-Type': 'application/json' } : {}),
+          ...(developmentSite ? { 'X-Development-Site': developmentSite } : {})
+        },
         body: body ? JSON.stringify(body) : undefined,
         signal: AbortSignal.timeout(15000)
       })
@@ -49,13 +55,14 @@ export function demandWidget() {
     host.dataset.demandWidget = 'v1'
     const root = host.attachShadow({ mode: 'open' })
     root.innerHTML = `<style>
-      :host{all:initial;color-scheme:light}*{box-sizing:border-box}dialog{font:14px/1.6 system-ui,sans-serif;color:#243047;background:#fff;border:0;border-radius:16px;padding:0;width:min(440px,calc(100vw - 24px));max-height:calc(100dvh - 32px);box-shadow:0 16px 64px #0004}dialog::backdrop{background:#0006}header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #dbe2ed}h2{font-size:18px;margin:0}.body{padding:16px;overflow:auto;max-height:calc(100dvh - 112px)}p{margin:0 0 16px}.welcome{background:#eef4ff;border-radius:12px;padding:12px}label{display:block;margin:8px 0 4px}input,textarea,button{font:inherit}input,textarea{width:100%;padding:8px;border:1px solid #bac5d6;border-radius:8px;background:#fff;color:inherit}textarea{resize:vertical;min-height:88px}button{cursor:pointer;border:1px solid #bac5d6;border-radius:8px;padding:8px 12px;background:#fff;color:inherit}button:disabled{cursor:wait;opacity:.6}:focus-visible{outline:2px solid #2563eb;outline-offset:2px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}fieldset{border:0;padding:0;margin:16px 0;min-width:0}legend{padding:0}.captcha{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.captcha img{width:160px;height:52px}.save{width:100%;background:#2563eb;color:#fff;border:0;margin-top:8px}.status{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;color:#a52a2a}.success{color:#16703c}.hint{font-size:12px;color:#56647a} @media(max-width:380px){.grid{grid-template-columns:1fr}}
-      </style><dialog aria-labelledby="demand-title"><header><h2 id="demand-title">需求咨询</h2><button type="button" data-close aria-label="关闭需求窗口">关闭</button></header><div class="body"><p class="welcome">您好！请描述您的需求，并留下任意一种联系方式，我们会在站外与您联系。</p><form><label for="description">需求描述（必填）</label><textarea id="description" name="description" required minlength="2" maxlength="5000"></textarea><label for="contactName">称呼（选填）</label><input id="contactName" name="contactName" maxlength="64" autocomplete="name"><fieldset><legend>联系方式（至少填写一项）</legend><div class="grid"><div><label for="phone">手机号</label><input id="phone" name="phone" type="tel" maxlength="32" autocomplete="tel"></div><div><label for="wechat">微信</label><input id="wechat" name="wechat" maxlength="64"></div><div><label for="email">邮箱</label><input id="email" name="email" type="email" maxlength="128" autocomplete="email"></div><div><label for="otherContact">其他联系方式</label><input id="otherContact" name="otherContact" maxlength="255"></div></div></fieldset><label for="captchaCode">图片验证码（必填）</label><div class="captcha"><img alt="图片验证码" hidden><button type="button" data-refresh>刷新验证码</button></div><input id="captchaCode" name="captchaCode" required maxlength="16" autocomplete="off"><p class="hint">验证码 5 分钟有效。联系方式仅用于本次需求跟进。</p><button class="save" type="submit">保存需求</button></form><p class="status" role="status" aria-live="polite"></p></div></dialog>`
+      :host{all:initial;color-scheme:light}*{box-sizing:border-box}dialog{font:13px/1.5 system-ui,sans-serif;color:#243047;background:#fff;border:0;border-radius:12px;padding:0;width:min(400px,calc(100vw - 24px));max-height:calc(100dvh - 32px);box-shadow:0 16px 64px #0004}dialog::backdrop{background:#0006}header{display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid #dbe2ed}h2{font-size:16px;margin:0}.body{padding:12px;overflow:auto;max-height:calc(100dvh - 96px)}p{margin:0 0 8px}.welcome{background:#eef4ff;border-radius:8px;padding:8px}label{display:block;margin:4px 0 2px}input,textarea,button{font:inherit}input,textarea{width:100%;padding:6px 8px;border:1px solid #bac5d6;border-radius:8px;background:#fff;color:inherit}textarea{resize:vertical;min-height:64px}button{cursor:pointer;border:1px solid #bac5d6;border-radius:8px;padding:6px 10px;background:#fff;color:inherit}button:disabled{cursor:wait;opacity:.6}:focus-visible{outline:2px solid #2563eb;outline-offset:2px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px}fieldset{border:0;padding:0;margin:8px 0;min-width:0}legend{padding:0}.captcha{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.captcha img{width:160px;height:52px}.save{width:100%;background:#2563eb;color:#fff;border:0;margin-top:4px}.status{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0;color:#a52a2a}.status:empty{display:none}.success{color:#16703c}.hint{font-size:12px;color:#56647a;margin:4px 0} @media(max-width:380px){.grid{grid-template-columns:1fr}}
+      </style><dialog aria-labelledby="demand-title"><header><h2 id="demand-title">需求咨询</h2><button type="button" data-close aria-label="关闭需求窗口">关闭</button></header><div class="body"><p class="welcome">您好！请描述您的需求，并留下任意一种联系方式，我们会在站外与您联系。</p><form><label for="description">需求描述（必填）</label><textarea id="description" name="description" required minlength="2" maxlength="5000"></textarea><label for="contactName">称呼（选填）</label><input id="contactName" name="contactName" maxlength="64" autocomplete="name"><fieldset><legend>联系方式（至少填写一项）</legend><div class="grid"><div><label for="phone">手机号</label><input id="phone" name="phone" type="tel" maxlength="32" autocomplete="tel"></div><div><label for="wechat">微信</label><input id="wechat" name="wechat" maxlength="64"></div><div><label for="email">邮箱</label><input id="email" name="email" type="email" maxlength="128" autocomplete="email"></div><div><label for="otherContact">其他联系方式</label><input id="otherContact" name="otherContact" maxlength="255"></div></div></fieldset><label for="captchaCode">图片验证码（必填）</label><div class="captcha"><img alt="图片验证码" hidden><button type="button" data-refresh>刷新验证码</button></div><input id="captchaCode" name="captchaCode" required maxlength="16" autocomplete="off"><p class="hint">验证码 5 分钟有效。联系方式仅用于本次需求跟进。</p><button class="save" type="submit">提交需求</button></form><p class="status" role="status" aria-live="polite"></p></div></dialog>`
     const dialog = root.querySelector('dialog')!
     const form = root.querySelector('form')!
     const image = root.querySelector('img')!
     const refresh = root.querySelector<HTMLButtonElement>('[data-refresh]')!
     const status = root.querySelector<HTMLElement>('.status')!
+    const welcome = root.querySelector<HTMLElement>('.welcome')!
     const description = root.querySelector<HTMLTextAreaElement>('#description')!
     const code = root.querySelector<HTMLInputElement>('#captchaCode')!
     let captchaId = ''
@@ -135,14 +142,15 @@ export function demandWidget() {
       busy = true
       lastSubmit = Date.now()
       lock()
-      message('正在保存需求…')
+      message('正在提交需求…')
       try {
         const result = await request<{ id: string }>(submitUrl, attempt.body)
         if (!result?.id) throw new Error('保存结果不明确，请重试')
         form.reset()
         form.hidden = true
+        welcome.hidden = true
         status.classList.add('success')
-        message('需求已收到，我们会通过您留下的联系方式与您联系。')
+        message('已收到您的需求，我们会尽快与您联系')
         attempt = undefined
         uncertain = false
         captchaId = ''
@@ -180,6 +188,7 @@ export function demandWidget() {
         if (!dialog.open) dialog.showModal()
         if (form.hidden) {
           form.hidden = false
+          welcome.hidden = false
           status.classList.remove('success')
           message('')
         }
