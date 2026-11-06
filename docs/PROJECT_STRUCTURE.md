@@ -438,7 +438,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`SideMenuNode.vue`](../apps/admin/app/components/SideMenuNode.vue) —— 侧栏菜单递归节点（最多三级，目录可展开/收起，命中路由高亮）
 - 旧 DashboardOverview 组件已删除；旧菜单与 RoleMenu 清理逻辑在 seed.ts，本轮不操作数据库
 - [`MemberCreateDialog.vue`](../apps/admin/app/components/MemberCreateDialog.vue) —— 新增站点会员弹窗
-- [`DemandDetailDialog.vue`](../apps/admin/app/components/DemandDetailDialog.vue) —— 详情/四栏联系方式、跟进状态/单份备注及 IP 禁用/解禁；操作路径与服务端对齐，共用 `/sites/demands` 授权，不建独立封禁页面；真实数据库与浏览器交互验收仍待完成
+- [`DemandDetailDialog.vue`](../apps/admin/app/components/DemandDetailDialog.vue) —— 详情/四栏联系方式、跟进状态/单份备注及 IP 禁用/解禁；封禁时展示来源、原因、触发/到期时间，空到期显示“直到人工解除”；操作路径与服务端对齐，共用 `/sites/demands` 授权，不建独立封禁页面；真实数据库与浏览器交互验收仍待完成
 - [`NewsDialog.vue`](../apps/admin/app/components/NewsDialog.vue) —— 新闻新建/编辑弹窗（标题 / 发布日期 / 摘要 / 封面图 `ImageField` / 正文 `NewsBodyEditor`（整篇 HTML，编辑区 320px）+ 编辑打开时拉单条详情回显正文）；与案例弹窗统一使用 Element Plus `top="3vh"` 设置顶部间距，`.el-dialog__body` 按视口限高（`calc(100vh - 180px)`）**只在内层滚动**，不再超出屏幕。
 - `NewsBodyEditor.vue` 正文样式 —— 仅编辑区与 GEO `site.css` 的 `.art-html` 对齐：14.6px / 1.9、标题、列表文本缩进与间距、表格默认细边 / 8px 内边距；复用管理后台现有字号、间距与颜色令牌，移除图片包裹间距和最小尺寸，不强制图片满宽
 - [`NewsBodyEditor.vue`](../apps/admin/app/components/NewsBodyEditor.vue) —— **单可视化正文编辑器（整篇 HTML，ADR-060）**：新闻 / 案例共用 wangEditor，v-model 为**整篇正文 HTML 字符串**（不是块数组），仅可视化编辑，无源码切换；支持 H2/H3 标题（**不提供 H1 入口**，用官方原生 `header2`/`header3`）、字号、文字色 / 背景色、粗斜下划删除、对齐、列表、表格、图片（含左 / 右环绕与取消环绕）、视频与撤销重做；保存原样入库、不做清洗（ADR-061），站点直接展示正文。**字重保留**：仅对登记的正文编辑器扩展 HTML 解析 / 渲染 / 序列化，保留 `font-weight:600/400`，避免规整成粗体或重复包裹 span。**媒体回显**：纯图片 `figure` 转为编辑器可识别的段落（含图注 / 视频 / 其它内容的 figure 不转换），`img/video/source` 的 src 与视频 poster 经 `resolveMediaUrl` 解析；图片 / 视频上传走 `filesApi.upload` 并带来源标签，粘贴 base64 图片入库后按 Slate 节点替换地址，进行中 / 已失败的图片不重复上传。**回显与历史清理**：空 HTML 初始化后通过 `applyHtml` 统一回显，先 blur 再 setHtml，并清空 undo/redo，避免撤销回到程序加载前；原始值与编辑器 HTML 双快照过滤延迟 change 回声，避免回写循环；编辑器只在可见容器初始化（详情页签 `lazy`），销毁后停止回显与异步实例操作
@@ -482,7 +482,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`sites/cases.vue`](../apps/admin/app/pages/sites/cases.vue) —— **成功案例管理**：按站点隔离 + 关键词 / 行业筛选（行业选项来自分类表 `catalogApi.industries`）+ 新建/编辑/删除；表格列案例（缩略图 + 标题）/ 行业 / 地点 / 面积·年份 / 使用体系 / 访问路径 / 状态 / 操作；弹窗 `CaseDialog`（行业为分类下拉，正文用 `NewsBodyEditor`）
 - [`sites/news.vue`](../apps/admin/app/pages/sites/news.vue) —— 新闻资讯管理（按站点隔离：站点切换 + 关键词搜索；表格列标题 / 访问路径 / 发布日期 / 发布状态徽标；操作编辑、删除（删除与保存均由服务端自动触发站点构建）；弹窗 `NewsDialog`）
 - [`sites/faqs.vue`](../apps/admin/app/pages/sites/faqs.vue) —— 高频问答管理（按站点隔离：站点切换 + 关键词搜索 + 分类筛选（选项来自分类接口，清空 = 全部）+ 上架状态筛选（全部 / 只看上架 / 只看未上架）；表格列问题 / 分类 / 访问路径 / 上架开关（行内即时生效，只影响列表页展示，详情页保留，ADR-055）/ 发布状态徽标；操作关联问题（`FaqRelatedDialog`，ADR-057）、编辑、删除；弹窗 `FaqDialog`，新分类保存后刷新分类清单）；答案为受限富文本（`FaqAnswerEditor`，ADR-058）
-- [`sites/demands.vue`](../apps/admin/app/pages/sites/demands.vue) —— “站点管理 → 需求收集”的站点/状态/关键词分页与独立详情；菜单定稿 `/sites/demands`，封禁共用此授权；新增菜单不自动扩大既有角色授权
+- [`sites/demands.vue`](../apps/admin/app/pages/sites/demands.vue) —— “站点管理 → 需求收集”的站点/状态/关键词分页与独立详情；loading 互斥下版本化串行补查最新条件，旧响应不回写，失败仍补查，卸载停止回写与补查；站点选项与列表并行独立加载；菜单定稿 `/sites/demands`，封禁共用此授权；新增菜单不自动扩大既有角色授权
 - [`content/index.vue`](../apps/admin/app/pages/content/index.vue) —— 页面列表（状态三态、GEO 分、提交审核与发布）
 - [`content/[id].vue`](../apps/admin/app/pages/content/%5Bid%5D.vue) —— 页面编辑器（模板 + 结构化 Block 表单 + 右侧 GEO 体检）
 - [`content/editor.vue`](../apps/admin/app/pages/content/editor.vue) —— **站点内容编辑器工作台**（09 §6.2）：工具条（站点切换 + **构建状态**（未构建 / 排队中 / 构建中 / 构建成功 / 构建失败 + 时间或已运行时长，失败可悬停看原因；进行中每 3 秒轮询并在结束时刷新左树与徽标 + 提示结果）+ **增量发布**（带 `?` 说明）+ **整站重建** / **GEO 索引更新**（接通既有 `/publish/site`、`/publish/repair` 接口，三个动作各带 `?` 说明，问号统一由 `TermHint` 渲染；**进行中三个按钮全部禁用**，增量发布与整站重建转圈）+ 刷新）、左列可搜索内容树（目录/页面/块 + 发布徽标，点目录即打开其下第一个页面）、右侧预览 iframe 占满一屏（走 `/preview/ticket`，头部展示预览态标记 + 页面**访问地址**可复制）、「页面 / 块 / 发布」改为右侧抽屉（页面：草稿字段 + SEO + 编审 + JSON-LD 双模式；块：实例清单（块标识下列出**块名称与用途说明**，定义批量预取）+ 动态数据表单 + 「编辑代码」新标签页打开块代码；发布：状态 + 发布/回退 + GEO 体检）
@@ -492,7 +492,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`files.vue`](../apps/admin/app/pages/files.vue) —— 素材管理（`static_files` 可视化入口）：站点筛选 + 关键词搜索（文件名 / 地址 / 来源 / 备注）+ 多选上传（图片 ≤2MB、视频 ≤100MB）、图片缩略预览（视频显示播放标记）、**「上传来源」列**（`source`，标注哪个功能传的）、复制访问地址、**ID 固定宽度单行 + 点击复制**、替换（隐藏 file input，accept 限定原文件 MIME，`PUT /files/:id/replace` 替换内容、引用地址不变）、删除
 - [`navigations.vue`](../apps/admin/app/pages/navigations.vue) —— 导航管理（头部主导航 + 页脚四列分组，条目增删排序、站内页面/外部链接二选一，整组全量覆盖保存）
 - [`members/index.vue`](../apps/admin/app/pages/members/index.vue) —— 站点会员管理
-- [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— GEO 入站请求筛选/分页明细，不做统计；loading 互斥下版本化串行补查最新条件，旧响应不回写，失败仍补查、卸载停止回写；站点名与明细并行加载，不由站点请求失败阻断明细；真实采集链路验收另行完成
+- [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— GEO 入站请求筛选/分页明细，不做统计；地区结果保留官方“IP Geolocation by DB-IP”署名链接；loading 互斥下版本化串行补查最新条件，旧响应不回写，失败仍补查、卸载停止回写；站点名与明细并行加载，不由站点请求失败阻断明细；真实采集链路验收另行完成
 - [`settings/index.vue`](../apps/admin/app/pages/settings/index.vue) —— 系统设置 · 运行配置（平台级，展示账号与角色/接口基址/时区/静态资源/AI 爬虫策略）
 - [`settings/users.vue`](../apps/admin/app/pages/settings/users.vue) —— 系统设置 · 用户管理（菜单授权，CRUD、角色绑定与启停），已移除站点授权列与站点选项加载
 - [`settings/roles.vue`](../apps/admin/app/pages/settings/roles.vue) —— 系统设置 · 角色管理（平台级，角色增删改查 + 菜单授权树，内置角色受保护）

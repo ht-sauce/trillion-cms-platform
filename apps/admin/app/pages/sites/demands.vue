@@ -17,6 +17,8 @@ const page = ref(1)
 const pageSize = ref(PAGE_SIZE_DEFAULT)
 const dialogVisible = ref(false)
 const demandId = ref<string | null>(null)
+let requestVersion = 0
+let disposed = false
 
 const statusMeta: Record<DemandStatus, { label: string; type: 'warning' | 'success' }> = {
   pending: { label: '待跟进', type: 'warning' },
@@ -25,20 +27,31 @@ const statusMeta: Record<DemandStatus, { label: string; type: 'warning' | 'succe
 
 async function loadSites() {
   const result = await sitesApi.list({ pageSize: 100 })
-  sites.value = result.list.map((item) => ({ id: item.id, name: item.name }))
+  if (!disposed) sites.value = result.list.map((item) => ({ id: item.id, name: item.name }))
 }
 
 async function load() {
+  requestVersion += 1
   await run(async () => {
-    const result = await demandsApi.list({
-      siteId: siteId.value || undefined,
-      status: status.value === 'all' ? undefined : status.value,
-      keyword: keyword.value.trim() || undefined,
-      page: page.value,
-      pageSize: pageSize.value
-    })
-    list.value = result.list
-    total.value = result.total
+    while (!disposed) {
+      const version = requestVersion
+      try {
+        const result = await demandsApi.list({
+          siteId: siteId.value || undefined,
+          status: status.value === 'all' ? undefined : status.value,
+          keyword: keyword.value.trim() || undefined,
+          page: page.value,
+          pageSize: pageSize.value
+        })
+        if (!disposed && version === requestVersion) {
+          list.value = result.list
+          total.value = result.total
+        }
+      } catch {
+        if (version === requestVersion) return
+      }
+      if (version === requestVersion) return
+    }
   })
 }
 
@@ -54,8 +67,10 @@ function openDetail(row: DemandItem) {
 
 watch([page, pageSize], load)
 onMounted(async () => {
-  await loadSites()
-  await load()
+  await Promise.allSettled([loadSites(), load()])
+})
+onBeforeUnmount(() => {
+  disposed = true
 })
 </script>
 

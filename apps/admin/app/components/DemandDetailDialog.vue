@@ -131,6 +131,15 @@ const toggleBan = debounce(
           <el-descriptions-item v-if="detail.ban" label="封禁原因" :span="2">
             <span class="detail-text">{{ detail.ban.reason }}</span>
           </el-descriptions-item>
+          <el-descriptions-item v-if="detail.ban" label="封禁来源" :span="2">
+            {{ detail.ban.source === 'auto' ? '自动封禁' : '人工封禁' }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="detail.ban" label="封禁触发时间">
+            <span class="mono">{{ detail.ban.createdAt }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="detail.ban" label="封禁到期时间">
+            <span class="mono">{{ detail.ban.expiresAt ?? '直到人工解除' }}</span>
+          </el-descriptions-item>
         </el-descriptions>
 
         <el-form label-width="80px" class="follow-form">

@@ -199,6 +199,7 @@ onBeforeUnmount(() => {
     </el-table>
 
     <div class="pager">
+      <el-link href="https://db-ip.com" target="_blank" rel="noopener noreferrer">IP Geolocation by DB-IP</el-link>
       <el-pagination
         v-model:current-page="page"
         v-model:page-size="pageSize"
@@ -242,7 +243,9 @@ onBeforeUnmount(() => {
 .pager {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: $sp-1;
+  flex-wrap: wrap;
   padding-inline: $sp-1;
 }
 </style>
