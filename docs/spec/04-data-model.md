@@ -1,6 +1,6 @@
 # 04 · 数据模型
 
-> 16 张表的职责、关系、字段口径与隔离策略。逐条DDL 以 `apps/server/prisma/schema/*.prisma` 为准，本文说明**为什么这样设计**。
+> 数据表的职责、关系、字段口径与站点归属。逐条 DDL 以 `apps/server/prisma/schema/*.prisma` 为准；新功能草稿与目标差异见 §3.7，不能据文件存在推定数据库已迁移。
 > **术语**：专有名词（物化路径 / 内容指纹 / 块标识 / 公共模板 …）统一解释见 [`../GLOSSARY.md`](../GLOSSARY.md)。
 
 ---
@@ -34,11 +34,11 @@ erDiagram
 
 ## 2. 表清单
 
-| 表             | 归属 | 职责一句话                                              | 隔离维度  |
+| 表             | 归属 | 职责一句话                                              | 归属维度  |
 | -------------- | ---- | ------------------------------------------------------- | --------- |
 | `Site`         | 平台 | 站点 = 企业：资质、备案、SEO/GEO 默认值、渲染模式、主题 | 行本身    |
 | `SiteDomain`   | 平台 | 站点别名域名映射（**主域名仍存 `Site.domain`**，本表只放别名） | `siteId`  |
-| `AdminUser`    | 平台 | 管理员账号：绑定角色（`roleId`）+ 授权站点列表          | 角色+站点 |
+| `AdminUser`    | 平台 | 管理员账号：绑定角色；现有 siteIds 待取消数据授权用途 | 角色      |
 | `Template`     | 平台 | 模板定义：key + Block 槽位序列                          | 全局      |
 | `Channel`      | 站点 | 栏目树（`parentId` 自关联）                             | `siteId`  |
 | `Page`         | 站点 | 页面 = 模板 + 结构化 Block + GEO 元数据                 | `siteId`  |
@@ -56,6 +56,9 @@ erDiagram
 | `ProductIndustry` | 站点 | 产品**行业分组**（`/products` 列表页的分组结构，见 §9） | `siteId`  |
 | `Product`      | 站点 | 产品**管理源**表（一条产品 = 一张卡片 + 一个详情页，见 §9） | `siteId`  |
 | `CaseStudy`    | 站点 | 成功案例**管理源**表（见 §9）                            | `siteId`  |
+| `GeoAccessEvent` | 请求 | 入站请求与响应事实、地域快照（实施中，§3.7） | `siteId` 可空 |
+| `DemandSubmission` | 站点 | 客户需求、联系方式与单份跟进备注（实施中） | `siteId` |
+| `GeoIpBan` | 平台 | 需求公开接口共用 IP 封禁名单（实施中） | 归一化 IP |
 
 > `Entity.siteId` 与 `StaticFile.siteId` 允许为 `null`，代表**集团级公共**资源。
 
@@ -130,7 +133,9 @@ stateDiagram-v2
 | 表             | 用途                                                                   | 关键字段                                            |
 | -------------- | ---------------------------------------------------------------------- | --------------------------------------------------- |
 | `TrackEvent`   | PV/UV 统计；UV 依据本地生成的匿名 `anonId` 去重，不含个人信息          | `siteId`、`path`、`referrer`、`anonId`、`userAgent` |
-| `AiCrawlEvent` | 记录 GPTBot / ClaudeBot / PerplexityBot 等抓取情况，后期做引用效果分析 | `siteId`、`botType`、`path`、`status`、`bytes`      |
+| `AiCrawlEvent` | 既有 AI 声明抓取记录；抓取不能证明引用，不与新入站记录重复计数 | `siteId`、`botType`、`path`、`status`、`bytes`      |
+
+2026-11-06 首版监控改用 §3.7 的单张请求事实表，不消费 TrackEvent 做 PV/UV，也不顺带删除这两张既有表或其技术接口。
 
 ### 3.5 `Menu`（后台菜单配置）
 
@@ -143,7 +148,7 @@ stateDiagram-v2
 | `createdAt` / `updatedAt` | 中国时区时间串，管理页展示                                            |
 
 - **可见性来自授权**：菜单本身不带"平台级"标记，某角色能看到哪些菜单完全由 `RoleMenu` 决定（见 3.6）
-- **菜单是体验层配置**：接口按角色授权过滤菜单树只是 UX；真正的安全边界仍是 `AdminAuthGuard` / `PlatformAdminGuard`（见 ADR-005、ADR-018）
+- 菜单树过滤只是 UX；按 REQUIREMENTS §9，管理接口须校验登录及对应启用菜单的 RoleMenu 授权，不再以用户站点列表或平台角色限制数据/业务操作。现有接口接入未完成，见 05 §2.1。
 - **不挂 `siteId`**：后台菜单为全平台一份（多站点共用同一后台壳），站点差异由站点选择器承担
 - 删除策略：图谱简单，存在子菜单时**拒绝删除**（`400`）；菜单删除时其授权记录由 `RoleMenu` 级联清理
 
@@ -154,7 +159,7 @@ stateDiagram-v2
 | 表 / 字段                        | 作用                                                                         |
 | -------------------------------- | ---------------------------------------------------------------------------- |
 | `Role.code`                      | 角色标识（唯一），如 `admin` / `site_admin`；内置角色的 `code` 不允许修改    |
-| `Role.platform`                  | **是否平台级角色**：平台级操作的唯一判据（`PlatformAdminGuard` 按此放行）    |
+| `Role.platform`                  | 既有平台角色标记；新基线不作业务访问门槛，字段与防锁死护栏分开核对，尚未删除 |
 | `Role.builtin`                   | 内置角色：禁止删除，禁止停用（避免系统失去管理入口）                         |
 | `Role.status`                    | `active` / `disabled`；停用后该角色的用户无法登录                            |
 | `RoleMenu(roleId, menuId)`       | 复合主键的授权关系；删除角色或菜单时级联清理                                 |
@@ -163,6 +168,23 @@ stateDiagram-v2
 - 授权**自动补全祖先**：保存角色的菜单授权时服务端会把所有上级菜单一并写入，避免"授权了子菜单却看不到"（侧栏建树需要完整链路）
 - 安全护栏：内置角色不可删除 / 不可停用 / 不可改标识；系统必须始终保留至少一个可用的平台级用户（不可删除自己、不可把最后一个平台级用户降级或停用）
 - 角色信息随 JWT 下发（`roleId/roleCode/roleName/platform`），**角色变更需用户重新登录生效**——取舍与理由见 [ADR-019](./08-adr.md#adr-019-rbac用户--角色--菜单绑定)
+
+### 3.7 入站监控与需求数据（2026-11-06，当前实施中）
+
+授权来源为 REQUIREMENTS §7/§9 及确认方案；以下区分当前 schema 草稿与必须满足的要求，不将候选实体自动视为已批准最终 DDL。2026-11-06 追加授权仅作 development 增量迁移测试：新增 `20261106150000_add_geo_status` 为 GeoAccessEvent 添加 `geo_status VARCHAR(16) NOT NULL DEFAULT 'unknown'`，历史值不推断地域；新增 `20261106160000_remove_legacy_overview_menu` 在事务内先删除关联 path=/ 菜单的 RoleMenu，再删除这些菜单。已应用迁移不得修改；不重跑种子、不补授既有角色、不操作测试/生产库。迁移前后核对角色、其余菜单与授权、历史迁移校验和及业务记录数，并做真实 HTTP 验证。
+
+| 实体/文件 | 当前草稿字段与约束 | 目标边界及未完成事项 |
+| --- | --- | --- |
+| `GeoAccessEvent` / `access-log.prisma` | UUID v7 主键；siteId 可空；host(128)、path(512)、method(8)、requestUrl(768)、clientIp/peerIp(64)、userAgent/referer(512)、browserName/browserVersion(32)、resourceType/accessCategory/completion(16)、agentToken/vendor(64)；status 可空、durationMs 整数；occurredAt/createdAt 秒精度 | 一请求一记录、finished/aborted；资源 page/asset/llms/sitemap/robots/payload/other、类别 browser/search_bot/ai_bot/unknown，仅声明身份。Host 无法映射不强行归属，siteId 当前仅标量未定义 Site relation，关联完整性待核对；URL 必要端口/未知协议表达仍待统一 |
+| 地域快照（同表） | country/region/city 可空(64)、geoSource/geoDbVersion 可空(32)；geoStatus(16)，默认 unknown 仅表示历史未知 | 保存时 maxmind 读取 DB-IP City Lite MMDB，状态为 resolved/non_public/invalid_ip/not_found/unavailable/error；私网、回环、保留地址不查库，不猜地域。已加载库的未命中/解析异常也保存 buildEpoch 的 UTC 日期版本；查询返回保存时状态与版本，不重算历史。替库方式与真实 MMDB 联调仍待验证，相关结果网页保留署名；geo_status 按本节追加授权通过独立增量迁移添加 |
+| `DemandSubmission` / `demand.prisma` | UUID v7；siteId(36)、description Text、contactName(64)、phone(32)、wechat(64)、email(128)、otherContact(255)、sourceUrl(512)、submitKey(64)；status=pending/followed、note Text、createdAt/updatedAt；唯一 `[siteId, submitKey]` | 四栏联系方式任一有效、单份备注不留历史；来源 origin+path 去 query/hash，站点按来源映射。当前没有 clientIp，管理后台却要求 clientIp/ban，无法据相同 IP 将日志关联客户身份；来源归属、字段及详情展示契约待裁决，不虚构已有关联 |
+| `GeoIpBan` / `demand.prisma` | UUID v7；ip(64) 全局唯一、reason(255)、source=auto/manual、expiresAt 可空、createdAt/updatedAt；到期索引 | 平台需求/验证码共用；自动 30 分钟、人工 null 到解除；人工优先，解禁/到期清临时计数，不阻断 GEO 页面。当前字段没有独立触发时间，更新/覆盖时触发时间语义待核对 |
+
+当前索引：GeoAccessEvent 的 `[siteId, occurredAt]`、occurredAt、clientIp、`[accessCategory, occurredAt]`、path 支持必要分页筛选；DemandSubmission 的 `[siteId, createdAt]`、status、createdAt 及幂等唯一约束；GeoIpBan 的 ip 唯一与 expiresAt 索引。不加日聚合、分表、自动删日志或会话/消息表；请求日志和客户需求不作身份关联。
+
+验证码与滚动计数当前为服务内存草稿，不预先宣称永远仅两张表或已满足重启/并发语义。验证码 5 分钟、单挑战 5 次错误、IP 累计猜错与频率规则见 REQUIREMENTS §7.4；并发幂等及验证码消耗顺序仍待验证。新模型沿用 §2.1 字符串主键/关联列和 §4 时间规范。
+
+2026-11-06 development 迁移测试结果：执行前已有 12 条迁移（含入站表、需求 clientIp、需求菜单），但真实库缺少 geo_status；追加两条迁移后共 14 条，重复 deploy 无待执行项。删除旧总览 1 条及其 RoleMenu 2 条，其余 21 个菜单、28 条授权与既有角色保持不变，原 12 条迁移文件/台账校验和不变；所有表有主键。真实 HTTP 22 项检查覆盖入站写入/列表及 non_public 快照、需求验证码/提交/幂等/详情/跟进/列表，以及 access-events/demands/menus 的 401/403/200；临时角色、账号和业务记录已清理，业务表计数恢复迁移前（均为 0）。因此没有存量访问行可验证实际回填，只验证列默认 unknown。仅证明 development 迁移与上述 HTTP 路径，不代表 GEO 响应采集、真实 MMDB 或浏览器全链路验收；不操作测试/生产库。
 
 ## 4. 字段口径（强制）
 
@@ -175,12 +197,12 @@ stateDiagram-v2
 | 注释      | 每个 model 与字段必须写 `///` 中文注释                                        | 同步进生成的 client 类型与库 COMMENT，降低误用   |
 | JSON 字段 | 列表类用 `Json @default("[]")`，配置类用带默认值的 JSON 字符串                | Prisma 写入需经 `toJsonInput` 收窄               |
 
-## 5. 隔离与索引
+## 5. 归属、权限与索引
 
 | 策略         | 落地                                                                                                                                                                   |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 行级隔离     | 所有内容/日志类表挂 `siteId`，查询经 `siteWhere` / `siteIdWhere` 强制过滤                                                                                              |
-| 越权阻断     | `assertSiteAccess(user, siteId)` 在 Service 入口执行（Guard 之外的第二道防线）                                                                                         |
+| 站点归属     | 保留内容/日志的 siteId、关系、唯一约束与用户主动查询条件；不按后台用户/角色 siteIds 限制可见数据。未知入站站点可空，不取消业务归属校验 |
+| 管理域权限   | 登录 + 对应菜单授权，完整 IP 不设专项数据权限；现有 assertSiteAccess/siteWhere/siteIdWhere 数据授权调用待统一移除，范围见 05 §2.1。会员域和内部调用身份不随之取消 |
 | 唯一性       | 栏目 `@@unique([siteId, slug])`、页面 `@@unique([siteId, channelId, slug])`、会员 `@@unique([siteId, username])`、站点别名域名 `SiteDomain.domain`（全局唯一）        |
 | 查询热点索引 | `@@index([siteId, status])`（Page）、`@@index([siteId, path])`（TrackEvent）、`@@index([siteId, botType])`（AiCrawlEvent）、`@@index([siteId, status])`（PublishTask） |
 

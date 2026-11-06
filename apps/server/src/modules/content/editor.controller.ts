@@ -20,12 +20,15 @@ import {
   UpdatePageMetaDto
 } from './editor.dto'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('内容编辑器')
 @ApiBearerAuth()
 @Controller('content/editor')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/content/editor')
 export class ContentEditorController {
   constructor(private readonly service: ContentEditorService) {}
 

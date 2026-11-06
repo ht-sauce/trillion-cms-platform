@@ -29,7 +29,11 @@ export const envSchema = z.object({
   /** 内部接口令牌，由 config/ 从 JWT_SECRET 派生 */
   INTERNAL_API_TOKEN: z.string().optional(),
   /** 预览票据有效期（毫秒） */
-  PREVIEW_TICKET_TTL_MS: z.string().optional()
+  PREVIEW_TICKET_TTL_MS: z.string().optional(),
+  /** 可信代理 CIDR（逗号分隔）；配置错误时按「无可信代理」处理，不无条件信任转发头 */
+  TRUSTED_PROXIES: z.string().optional(),
+  /** DB-IP City Lite MMDB 文件路径（相对服务端工作目录或绝对路径） */
+  DBIP_CITY_MMDB: z.string().optional()
 })
 
 export type EnvInput = z.infer<typeof envSchema>

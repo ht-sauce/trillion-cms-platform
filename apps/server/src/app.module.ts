@@ -28,6 +28,8 @@ import { BlocksModule } from './modules/blocks/blocks.module'
 import { NavigationModule } from './modules/navigation/navigation.module'
 import { PreviewModule } from './modules/preview/preview.module'
 import { GeoModule } from './modules/geo/geo.module'
+import { AccessModule } from './modules/access/access.module'
+import { DemandsModule } from './modules/demands/demands.module'
 
 @Module({
   imports: [
@@ -62,7 +64,9 @@ import { GeoModule } from './modules/geo/geo.module'
     BlocksModule,
     NavigationModule,
     PreviewModule,
-    GeoModule
+    GeoModule,
+    AccessModule,
+    DemandsModule
   ]
 })
 export class AppModule {}

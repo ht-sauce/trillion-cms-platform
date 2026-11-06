@@ -1,9 +1,4 @@
 <script setup lang="ts">
-/**
- * 后台用户表单弹窗（新建 / 编辑用户 + 角色绑定 + 站点授权）
- * 规范：弹窗一律独立组件，父页面只用 v-model 控制显隐、监听 saved 刷新数据
- * 站点授权仅对非平台级角色有意义（平台级角色默认可访问全部站点）
- */
 import { ElMessage } from 'element-plus'
 import { adminUsersApi, type AdminUserItem, type AdminUserPayload, type RoleItem } from '~/config/api'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
@@ -14,8 +9,6 @@ const props = defineProps<{
   user: AdminUserItem | null
   /** 可选角色（父页面加载后传入） */
   roles: RoleItem[]
-  /** 可选站点（父页面加载后传入） */
-  sites: { id: string; name: string }[]
 }>()
 const emit = defineEmits<{ saved: [] }>()
 
@@ -27,13 +20,10 @@ const form = reactive({
   password: '',
   displayName: '',
   roleId: undefined as string | undefined,
-  siteIds: [] as string[],
   enabled: true
 })
 
 const editingId = computed(() => props.user?.id ?? null)
-/** 当前所选角色是否平台级（决定站点授权是否可用） */
-const rolePlatform = computed(() => props.roles.find((item) => item.id === form.roleId)?.platform ?? false)
 
 /** 每次打开时重置并按传入值回显（密码留空表示不修改） */
 watch(visible, (open) => {
@@ -43,7 +33,6 @@ watch(visible, (open) => {
   form.password = ''
   form.displayName = user?.displayName ?? ''
   form.roleId = user?.roleId ?? props.roles[0]?.id
-  form.siteIds = [...(user?.siteIds ?? [])]
   form.enabled = user?.enabled ?? true
 })
 
@@ -69,7 +58,6 @@ const submit = debounce(() => {
   const payload: AdminUserPayload = {
     displayName: form.displayName.trim(),
     roleId: form.roleId,
-    siteIds: form.siteIds,
     enabled: form.enabled
   }
   if (form.password) payload.password = form.password
@@ -106,18 +94,6 @@ const submit = debounce(() => {
       <el-form-item label="绑定角色">
         <el-select v-model="form.roleId" style="width: 100%">
           <el-option v-for="role in roles" :key="role.id" :label="`${role.name}（${role.code}）`" :value="role.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <template #label><TermHint term="siteGrant" /></template>
-        <el-select
-          v-model="form.siteIds"
-          multiple
-          :disabled="rolePlatform"
-          :placeholder="rolePlatform ? '平台级角色可访问全部站点' : '选择可管理的站点'"
-          style="width: 100%"
-        >
-          <el-option v-for="site in sites" :key="site.id" :label="site.name" :value="site.id" />
         </el-select>
       </el-form-item>
       <el-form-item label="启用">

@@ -163,9 +163,7 @@ export class GeoService {
       /** 实体声明输出在哪一页（错误提示里指出具体路径，便于定位） */
       entityPath,
       /** 实体声明按行业取类型：工业站输出 Organization，医疗站输出 MedicalClinic（ADR-046） */
-      entityDeclared: entityJsonLd.includes(
-        site.businessType === 'industrial' ? '"Organization"' : '"MedicalClinic"'
-      ),
+      entityDeclared: entityJsonLd.includes(site.businessType === 'industrial' ? '"Organization"' : '"MedicalClinic"'),
       hasLlmsTxt: Boolean(documents.llms?.trim()),
       /** 两项同时成立才算：站点显式声明了策略，且产物里确实带可读说明 */
       robotsHasAiPolicy:

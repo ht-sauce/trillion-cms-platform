@@ -59,7 +59,12 @@ defineBlock({
     <template v-for="item in data.items || []" :key="item.name">
       <NuxtLink v-if="item.href" class="pd-card" :to="item.href">
         <div class="pd-pic">
-          <img v-if="item.img" :src="item.img" :alt="`${item.name}${item.cnName ? ' ' + item.cnName : ''} 成品地面`" loading="lazy" />
+          <img
+            v-if="item.img"
+            :src="item.img"
+            :alt="`${item.name}${item.cnName ? ' ' + item.cnName : ''} 成品地面`"
+            loading="lazy"
+          />
           <span v-else class="pd-ph">成品实拍图待补</span>
         </div>
         <div class="pd-body">
@@ -75,7 +80,12 @@ defineBlock({
       </NuxtLink>
       <div v-else class="pd-card">
         <div class="pd-pic">
-          <img v-if="item.img" :src="item.img" :alt="`${item.name}${item.cnName ? ' ' + item.cnName : ''} 成品地面`" loading="lazy" />
+          <img
+            v-if="item.img"
+            :src="item.img"
+            :alt="`${item.name}${item.cnName ? ' ' + item.cnName : ''} 成品地面`"
+            loading="lazy"
+          />
           <span v-else class="pd-ph">成品实拍图待补</span>
         </div>
         <div class="pd-body">

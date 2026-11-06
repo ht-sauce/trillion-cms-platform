@@ -7,6 +7,8 @@ import { BadRequestException, Body, Controller, Get, Headers, Param, Post, Query
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { PreviewService } from './preview.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('预览')
@@ -16,7 +18,8 @@ export class PreviewController {
 
   @Post('ticket')
   @ApiBearerAuth()
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, MenuPermissionGuard)
+  @RequireMenu(['/sites', '/content', '/content/editor'])
   @ApiOperation({ summary: '生成预览票据（默认 30 分钟；pageId 缺省取站点首页 = 整站预览）' })
   ticket(@CurrentUser() user: AuthUser, @Body() dto: { siteId: string; pageId?: string }) {
     return this.service.createTicket(user, dto)

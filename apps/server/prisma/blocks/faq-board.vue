@@ -154,7 +154,11 @@ function syncUrl() {
     else params.delete('fp')
   }
   const search = params.toString()
-  window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`)
+  window.history.replaceState(
+    null,
+    '',
+    `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`
+  )
 }
 
 function selectCat(cat: string) {
@@ -340,7 +344,9 @@ watch([activeCat, page, query, searchPage], () => {
       >
         <NuxtLink class="qa-link" :to="item.href || '#'">
           <span class="qidx">{{ pad((searchPage - 1) * pageSize + index + 1) }}</span>
-          <span class="qt">{{ item.q }}<span v-if="item.cat" class="fq-cat">{{ item.cat }}</span></span>
+          <span class="qt"
+            >{{ item.q }}<span v-if="item.cat" class="fq-cat">{{ item.cat }}</span></span
+          >
           <i class="arw" aria-hidden="true"></i>
         </NuxtLink>
         <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
@@ -472,7 +478,6 @@ watch([activeCat, page, query, searchPage], () => {
 .fq-board .qa.qa-open .ans {
   max-height: none;
 }
-
 
 .fq-board .qa .ans p {
   margin: 0 0 10px;

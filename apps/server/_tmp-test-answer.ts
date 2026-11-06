@@ -14,4 +14,7 @@ for (const [index, text] of samples.entries()) {
 }
 
 /** 安全检查：脚本标签与属性必须被清掉 */
-console.log('\nXSS:', sanitizeFaqAnswerHtml('<p onclick="x()">a</p><script>alert(1)</script><a href="javascript:1">b</a>'))
+console.log(
+  '\nXSS:',
+  sanitizeFaqAnswerHtml('<p onclick="x()">a</p><script>alert(1)</script><a href="javascript:1">b</a>')
+)

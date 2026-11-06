@@ -14,7 +14,7 @@ const route = useRoute()
 const userLabel = computed(() => auth.user?.displayName || auth.user?.username || '未登录')
 const roleLabel = computed(() => auth.user?.roleName || '')
 /** 顶栏面包屑：优先取菜单标题，未配置的路径回退为路径本身 */
-const crumb = computed(() => menuStore.titleOf(route.path) || (route.path === '/' ? '总览仪表盘' : route.path))
+const crumb = computed(() => menuStore.titleOf(route.path) || (route.path === '/' ? '首页' : route.path))
 
 onMounted(async () => {
   auth.init()

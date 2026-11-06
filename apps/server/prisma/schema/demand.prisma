@@ -1,0 +1,69 @@
+/// 客户需求提交表：GEO 站点聊天式需求表单唯一落库入口，后台在站外人工跟进
+/// 只保存客户主动提交的业务内容与联系方式；不建会话表、不存聊天消息、不做访客身份持久化
+model DemandSubmission {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+
+  /// 所属站点 ID（按提交来源域名映射，不信任客户端自填）
+  siteId String @map("site_id") @db.VarChar(36)
+  /// 需求描述（纯文本，必填）
+  description String @db.Text
+  /// 称呼（可选）
+  contactName String? @map("contact_name") @db.VarChar(64)
+  /// 手机号（可选；四栏联系方式任一项有效即可）
+  phone String? @db.VarChar(32)
+  /// 微信（可选）
+  wechat String? @db.VarChar(64)
+  /// 邮箱（可选）
+  email String? @db.VarChar(128)
+  /// 其他联系方式（纯文本，可选）
+  otherContact String? @map("other_contact") @db.VarChar(255)
+
+  /// 来源页面（站点 origin + path，不含 query / hash）
+  sourceUrl String? @map("source_url") @db.VarChar(512)
+  clientIp String @map("client_ip") @db.VarChar(64)
+  /// 客户端提交标识（幂等键）：同站点同标识重试只保留一条
+  submitKey String @map("submit_key") @db.VarChar(64)
+
+  /// 跟进状态：pending=待跟进 / followed=已跟进
+  status String @default("pending") @db.VarChar(16)
+  /// 内部跟进备注（可编辑，不保留历史）
+  note String? @db.Text
+
+  /// 提交时间（中国时区，精确到秒）
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 幂等：同站点同一提交标识只落一条
+  @@unique([siteId, submitKey])
+  /// 按站点 + 时间查询
+  @@index([siteId, createdAt])
+  /// 按跟进状态筛选
+  @@index([status])
+  /// 全站时间倒序分页
+  @@index([createdAt])
+}
+
+/// IP 封禁名单：平台全部站点的需求提交与验证码接口共用
+/// source=auto 为频率/猜验证码自动封禁（默认 30 分钟），source=manual 为后台人工禁用（直到解除）
+model GeoIpBan {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+  /// 被封禁的客户端 IP（可信代理规则解析并归一化后）
+  ip String @unique @db.VarChar(64)
+  /// 封禁原因（自动规则说明或人工填写）
+  reason String @db.VarChar(255)
+  /// 封禁来源：auto=自动 / manual=人工
+  source String @default("auto") @db.VarChar(16)
+  /// 到期时间；null 表示人工禁用直到后台解除
+  expiresAt DateTime? @map("expires_at") @db.DateTime(0)
+
+  /// 创建时间（中国时区，精确到秒）
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+  /// 更新时间（自动维护）
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(0)
+
+  /// 按到期时间清理/判断
+  @@index([expiresAt])
+}

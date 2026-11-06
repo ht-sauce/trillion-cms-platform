@@ -39,8 +39,7 @@ export class AdminAuthGuard implements CanActivate {
       roleId: payload.roleId,
       roleCode: payload.roleCode,
       roleName: payload.roleName,
-      platform: Boolean(payload.platform),
-      siteIds: payload.siteIds || []
+      platform: Boolean(payload.platform)
     }
     return true
   }

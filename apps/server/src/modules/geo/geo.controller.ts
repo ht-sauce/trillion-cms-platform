@@ -7,12 +7,15 @@ import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { GeoService, type GeoPreviewTarget } from './geo.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('GEO 元数据')
 @ApiBearerAuth()
 @Controller('geo')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu(['/monitor', '/sites', '/content/editor'])
 export class GeoController {
   constructor(private readonly service: GeoService) {}
 

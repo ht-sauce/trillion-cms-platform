@@ -26,3 +26,15 @@ export function buildMenuTree(items: MenuItem[]): MenuNode[] {
 export function flattenMenuTree(nodes: MenuNode[], depth = 1): (MenuNode & { depth: number })[] {
   return nodes.flatMap((node) => [{ ...node, depth }, ...flattenMenuTree(node.children, depth + 1)])
 }
+
+export function firstMenuPath(nodes: MenuNode[]): string {
+  for (const node of nodes) {
+    if (node.children.length) {
+      const childPath = firstMenuPath(node.children)
+      if (childPath) return childPath
+    } else if (node.path && /^\/(?!\/)/.test(node.path) && node.path !== '/') {
+      return node.path
+    }
+  }
+  return ''
+}

@@ -1,0 +1,75 @@
+/// 入站请求访问记录表：GEO 渲染引擎中间件在响应结束/中断后异步上报，一条请求一条记录
+/// 记录的是「请求事实」（页面 / 静态资源 / 索引文件 / payload 等），不用于 PV/UV 或访客行为分析
+model GeoAccessEvent {
+  /// 主键 ID
+  id String @id @default(uuid(7)) @db.VarChar(36)
+
+  /// 所属站点 ID；Host 无法解析或本地回环时为 null（不强行归属任何站点）
+  siteId String? @map("site_id") @db.VarChar(36)
+  /// 请求 Host（不含端口；作为不可信输入限长保存）
+  host String @db.VarChar(128)
+  /// 请求路径（不含 query 与 hash）
+  path String @db.VarChar(512)
+  /// 请求方法（GET / HEAD 等）
+  method String @db.VarChar(8)
+  /// 请求地址快照：协议可信时带 scheme，否则保留 `host + path` 形态
+  requestUrl String @map("request_url") @db.VarChar(768)
+
+  /// 客户端 IP（可信代理规则解析并归一化后）
+  clientIp String @map("client_ip") @db.VarChar(64)
+  /// 直连对端 IP（socket remoteAddress，用于可信代理判定与排查）
+  peerIp String @map("peer_ip") @db.VarChar(64)
+  /// 原始 User-Agent（限长）
+  userAgent String @map("user_agent") @db.VarChar(512)
+  /// Referer（已去除 query / hash，可能为空）
+  referer String? @db.VarChar(512)
+
+  /// 从 UA 简单识别的浏览器名称；无法识别固定为 unknown
+  browserName String @map("browser_name") @db.VarChar(32)
+  /// 浏览器主版本号；无法识别为空
+  browserVersion String? @map("browser_version") @db.VarChar(32)
+
+  /// 资源类型：page / asset / llms / sitemap / robots / payload / other
+  resourceType String @map("resource_type") @db.VarChar(16)
+  /// 访问类别：browser / search_bot / ai_bot / unknown（基于 UA 的声明身份，不确认真人）
+  accessCategory String @map("access_category") @db.VarChar(16)
+  /// 命中的爬虫标识（如 Googlebot / GPTBot）；未命中为空
+  agentToken String? @map("agent_token") @db.VarChar(64)
+  /// 爬虫声明厂商（如 Google / OpenAI）；未知为 unknown
+  vendor String @default("unknown") @db.VarChar(64)
+
+  /// HTTP 响应状态码；连接中断且无法确定时为空
+  status Int?
+  /// 从入站到响应完成/中断的耗时（毫秒），不含监控保存耗时
+  durationMs Int @map("duration_ms")
+  /// 完成状态：finished=正常结束 / aborted=连接中断
+  completion String @db.VarChar(16)
+
+  /// IP 地域国家（DB-IP City Lite 解析；未知为空）
+  country String? @db.VarChar(64)
+  /// IP 地域省/州（未知为空）
+  region String? @db.VarChar(64)
+  /// IP 地域城市（未知为空）
+  city String? @db.VarChar(64)
+  /// 地域数据来源（如 DB-IP City Lite）
+  geoSource String? @map("geo_source") @db.VarChar(32)
+  /// 地域库版本（MMDB buildEpoch 对应的日期；不可用为空）
+  geoDbVersion String? @map("geo_db_version") @db.VarChar(32)
+  geoStatus String @default("unknown") @map("geo_status") @db.VarChar(16)
+
+  /// 请求发生时间（中国时区，精确到秒）
+  occurredAt DateTime @map("occurred_at") @db.DateTime(0)
+  /// 记录写入时间
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(0)
+
+  /// 按站点 + 时间查询
+  @@index([siteId, occurredAt])
+  /// 全站时间倒序分页
+  @@index([occurredAt])
+  /// 按客户端 IP 查询
+  @@index([clientIp])
+  /// 按访问类别 + 时间查询
+  @@index([accessCategory, occurredAt])
+  /// 按路径查询
+  @@index([path])
+}

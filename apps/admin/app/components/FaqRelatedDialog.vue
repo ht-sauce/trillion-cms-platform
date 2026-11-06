@@ -147,7 +147,14 @@ const submit = debounce(() => {
             @keyup.enter="applyFilter"
             @clear="applyFilter"
           />
-          <el-select v-model="category" size="small" placeholder="全部分类" clearable style="width: 140px" @change="applyFilter">
+          <el-select
+            v-model="category"
+            size="small"
+            placeholder="全部分类"
+            clearable
+            style="width: 140px"
+            @change="applyFilter"
+          >
             <el-option v-for="item in categories" :key="item" :label="item" :value="item" />
           </el-select>
         </header>
@@ -193,7 +200,9 @@ const submit = debounce(() => {
             <span class="q">{{ item.question }}</span>
             <span class="ops">
               <el-button link size="small" :disabled="index === 0" @click="move(index, -1)">↑</el-button>
-              <el-button link size="small" :disabled="index === selected.length - 1" @click="move(index, 1)">↓</el-button>
+              <el-button link size="small" :disabled="index === selected.length - 1" @click="move(index, 1)"
+                >↓</el-button
+              >
               <el-button link size="small" type="danger" @click="remove(item.id)">移除</el-button>
             </span>
           </div>

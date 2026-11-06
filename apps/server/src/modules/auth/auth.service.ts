@@ -35,8 +35,7 @@ export class AuthService {
       roleId: record.roleId,
       roleCode: record.role.code,
       roleName: record.role.name,
-      platform: record.role.platform,
-      siteIds: this.toSiteIds(record.siteIds)
+      platform: record.role.platform
     }
 
     const token = await this.jwt.signAsync(
@@ -46,8 +45,7 @@ export class AuthService {
         roleId: authUser.roleId,
         roleCode: authUser.roleCode,
         roleName: authUser.roleName,
-        platform: authUser.platform,
-        siteIds: authUser.siteIds
+        platform: authUser.platform
       },
       {
         secret: this.config.get<string>('jwt.secret'),
@@ -62,14 +60,12 @@ export class AuthService {
       roleId: authUser.roleId,
       roleCode: authUser.roleCode,
       roleName: authUser.roleName,
-      platform: authUser.platform,
-      siteIds: authUser.siteIds
+      platform: authUser.platform
     }
 
     return { token, user: profile }
   }
 
-  /** 当前用户信息（含角色与授权站点） */
   async profile(authUser: AuthUser): Promise<AdminUserEntity> {
     const record = await this.prisma.adminUser.findUnique({ where: { id: authUser.id }, include: { role: true } })
     if (!record) throw new UnauthorizedException('账号不存在')
@@ -80,13 +76,7 @@ export class AuthService {
       roleId: record.roleId,
       roleCode: record.role.code,
       roleName: record.role.name,
-      platform: record.role.platform,
-      siteIds: this.toSiteIds(record.siteIds)
+      platform: record.role.platform
     }
-  }
-
-  /** siteIds JSON 字段收窄为数组 */
-  private toSiteIds(value: unknown): string[] {
-    return Array.isArray(value) ? (value as string[]) : []
   }
 }

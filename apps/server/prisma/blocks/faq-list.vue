@@ -168,7 +168,6 @@ defineBlock({
   max-height: none;
 }
 
-
 /* 富文本答案的结构版式（列表缩进，否则「1. 2. 3.」仍旧挤成一坨） */
 .faq .q .a p {
   margin: 0 0 10px;

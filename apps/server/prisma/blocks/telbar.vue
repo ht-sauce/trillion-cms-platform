@@ -64,6 +64,7 @@ defineBlock({
         class="btn"
         :class="action.primary === false ? 'btn-line' : 'btn-teal'"
         :to="action.href"
+        :data-contact-action="/^\/contact\/?$/.test(String(action.href)) ? 'demand' : undefined"
       >
         {{ action.label }}
       </NuxtLink>

@@ -1,6 +1,6 @@
 # 02 · 服务端架构（apps/server）
 
-> 组件级视图。回答：模块怎么划、谁依赖谁、横切能力在哪层生效、站点隔离如何成为真正的安全边界。
+> 组件级视图。回答：模块怎么划、谁依赖谁、横切能力在哪层生效、登录与菜单授权如何成为管理域安全边界。
 > 数据模型见 [`04-data-model.md`](./04-data-model.md)，接口契约见 [`05-api-contract.md`](./05-api-contract.md)。
 
 ---
@@ -16,7 +16,7 @@ flowchart TB
 
   subgraph Cross["横切层 common/"]
     G1["AdminAuthGuard"]
-    G2["PlatformAdminGuard"]
+    G2["MenuPermissionGuard"]
     I1["TransformInterceptor<br/>统一 {code,message,data}"]
     F1["HttpExceptionFilter"]
     D1["@CurrentUser"]
@@ -82,7 +82,7 @@ common/   →  modules/  ❌ 禁止反向依赖
 
 ## 3. 模块清单
 
-| 模块           | 控制器路由       | 职责                                                       | 鉴权                 | 站点隔离 |
+| 模块           | 控制器路由       | 职责                                                       | 鉴权                 | 站点归属 |
 | -------------- | ---------------- | ---------------------------------------------------------- | -------------------- | -------- |
 | `auth`         | `/geoserver/auth`      | 管理员登录（bcrypt 校验）、签发 JWT-A、`/me`               | 除登录外需 JWT-A     | ——       |
 | `sites`        | `/geoserver/sites`     | 站点 CRUD、SEO/GEO 默认值、renderMode、主题配置            | JWT-A                | ✅       |
@@ -92,16 +92,16 @@ common/   →  modules/  ❌ 禁止反向依赖
 | `publish`      | `/geoserver/publish`   | 发布任务入队、串行执行、调用构建脚本、查询任务             | JWT-A                | ✅       |
 | `track`        | `/geoserver/track`     | 埋点摄取（攒批写库）、PV/UV 概览、AI 爬虫统计              | 摄取公开，查询需鉴权 | ✅       |
 | `entities`     | `/geoserver/entities`  | 品牌/产品/机构实体与别名管理（GEO 实体一致性）             | JWT-A                | ✅       |
-| `menus`        | `/geoserver/menus`     | 后台菜单树（按当前用户角色的菜单授权过滤）与菜单配置维护   | 树需登录，写操作限平台级角色 | ——  |
-| `roles`        | `/geoserver/roles`     | 角色 CRUD 与「角色 → 菜单」授权（三级菜单、自动补全上级）  | JWT-A + 平台级角色   | ——       |
-| `admin-users`  | `/geoserver/admin-users` | 后台用户 CRUD 与「用户 → 角色」绑定（含站点授权、安全护栏） | JWT-A + 平台级角色 | ——     |
+| `menus`        | `/geoserver/menus`     | 后台菜单树与菜单配置维护 | 树仅登录，维护按菜单 | —— |
+| `roles`        | `/geoserver/roles`     | 角色 CRUD 与菜单授权（自动补全上级） | JWT-A + 对应菜单 | —— |
+| `admin-users`  | `/geoserver/admin-users` | 用户 CRUD、角色绑定与安全护栏，无站点数据授权 | JWT-A + 对应菜单 | —— |
 | `news-faq`     | `/geoserver/news-faq`  | 新闻文章 / 问答条目管理面（表为管理源、页面是发布产物）     | JWT-A                | ✅       |
 | `catalog`      | `/geoserver/catalog`   | 产品体系（含行业分组）/ 成功案例管理面（同表驱动口径）     | JWT-A                | ✅       |
 | `site-auth`    | `/geoserver/site-auth` | 站点会员注册/登录/校验/获取自身信息（JWT-M）               | 除登录注册外需 JWT-M | ✅       |
 | `public`       | `/geoserver/public`    | **无鉴权只读**：站点配置、路由清单、页面详情、robots、实体 | 无                   | 按 key   |
 | `health`       | `/geoserver/health`    | 健康检查                                                   | 无                   | ——       |
 
-> 合计 **71 条已注册路由**（43 条首轮验证 + `menus` 5 + `roles` 5 + `admin-users` 4 + `news-faq` 12 + `catalog` 14，另有 `public` / `preview` 等按需扩展）。逐条清单与请求/响应字段见 [`05-api-contract.md`](./05-api-contract.md)。
+> 表中管理业务的 JWT-A 一律包含对应菜单校验；✅ 仅表示资源站点归属，不表示用户站点数据权限。逐接口映射以 §4.3 为准，接口契约见 05；路由覆盖通过真实控制器元数据测试，不依赖历史总数。
 
 > **表驱动内容域**（`news-faq` / `catalog`）共用一套模式：管理源是独立数据表，`Page` 只是发布产物；保存后自动派生/重算页面块 → 自动触发页面级发布。派生详情页的块结构从站点既有同栏目 detail 页**克隆为模板**（[ADR-052](./08-adr.md)），代码内不含任何站点文案，换站点零改动。
 
@@ -123,32 +123,34 @@ common/   →  modules/  ❌ 禁止反向依赖
 flowchart LR
   R["请求"] --> G{"AdminAuthGuard<br/>解析 JWT-A"}
   G -->|"无效/缺失"| E1["401"]
-  G -->|"有效"| U["@CurrentUser 注入 AuthUser<br/>{id, username, roleId, roleCode, roleName, platform, siteIds}"]
-  U --> P{"PlatformAdminGuard<br/>（仅平台级接口）"}
-  P -->|"platform = false"| E2["403"]
-  P -->|"通过"| S["Service 前置：<br/>assertSiteAccess(user, siteId)"]
-  S -->|"越权"| E3["403"]
-  S -->|"通过"| Q["siteWhere / siteIdWhere 过滤查询"]
+  G -->|"有效"| U["@CurrentUser 注入身份与 roleId"]
+  U --> P{"身份/导航接口？"}
+  P -->|"是"| OK["放行"]
+  P -->|"否"| M{"MenuPermissionGuard<br/>对应启用菜单 + RoleMenu"}
+  M -->|"无授权/无声明"| E2["403"]
+  M -->|"通过"| Q["业务归属、关联、发布约束与主动站点筛选"]
 ```
 
 **双 JWT 域**
 
 | 域         | Token | 载荷                                                | 适用模块                    |
 | ---------- | ----- | --------------------------------------------------- | --------------------------- |
-| admin 用户 | JWT-A | `roleId` + `roleCode` + `platform` + `siteIds`      | auth/sites/content/roles/…  |
+| 管理后台用户 | JWT-A | `roleId` + `roleCode` + `roleName`，`platform` 仅作角色属性展示 | auth/sites/content/roles/… |
 | 站点会员   | JWT-M | `memberId` + `siteId`                               | site-auth（客户端岛屿调用） |
 
-> 角色由「用户 → 角色」绑定解析，登录时写入 JWT；**平台级判据是角色的 `platform` 标记**，不再硬编码角色字符串。
+> 2026-11-06 按 REQUIREMENTS §9、05 §2 与用户授权方案：全平台管理业务仅按登录和对应菜单授权，不以 `platform` 或用户 `siteIds` 限制业务操作与可见范围。不自动授予菜单。身份接口 `/auth/me`、导航接口 `/menus/tree` 仅需登录；内部令牌、预览票据和会员 JWT-M 独立保留。账号启停、内置角色、不能删自己及至少一个可用平台管理用户的防锁死护栏不作为业务门槛删除。
 
-### 4.3 站点隔离（`common/utils/site-scope.ts`）
+### 4.3 站点归属与主动筛选（`common/utils/site-scope.ts`）
 
 | 函数                             | 用途                                     |
 | -------------------------------- | ---------------------------------------- |
-| `assertSiteAccess(user, siteId)` | 越权直接抛 403（**安全边界，不可省略**） |
-| `siteWhere(user, siteId)`        | 构造带 `siteId` 的查询条件               |
-| `siteIdWhere(user, siteId)`      | 仅返回 siteId 条件（用于 task 等表）     |
+| `assertSiteAccess(user, siteId)` | 旧调用兼容入口，不再按用户站点授权拒绝 |
+| `siteWhere(user, siteId)`        | 仅按显式 siteId 构造站点主键条件，缺省不过滤 |
+| `siteIdWhere(user, siteId)`      | 仅按显式 siteId 构造内容归属筛选，缺省不过滤 |
 
-> **重要**：菜单/界面隐藏站点只是 UX；真正的安全边界是 Guard + `site-scope` 强制过滤。二者必须同时存在（见 [ADR-005](./08-adr.md#adr-005-站点数据隔离双保险菜单--guard--查询过滤)）。
+> 管理域安全边界为 JWT-A + MenuPermissionGuard。内容 siteId、同站目录/页面/文件关联、公共模板引入时复制为本站副本、公开 published 过滤均保留；取消后台数据授权不取消资源归属。旧 ADR-005 的用户站点权限口径不再适用本次授权基线。
+
+菜单映射：sites → `/sites`；content → `/content`；editor → `/content/editor`；files → `/files`；members → `/members`；entities、geo、track 管理读口 → `/monitor`；navigations → `/navigations`；menus 维护 → `/settings/menus`；roles → `/settings/roles`；admin-users → `/settings/users`；新闻 → `/sites/news`，问答 → `/sites/faqs`，共同重建要求二者；产品/行业 → `/sites/products`，案例 → `/sites/cases`。共享选择数据允许对应消费菜单中的任一授权，但不扩大写权限。blocks 按实际 siteId/template 参数区分 `/blocks` 与 `/blocks/templates`；publish 与 preview/ticket 按消费入口 `/sites`、`/content`、`/content/editor` 授权；access-events → `/monitor`，demands 管理口 → `/sites/demands`。公开业务写口 track 摄取、会员注册/登录、需求提交保留既有专用校验，不转成匿名内容维护口。
 
 ### 4.4 配置与工具
 

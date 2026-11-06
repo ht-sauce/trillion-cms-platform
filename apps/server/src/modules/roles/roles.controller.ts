@@ -5,17 +5,20 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Put, 
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { RolesService } from './roles.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
-import { PlatformAdminGuard } from '../../common/guards/platform-admin.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CreateRoleDto, QueryRoleDto, SaveRoleMenusDto, UpdateRoleDto } from './dto'
 
 @ApiTags('角色')
 @ApiBearerAuth()
 @Controller('roles')
-@UseGuards(AdminAuthGuard, PlatformAdminGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/settings/roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Get()
+  @RequireMenu(['/settings/roles', '/settings/users'])
   @ApiOperation({ summary: '角色列表（含授权菜单与用户数）' })
   list(@Query() query: QueryRoleDto) {
     return this.rolesService.list(query)

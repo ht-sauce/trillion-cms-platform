@@ -5,14 +5,16 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { AdminUsersService } from './admin-users.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
-import { PlatformAdminGuard } from '../../common/guards/platform-admin.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { CreateAdminUserDto, QueryAdminUserDto, UpdateAdminUserDto } from './dto'
 
 @ApiTags('后台用户')
 @ApiBearerAuth()
 @Controller('admin-users')
-@UseGuards(AdminAuthGuard, PlatformAdminGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/settings/users')
 export class AdminUsersController {
   constructor(private readonly adminUsersService: AdminUsersService) {}
 
@@ -23,7 +25,7 @@ export class AdminUsersController {
   }
 
   @Post()
-  @ApiOperation({ summary: '新建用户（含角色绑定与站点授权）' })
+  @ApiOperation({ summary: '新建用户（含角色绑定）' })
   create(@Body() dto: CreateAdminUserDto) {
     return this.adminUsersService.create(dto)
   }

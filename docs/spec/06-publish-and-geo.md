@@ -147,7 +147,18 @@ flowchart LR
 | 带 `?__preview=` 票据 | 一律放行 SSR 走草稿链路（§7.5 / 09 §7.5），nginx 418 分流取消 |
 | Host 为回环（本地开发） | 中间件直接放行，仍走「URL 首段前缀」形态（ADR-031） |
 
-**流量监控两层**：① 服务端访问日志——入口中间件输出单行 JSON（host / method / path / status / 耗时 / UA，静态资产与回环地址跳过），覆盖爬虫抓取、无 JS 访问等埋点盲区；② 页面级埋点——`TrackEvent`（按 siteId 隔离，`NUXT_PUBLIC_TRACK_ENABLED=1` 时启用）。看板入库为后续演进项（届时走 `04` 加表流程）。
+**流量监控两层**：① GEO 入站请求在响应完成/中断后逐条异步上报既有内部接口 `POST /internal/access-events`；② 页面级埋点——`TrackEvent`（按 siteId 隔离，`NUXT_PUBLIC_TRACK_ENABLED=1` 时启用），保持原有行为。
+
+#### 4.3.1 响应后异步访问上报（2026-11-06，已授权方案 §3/§4）
+
+- 独立的 `server/middleware/00-access.ts` 在预览、站点入口之前采集普通字段快照并注册 `finish/close`；不读请求体、不包装响应流、不为监控新增站点查询。所有实际到达 GEO 的请求（含资产、回环、非 GET/HEAD、未知站点及预览）均记录；`SITES_STATIC_DISABLED=1` 的构建渲染进程不采集。站点映射缺失由既有保存接口按 Host 解析，不猜 siteId。
+- `finish` 记 `finished`；未正常完成的 `close` 记 `aborted`，未发送响应头时状态为空。每请求最多一条，完成后移除两个监听。`durationMs` 使用单调时钟，从入站到结束，不含保存耗时；finish 不证明客户端完整收到响应。
+- `recordAccess(info)` 返回 void，异步 `processAccess` 内部捕获实际保存异常；复用 `INTERNAL_API_TOKEN`（仅服务端环境变量）与 `x-internal-token`，API 基址取既有 runtimeConfig。缺凭据不发请求；失败允许丢失，不传播到原路由、不重试，不新增队列/批量/定时器/IPC。逐条保存的资源开销及高流量在途增长是首版已接受边界，不宣称线程隔离或零损耗。
+- 客户端 IP 默认取 socket 对端；`TRUSTED_PROXIES`（既有 env 配置，逗号分隔 CIDR）未配置则不信任任何转发头。IPv4/IPv6 归一化（含 mapped IPv4），仅可信 peer 才从 X-Forwarded-For 右向左越过可信代理，第一不可信地址为客户端；无效链回退 peer，不跳过无效节点继续相信左侧。X-Forwarded-Proto/Host 同样仅可信 peer 可采用。实际 nginx 拓扑与 CIDR 仍须部署时验收，本地测试不证明线上真实 IP。
+- 保存 received scheme + Host（含端口）+ 原路径，剔除 query/hash/URL 凭据；Host 非法时地址为空，不编造 URL。Referer 同样去 query/hash/凭据，仅接受 HTTP(S)。限长与既有 DTO 对齐：host 128、path 512、method 8、requestUrl 768、IP 64、UA/Referer 512、browserName/version 32、agentToken/vendor 64。occurredAt 为内部协议 ISO 时间（不是业务展示时间）；不保存 Cookie、Authorization、预览票据和全量 header。
+- 资源分类为 page / asset / llms / sitemap / robots / payload / other，分类时归一化尾斜杠与既有站点前缀，记录仍保留原请求路径；精确识别 llms.txt、llms-full.txt、sitemap.xml 与 sitemap 分片、robots.txt、_payload.json，不把错误拼写当索引文件。
+- UA 先匹配搜索/AI 声明 token（更具体优先、大小写不敏感、词边界），再识别浏览器/版本；未知保持 unknown。搜索：Googlebot（Image/Video）、bingbot、Baiduspider（image）、Sogou web/inst spider、360Spider（Image/Video）、yisouspider、Bytespider、Applebot；AI：OpenAI、Anthropic、Perplexity、Kimi 的已确认抓取/搜索/用户触发 token。规则维护证据与用途；Bytespider 不归豆包、bingbot 不归 Copilot、搜狗不归腾讯 AI。Google-Extended / Applebot-Extended / Googlebot-News 策略 token 与未确认专用 UA 不提升为真实爬虫规则。声明匹配不验证真人、官方 IP/DNS、模型搜索或引用结果。
+- 本次不改 widget、客户端埋点、页面渲染、发布产物、服务端保存逻辑、数据库或 robots 放行规则；旧 `[access]` 页面级 stdout 日志由完整响应后上报替代，避免双重口径。
 
 ## 5. 发布前体检（`checkPageGeo`）
 

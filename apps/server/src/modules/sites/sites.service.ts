@@ -85,7 +85,6 @@ export class SitesService {
       include: { domains: { select: { domain: true }, orderBy: { id: 'asc' } } }
     })
     if (!site) throw new NotFoundException('站点不存在')
-    if (!user.platform) siteWhere(user, site.id)
     return this.toView(await this.withFiles(site), await this.publish.latestTask(site.id))
   }
 

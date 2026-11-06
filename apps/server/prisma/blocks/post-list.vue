@@ -79,7 +79,11 @@ function syncUrl() {
   if (currentPage.value > 1) params.set('page', String(currentPage.value))
   else params.delete('page')
   const search = params.toString()
-  window.history.replaceState(null, '', `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`)
+  window.history.replaceState(
+    null,
+    '',
+    `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`
+  )
 }
 
 function goPage(target: number) {

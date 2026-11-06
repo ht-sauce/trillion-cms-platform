@@ -41,9 +41,7 @@ defineBlock({
       <span class="no">{{ item.no || String(i + 1).padStart(2, '0') }}</span>
       <h3>{{ item.title }}</h3>
       <p v-if="item.desc">{{ item.desc }}</p>
-      <a v-if="item.href" class="go" :href="item.href">
-        {{ item.moreLabel || '了解更多' }} <i>→</i>
-      </a>
+      <a v-if="item.href" class="go" :href="item.href"> {{ item.moreLabel || '了解更多' }} <i>→</i> </a>
     </div>
   </div>
 </template>

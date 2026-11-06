@@ -6,7 +6,7 @@
 process.env.TZ = process.env.TZ || 'Asia/Shanghai'
 
 import { NestFactory } from '@nestjs/core'
-import { ValidationPipe } from '@nestjs/common'
+import { HttpException, ValidationPipe } from '@nestjs/common'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import { NestExpressApplication } from '@nestjs/platform-express'
 import { join } from 'node:path'
@@ -17,6 +17,11 @@ import { buildDefaultAgents } from './config/ai-crawlers'
 import { mpEncodeUrl } from './config/database-url'
 import { formatDateTime } from './common/utils/datetime'
 import * as fs from 'node:fs'
+import type { NextFunction, Request, Response } from 'express'
+import { ConfigService } from '@nestjs/config'
+import { countedRequests, DemandsController } from './modules/demands/demands.controller'
+import { DemandsService } from './modules/demands/demands.service'
+import { resolveClientIp } from './common/utils/ip'
 
 /**
  * 请求体上限（默认 100kb 装不下建站描述导入：一个 30+ 页面、每页若干块的整站 JSON 常在数百 KB）
@@ -65,7 +70,60 @@ async function bootstrap() {
   const uploadDir = process.env.UPLOAD_DIR || 'uploads'
   fs.mkdirSync(join(process.cwd(), uploadDir), { recursive: true })
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false })
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: false, bodyParser: false })
+  const demands = app.get(DemandsService)
+  const controller = app.get(DemandsController)
+  const trustedProxies = app.get(ConfigService).get<string[]>('trustedProxies') || []
+  app.use(async (request: Request, response: Response, next: NextFunction) => {
+    const path = request.path.toLowerCase().replace(/\/+$/, '')
+    const endpoint =
+      path === '/geoserver/demands/captcha' && request.method === 'GET'
+        ? 'captcha'
+        : path === '/geoserver/demands/submit' && request.method === 'POST'
+          ? 'submit'
+          : undefined
+    const publicPath = [
+      '/geoserver/demands/captcha',
+      '/geoserver/demands/submit',
+      '/geoserver/demands/widget-config'
+    ].includes(path)
+    if (!publicPath) return next()
+    response.setHeader('Cache-Control', 'no-store')
+    response.setHeader('X-Robots-Tag', 'noindex')
+    try {
+      let entryError: unknown
+      if (endpoint) {
+        const forwarded = request.headers['x-forwarded-for']
+        const ip = resolveClientIp(
+          request.socket.remoteAddress || '',
+          Array.isArray(forwarded) ? forwarded[0] : forwarded,
+          trustedProxies
+        )
+        try {
+          await demands.countPublicEntry(ip, endpoint)
+          countedRequests.add(request)
+        } catch (error) {
+          entryError = error
+        }
+      }
+      if (request.headers.origin !== undefined) {
+        try {
+          await demands.widgetConfig(controller.publicContext(request))
+          response.vary('Origin')
+          response.setHeader('Access-Control-Allow-Origin', request.headers.origin)
+        } catch (error) {
+          throw entryError || error
+        }
+      }
+      if (entryError) throw entryError
+      next()
+    } catch (error) {
+      const status = error instanceof HttpException ? error.getStatus() : 500
+      response
+        .status(status)
+        .json({ code: status, message: error instanceof HttpException ? error.message : '服务端内部错误', data: null })
+    }
+  })
 
   /**
    * 请求体上限：默认 100kb 装不下「建站描述导入」这类整站 JSON（一个 30+ 页面、
@@ -73,6 +131,15 @@ async function bootstrap() {
    */
   app.useBodyParser('json', { limit: JSON_BODY_LIMIT })
   app.useBodyParser('urlencoded', { extended: true, limit: JSON_BODY_LIMIT })
+  app.use((error: { type?: string }, request: Request, response: Response, next: NextFunction) => {
+    if (!['/geoserver/demands/submit', '/geoserver/demands/submit/'].includes(request.path.toLowerCase()))
+      return next(error)
+    if (error.type !== 'entity.too.large' && error.type !== 'entity.parse.failed') return next(error)
+    const status = error.type === 'entity.too.large' ? 413 : 400
+    response
+      .status(status)
+      .json({ code: status, message: status === 413 ? '请求体过大' : '请求体格式不正确', data: null })
+  })
 
   /** 跨域白名单由 config/ 按管理后台与 GEO 项目端口派生（见根 config/index.mjs） */
   const origins = (process.env.CORS_ORIGINS as string)

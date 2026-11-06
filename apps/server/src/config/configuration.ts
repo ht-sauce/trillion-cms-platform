@@ -63,7 +63,14 @@ const configuration = () => {
       ticketTtlMs: Number(process.env.PREVIEW_TICKET_TTL_MS) || 30 * 60 * 1000
     },
     /** 内部接口令牌：构建脚本 / 渲染引擎中间件访问 /internal/* 时携带（见 config/index.mjs 派生规则） */
-    internalToken: process.env.INTERNAL_API_TOKEN || ''
+    internalToken: process.env.INTERNAL_API_TOKEN || '',
+    /** 入站监控：可信代理 CIDR（逗号分隔）；只有 peerIp 命中时才解析转发头 */
+    trustedProxies: (process.env.TRUSTED_PROXIES || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+    /** 入站监控：DB-IP City Lite MMDB 文件路径（离线库，缺失时地域留空且不影响日志保存） */
+    dbipCityMmdb: process.env.DBIP_CITY_MMDB || 'data/dbip-city-lite.mmdb'
   }
 }
 

@@ -5,13 +5,16 @@ import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@n
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { MembersService } from './members.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { normalizePage, normalizePageSize } from '../../common/constants'
 
 @ApiTags('站点会员')
 @ApiBearerAuth()
 @Controller('members')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/members')
 export class MembersController {
   constructor(private readonly service: MembersService) {}
 

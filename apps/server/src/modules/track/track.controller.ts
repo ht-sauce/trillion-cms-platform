@@ -7,6 +7,8 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger'
 import type { Request } from 'express'
 import { TrackService } from './track.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { matchAiCrawler } from '../../config/ai-crawlers'
 
 @ApiTags('埋点与 AI 爬虫监控')
@@ -47,14 +49,16 @@ export class TrackController {
   }
 
   @Get('overview')
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, MenuPermissionGuard)
+  @RequireMenu('/monitor')
   @ApiOperation({ summary: 'PV/UV 概览与 Top 页面' })
   overview(@Query('siteId') siteId: string, @Query('days') days?: string) {
     return this.service.overview(siteId, Number(days || 7))
   }
 
   @Get('ai-overview')
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, MenuPermissionGuard)
+  @RequireMenu('/monitor')
   @ApiOperation({ summary: 'AI 爬虫抓取概览（爬虫类型与路径 Top）' })
   aiOverview(@Query('siteId') siteId: string, @Query('days') days?: string) {
     return this.service.aiOverview(siteId, Number(days || 7))

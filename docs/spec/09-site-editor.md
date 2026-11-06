@@ -275,6 +275,8 @@ sequenceDiagram
 
 ### 4.3 装载与渲染链路
 
+2026-11-06 forintech 按钮补齐：`hero-dark` / `scene-hero` / `telbar` 的站内 `/contact` 行动按钮在数据库本站块与种子模板保存条件 `data-contact-action="demand"`，同步与重建后标记仍存在；编译转换只兼容旧块、不覆盖源标记。首页真实 `scene-hero` 次按钮为「联系我们」，其他主体页同类联系按钮一并核对；横幅「提交需求」及顶部「电话咨询」文案保留，顶部不参与 widget。内容改动须更新页面内容指纹，但不伪写生产发布状态或 publishedHash。本轮仅 development 本地站点产物验证。
+
 ```mermaid
 flowchart LR
   DB["BlockDefinition<br/>（本站块优先，公共模板仅兜底）"] -->|"内部接口 /internal/blocks"| GEN[".blocks/Blk<PascalKey>.vue<br/>（生成目录，gitignore，构建前清理）"]

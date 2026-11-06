@@ -12,7 +12,6 @@ export interface AdminUser {
   roleCode: string
   roleName: string
   platform: boolean
-  siteIds: string[]
 }
 
 export interface LoginPayload {

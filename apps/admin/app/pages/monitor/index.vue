@@ -1,205 +1,248 @@
 <script setup lang="ts">
 /**
- * GEO 监控看板：AI 爬虫抓取趋势 + 抓取路径 Top
- * v1 数据源为服务端采集（nginx 日志 / llms.txt 动态返回记录）
+ * GEO 监控：按站点与请求特征筛选入站访问明细
  */
-import { sitesApi, trackApi } from '~/config/api'
+import {
+  ACCESS_CATEGORY_OPTIONS,
+  ACCESS_COMPLETION_LABEL,
+  ACCESS_RESOURCE_OPTIONS,
+  accessApi,
+  sitesApi,
+  type AccessCategory,
+  type AccessEventItem,
+  type AccessResourceType,
+  type SiteItem
+} from '~/config/api'
+import { PAGINATION_LAYOUT, PAGE_SIZE_DEFAULT, PAGE_SIZE_OPTIONS } from '~/config/pagination'
+import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
 
-const sites = ref<{ id: string; name: string }[]>([])
-const siteId = ref<string>()
-const days = ref(7)
-const ai = ref<{
-  total: number
-  bots: { botType: string; count: number }[]
-  paths: { path: string; count: number }[]
-}>()
+const { isLoading, run } = useLoading()
+const sites = ref<Pick<SiteItem, 'id' | 'name'>[]>([])
+const list = ref<AccessEventItem[]>([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(PAGE_SIZE_DEFAULT)
+const siteId = ref('')
+const dateRange = ref<[string, string] | null>(null)
+const clientIp = ref('')
+const path = ref('')
+const resourceType = ref<AccessResourceType | ''>('')
+const accessCategory = ref<AccessCategory | ''>('')
+const agentToken = ref('')
+const status = ref<number>()
+let requestVersion = 0
+let disposed = false
+
+const siteNames = computed(() => new Map(sites.value.map((site) => [site.id, site.name])))
+const resourceLabels = new Map(ACCESS_RESOURCE_OPTIONS.map((option) => [option.value, option.label]))
+const categoryLabels = new Map(ACCESS_CATEGORY_OPTIONS.map((option) => [option.value, option.label]))
 
 async function loadSites() {
   const result = await sitesApi.list({ pageSize: 100 })
-  sites.value = result.list
-  if (!siteId.value && result.list.length) siteId.value = result.list[0].id
+  sites.value = result.list.map((item) => ({ id: item.id, name: item.name }))
 }
 
 async function load() {
-  if (!siteId.value) return
-  ai.value = await trackApi.aiOverview(siteId.value, days.value)
+  requestVersion += 1
+  await run(async () => {
+    while (!disposed) {
+      const version = requestVersion
+      try {
+        const result = await accessApi.list({
+          siteId: siteId.value || undefined,
+          from: dateRange.value?.[0],
+          to: dateRange.value?.[1],
+          clientIp: clientIp.value || undefined,
+          path: path.value || undefined,
+          resourceType: resourceType.value || undefined,
+          accessCategory: accessCategory.value || undefined,
+          agentToken: agentToken.value || undefined,
+          status: status.value,
+          page: page.value,
+          pageSize: pageSize.value
+        })
+        if (!disposed && version === requestVersion) {
+          list.value = result.list
+          total.value = result.total
+        }
+      } catch {
+        if (version === requestVersion) return
+      }
+      if (version === requestVersion) return
+    }
+  })
 }
 
-watch([siteId, days], load)
+function reloadFromFirstPage() {
+  if (page.value === 1) load()
+  else page.value = 1
+}
+
+const onSearch = debounce(reloadFromFirstPage, DEBOUNCE_WAIT)
+const onReset = debounce(() => {
+  siteId.value = ''
+  dateRange.value = null
+  clientIp.value = ''
+  path.value = ''
+  resourceType.value = ''
+  accessCategory.value = ''
+  agentToken.value = ''
+  status.value = undefined
+  reloadFromFirstPage()
+}, DEBOUNCE_WAIT)
+
+function locationText(row: AccessEventItem) {
+  return [row.country, row.region, row.city].filter(Boolean).join(' / ') || '—'
+}
+
+watch([page, pageSize], load)
 onMounted(async () => {
-  await loadSites()
-  await load()
+  await Promise.allSettled([loadSites(), load()])
+})
+onBeforeUnmount(() => {
+  disposed = true
 })
 </script>
 
 <template>
   <div class="page-wrap">
-    <div class="bar">
+    <div class="filter-bar">
       <span class="panel-title">GEO 监控</span>
-      <el-select v-model="siteId" size="small" style="width: 200px">
+      <el-select v-model="siteId" class="filter-site" placeholder="全部站点" clearable>
         <el-option v-for="s in sites" :key="s.id" :label="s.name" :value="s.id" />
       </el-select>
-      <el-select v-model="days" size="small" style="width: 100px">
-        <el-option :label="'近 7 日'" :value="7" />
-        <el-option :label="'近 30 日'" :value="30" />
+      <el-date-picker
+        v-model="dateRange"
+        class="filter-date"
+        type="datetimerange"
+        range-separator="至"
+        start-placeholder="开始时间"
+        end-placeholder="结束时间"
+        value-format="YYYY-MM-DD HH:mm:ss"
+      />
+      <el-input v-model="clientIp" class="filter-text" placeholder="客户端 IP" clearable @keyup.enter="onSearch" />
+      <el-input v-model="path" class="filter-text" placeholder="访问路径" clearable @keyup.enter="onSearch" />
+      <el-select v-model="resourceType" class="filter-select" placeholder="资源类型" clearable>
+        <el-option v-for="option in ACCESS_RESOURCE_OPTIONS" :key="option.value" v-bind="option" />
       </el-select>
+      <el-select v-model="accessCategory" class="filter-select" placeholder="访问类别" clearable>
+        <el-option v-for="option in ACCESS_CATEGORY_OPTIONS" :key="option.value" v-bind="option" />
+      </el-select>
+      <el-input v-model="agentToken" class="filter-text" placeholder="代理标识" clearable @keyup.enter="onSearch" />
+      <el-input-number
+        v-model="status"
+        class="filter-status"
+        :min="100"
+        :max="599"
+        :controls="false"
+        placeholder="状态码"
+      />
+      <el-button type="primary" :loading="isLoading()" @click="onSearch">查询</el-button>
+      <el-button @click="onReset">重置</el-button>
     </div>
 
-    <div class="grid3">
-      <div class="chip">
-        <span class="lab">AI 抓取总次数</span>
-        <span class="fig mono accent">{{ (ai?.total || 0).toLocaleString() }}</span>
-      </div>
-      <div class="chip">
-        <span class="lab">爬虫种类</span>
-        <span class="fig mono">{{ ai?.bots.length || 0 }}</span>
-      </div>
-      <div class="chip">
-        <span class="lab">被抓取页面</span>
-        <span class="fig mono">{{ ai?.paths.length || 0 }}</span>
-      </div>
-    </div>
-
-    <div class="row">
-      <div class="panel flex1">
-        <div class="hd">
-          <span class="panel-title"><TermHint term="aiCrawler" />分布</span>
-        </div>
-        <el-table
-          :data="ai?.bots || []"
-          border
-          size="small"
-          style="width: 100%"
-          empty-text="暂无 AI 抓取数据（自托管模式需配置 nginx 日志采集）"
+    <el-table v-loading="isLoading()" :data="list" border empty-text="暂无访问明细">
+      <el-table-column label="访问时间" width="150" fixed="left">
+        <template #default="{ row }"
+          ><span class="mono">{{ row.occurredAt }}</span></template
         >
-          <el-table-column prop="botType" label="爬虫" min-width="160" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span class="mono">{{ row.botType }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="抓取次数" width="100">
-            <template #default="{ row }">
-              <span class="mono">{{ row.count }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="占比" width="160">
-            <template #default="{ row }">
-              <span class="pbar">
-                <span :style="{ width: `${Math.round((row.count / Math.max(ai?.total || 1, 1)) * 100)}%` }" />
-              </span>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+      </el-table-column>
+      <el-table-column label="站点" min-width="140" show-overflow-tooltip>
+        <template #default="{ row }">{{ (row.siteId && siteNames.get(row.siteId)) || row.host }}</template>
+      </el-table-column>
+      <el-table-column label="请求" min-width="280" show-overflow-tooltip>
+        <template #default="{ row }">
+          <span class="mono">{{ row.method }} {{ row.path }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="客户端 IP" width="136">
+        <template #default="{ row }"
+          ><span class="mono">{{ row.clientIp }}</span></template
+        >
+      </el-table-column>
+      <el-table-column label="访问类别" width="92">
+        <template #default="{ row }">{{ categoryLabels.get(row.accessCategory) }}</template>
+      </el-table-column>
+      <el-table-column label="资源类型" width="92">
+        <template #default="{ row }">{{ resourceLabels.get(row.resourceType) }}</template>
+      </el-table-column>
+      <el-table-column label="代理 / 厂商" min-width="150" show-overflow-tooltip>
+        <template #default="{ row }">{{ row.agentToken || row.vendor || '—' }}</template>
+      </el-table-column>
+      <el-table-column label="浏览器" min-width="140" show-overflow-tooltip>
+        <template #default="{ row }">{{
+          [row.browserName, row.browserVersion].filter(Boolean).join(' ') || '—'
+        }}</template>
+      </el-table-column>
+      <el-table-column label="状态" width="72">
+        <template #default="{ row }"
+          ><span class="mono">{{ row.status ?? '—' }}</span></template
+        >
+      </el-table-column>
+      <el-table-column label="耗时" width="90">
+        <template #default="{ row }"
+          ><span class="mono">{{ row.durationMs }} ms</span></template
+        >
+      </el-table-column>
+      <el-table-column label="结果" width="78">
+        <template #default="{ row }">{{ ACCESS_COMPLETION_LABEL[row.completion] }}</template>
+      </el-table-column>
+      <el-table-column label="地区" min-width="180" show-overflow-tooltip>
+        <template #default="{ row }">{{ locationText(row) }}</template>
+      </el-table-column>
+      <el-table-column prop="referer" label="来源" min-width="220" show-overflow-tooltip>
+        <template #default="{ row }"
+          ><span class="mono">{{ row.referer || '—' }}</span></template
+        >
+      </el-table-column>
+      <el-table-column prop="userAgent" label="User-Agent" min-width="300" show-overflow-tooltip />
+    </el-table>
 
-      <div class="panel flex1">
-        <div class="hd"><span class="panel-title">被抓取页面 Top</span></div>
-        <el-table :data="ai?.paths || []" border size="small" style="width: 100%" empty-text="暂无数据">
-          <el-table-column prop="path" label="路径" min-width="200" show-overflow-tooltip>
-            <template #default="{ row }">
-              <span class="mono">{{ row.path }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="次数" width="100">
-            <template #default="{ row }">
-              <span class="mono">{{ row.count }}</span>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-    </div>
-
-    <div class="notes-panel">
-      <div class="hd"><span class="panel-title">说明</span></div>
-      <ul class="notes">
-        <li>自托管模式：nginx access log 由采集器过滤 AI UA 后推送至服务端 /geoserver/track/ai-crawl 入表</li>
-        <li>CDN 模式：v1 不覆盖回源日志，架构已预留日志源适配器，后期接入即可</li>
-        <li>robots.txt 默认放行全部已知 AI 爬虫——这是 GEO 能否生效的前提</li>
-      </ul>
+    <div class="pager">
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        :page-sizes="PAGE_SIZE_OPTIONS"
+        :layout="PAGINATION_LAYOUT"
+        small
+      />
     </div>
   </div>
 </template>
 
 <style scoped lang="scss">
-.bar {
+.filter-bar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: $sp-1;
 }
 
-.grid3 {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: $sp-1;
+.filter-site {
+  width: calc($sp-4 * 6);
 }
 
-.chip {
-  @include panel;
-  padding: $sp-2;
+.filter-date {
+  width: calc($sp-4 * 8);
+}
+
+.filter-text {
+  width: calc($sp-4 * 4);
+}
+
+.filter-select {
+  width: calc($sp-4 * 3);
+}
+
+.filter-status {
+  width: calc($sp-4 * 2.5);
+}
+
+.pager {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-
-  .lab {
-    font-size: $font-size-xs;
-    color: $c-text-mute;
-  }
-
-  .fig {
-    font-size: $font-size-figure;
-    font-weight: 500;
-  }
-
-  .accent {
-    color: $c-accent;
-  }
-}
-
-.row {
-  display: flex;
-  gap: $sp-2;
-}
-
-.flex1 {
-  flex: 1;
-  min-width: 0;
-}
-
-.panel {
-  @include panel;
-  // 面板内是 border 模式表格：外框由表格承担，避免双层边框
-  border: 0;
-  overflow: hidden;
-}
-
-/** 纯文字说明面板：内部没有表格承担外框，保留完整面板边框 */
-.notes-panel {
-  @include panel;
-}
-
-.hd {
-  padding: 6px 10px;
-}
-
-.pbar {
-  display: block;
-  height: 4px;
-  background: $c-border-soft;
-  border-radius: 2px;
-
-  span {
-    display: block;
-    height: 4px;
-    background: $c-primary;
-    border-radius: 2px;
-  }
-}
-
-.notes {
-  margin: 0;
-  padding: $sp-2 $sp-3;
-  color: $c-text-mute;
-  font-size: $font-size-xs;
-  line-height: 2;
+  align-items: center;
+  justify-content: flex-end;
+  padding-inline: $sp-1;
 }
 </style>

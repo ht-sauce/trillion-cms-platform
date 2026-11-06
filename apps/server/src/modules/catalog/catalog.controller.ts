@@ -22,15 +22,25 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { ProductsService } from './products.service'
 import { CasesService } from './cases.service'
-import { CreateCaseDto, CreateIndustryDto, CreateProductDto, UpdateCaseDto, UpdateIndustryDto, UpdateProductDto } from './dto'
+import {
+  CreateCaseDto,
+  CreateIndustryDto,
+  CreateProductDto,
+  UpdateCaseDto,
+  UpdateIndustryDto,
+  UpdateProductDto
+} from './dto'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { normalizePage, normalizePageSize } from '../../common/constants'
 
 @ApiTags('产品与案例')
 @ApiBearerAuth()
 @Controller('catalog')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/sites/products')
 export class CatalogController {
   constructor(
     private readonly products: ProductsService,
@@ -53,7 +63,11 @@ export class CatalogController {
 
   @Patch('industries/:id')
   @ApiOperation({ summary: '编辑行业分组（改名同步产品内的行业引用）' })
-  updateIndustry(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateIndustryDto) {
+  updateIndustry(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateIndustryDto
+  ) {
     return this.products.updateIndustry(user, id, dto)
   }
 
@@ -76,7 +90,15 @@ export class CatalogController {
     @Query('series') series?: string,
     @Query('industry') industry?: string
   ) {
-    return this.products.listProducts(user, siteId, normalizePage(page), normalizePageSize(pageSize), keyword, series, industry)
+    return this.products.listProducts(
+      user,
+      siteId,
+      normalizePage(page),
+      normalizePageSize(pageSize),
+      keyword,
+      series,
+      industry
+    )
   }
 
   @Get('products/:id/detail')
@@ -106,6 +128,7 @@ export class CatalogController {
   // ---------------- 成功案例 ----------------
 
   @Get('cases')
+  @RequireMenu('/sites/cases')
   @ApiOperation({ summary: '案例分页列表（keyword 匹配标题，可按行业过滤）' })
   listCases(
     @CurrentUser() user: AuthUser,
@@ -119,24 +142,28 @@ export class CatalogController {
   }
 
   @Get('cases/:id/detail')
+  @RequireMenu('/sites/cases')
   @ApiOperation({ summary: '单条案例详情（含正文/项目信息/项目画面，编辑回显用）' })
   getCase(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.cases.getCase(user, id)
   }
 
   @Post('cases')
+  @RequireMenu('/sites/cases')
   @ApiOperation({ summary: '新建案例（保存即发布，自动派生详情页并重算列表卡片）' })
   createCase(@CurrentUser() user: AuthUser, @Body() dto: CreateCaseDto) {
     return this.cases.createCase(user, dto)
   }
 
   @Patch('cases/:id')
+  @RequireMenu('/sites/cases')
   @ApiOperation({ summary: '编辑案例（slug 不可改；详情页缺失自动补建并重算列表卡片）' })
   updateCase(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCaseDto) {
     return this.cases.updateCase(user, id, dto)
   }
 
   @Delete('cases/:id')
+  @RequireMenu('/sites/cases')
   @ApiOperation({ summary: '删除案例（删发布产物页面与表记录，重算列表卡片并触发发布）' })
   removeCase(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.cases.removeCase(user, id)
@@ -151,6 +178,7 @@ export class CatalogController {
   }
 
   @Post('cases/rebuild')
+  @RequireMenu('/sites/cases')
   @ApiOperation({ summary: '批量重建案例派生页面（导入/修复用）：全部案例补建或刷新详情页 + 重算列表页，统一发布一次' })
   rebuildCases(@CurrentUser() user: AuthUser, @Query('siteId') siteId: string) {
     return this.cases.rebuild(user, siteId)

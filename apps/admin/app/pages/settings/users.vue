@@ -4,7 +4,7 @@
  * 表格：统一 border 模式（列宽可拖拽）；表单走独立弹窗组件 AdminUserFormDialog
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { adminUsersApi, rolesApi, sitesApi, type AdminUserItem, type RoleItem } from '~/config/api'
+import { adminUsersApi, rolesApi, type AdminUserItem, type RoleItem } from '~/config/api'
 import { TERMS } from '~/config/glossary'
 import { PAGINATION_LAYOUT, PAGE_SIZE_DEFAULT, PAGE_SIZE_OPTIONS } from '~/config/pagination'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
@@ -21,7 +21,6 @@ const roleFilter = ref<string | ''>('')
 const loading = ref(false)
 
 const roles = ref<RoleItem[]>([])
-const sites = ref<{ id: string; name: string }[]>([])
 
 const showDialog = ref(false)
 const editingUser = ref<AdminUserItem | null>(null)
@@ -43,16 +42,8 @@ async function load() {
 }
 
 async function loadOptions() {
-  const [roleResult, siteResult] = await Promise.all([rolesApi.list(), sitesApi.list({ pageSize: 100 })])
+  const roleResult = await rolesApi.list()
   roles.value = roleResult.list
-  sites.value = siteResult.list
-}
-
-/** 站点授权展示：平台级角色为全部站点，其余按授权站点名拼接 */
-function siteLabel(row: AdminUserItem) {
-  if (row.platform) return '全部站点'
-  if (!row.siteIds.length) return '-'
-  return row.siteIds.map((id) => sites.value.find((site) => site.id === id)?.name || `#${id}`).join('、')
 }
 
 function openCreate() {
@@ -128,10 +119,6 @@ onMounted(async () => {
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column min-width="200" show-overflow-tooltip>
-        <template #header><TermHint term="siteGrant" /></template>
-        <template #default="{ row }">{{ siteLabel(row) }}</template>
-      </el-table-column>
       <el-table-column label="状态" width="80">
         <template #default="{ row }">
           <span :class="row.enabled ? 'c-success' : 'c-warning'">
@@ -165,7 +152,7 @@ onMounted(async () => {
       />
     </div>
 
-    <AdminUserFormDialog v-model="showDialog" :user="editingUser" :roles="roles" :sites="sites" @saved="load" />
+    <AdminUserFormDialog v-model="showDialog" :user="editingUser" :roles="roles" @saved="load" />
   </div>
 </template>
 

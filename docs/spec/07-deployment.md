@@ -130,6 +130,9 @@ flowchart TB
 | `DB_HOST` / `DB_PORT` / `DB_USER`      | 数据库地址与账号（`DB_PORT` 缺省 3306）           | env 文件                                                      |
 | `DB_PASSWORD` / `DB_NAME`              | 数据库口令与库名                                  | env 文件                                                      |
 | `JWT_SECRET` / `JWT_EXPIRES_IN`        | 管理后台 JWT 密钥与有效期                         | env 文件（**生产必须 32 位以上随机串**，占位值会告警）        |
+| `INTERNAL_API_TOKEN`                   | 服务端与 GEO 之间的内部调用凭据，非浏览器权限凭据 | env 显式值优先；未配置时由 `config/index.mjs` 从 `JWT_SECRET` 派生并注入 |
+| `TRUSTED_PROXIES`                      | 服务端需求入口 / GEO 采集入口信任的代理 CIDR，逗号分隔 | env 值由 `buildAppEnv()` 原样透传；服务端映射为 `trustedProxies`，GEO 中间件直接读取；缺省空列表 |
+| `DBIP_CITY_MMDB`                       | 服务端保存请求时使用的 DB-IP City Lite 离线 MMDB 路径 | env 值由 `buildAppEnv()` 原样透传；映射为 `dbipCityMmdb`，缺省 `data/dbip-city-lite.mmdb`，相对服务端工作目录或绝对路径 |
 | `UPLOAD_DIR` / `PUBLIC_URL_PREFIX`     | 上传物理目录与对外 URL 前缀                       | env 文件                                                      |
 | `TZ`                                   | 时区                                              | 缺省 `Asia/Shanghai`                                          |
 | `GEO_PROJECT_DIR` / `SITES_OUTPUT_DIR` | 发布时定位 GEO 项目与 SSG 产物目录                | 服务端保留相对默认值（`../geo`、`../geo/sites`），容器内由 compose 覆盖 |
@@ -138,6 +141,15 @@ flowchart TB
 | `NODE_ENV`                             | 决定是否启用 Swagger 等环境分支                   | 等同运行环境名（由启动器注入）                                |
 
 > 服务端启动时用 **zod 校验**关键变量，缺失或非法直接启动失败（`apps/server/src/config/env.validation.ts`）。
+
+### 3.3.1 入站监控 / 需求配置与未验收边界（2026-11-06）
+
+- `TRUSTED_PROXIES`、`DBIP_CITY_MMDB` 已在 `env/.env.example` 登记，并作为可选字符串进入服务端 zod 配置。根 `config/index.mjs` 通过 `...config.vars` 注入现有值，没有额外默认代理网段或路径派生；本轮仅同步说明，不修改配置值、密钥或应用代码。
+- **代理信任须按真实直连拓扑配置**：peerIp 不命中可信 CIDR 时不用转发头解析客户端 IP；命中后 X-Forwarded-For 从右向左跳过可信代理。未配置时只使用直连地址，不因有 nginx、内网或回环地址就自动信任；格式错误不应获得信任，但 zod 仅验证字符串、两端解析实现并不完全相同，恶意/畸形代理链及生产拓扑仍需独立验收。CORS 白名单不代替内部令牌或代理信任。
+- **MMDB 是服务器侧离线数据**：相对路径以服务端进程工作目录为基准（仓库形态为 `apps/server`，部署包为包内服务端目录），容器需使用容器内可读路径及挂载；不可照搬本机绝对路径。未配置时使用上述默认路径，文件缺失/读取失败返回空地域及 `unavailable`，不阻断日志保存；非法、非公网、未命中、读取异常与命中分别登记 geoStatus，查询不重算历史地域。
+- **本机有限验证已完成**：development 当前指向被忽略的 `aiTest/dbip-city-lite-20261106/dbip-city-lite-2026-11.mmdb` 绝对路径；已有证据记录完整配置注入、真实 MMDB/GeoIpService 读取（6 个公网 IPv4/IPv6 样本、5 个控制样本），库版本由 buildEpoch 得到 `2026-11-01`，不是文件名推断。该结论不覆盖真实数据库写入、全库准确度、页面署名或线上运行进程。
+- **替库不承诺热更新**：当前 GeoIpService 懒加载并缓存 reader/加载 Promise；同进程替换文件、修改路径或补齐首次失败的文件不会自动重新加载。需在授权运维窗口重新启动服务端并复核新版本；本轮不重启、不迁移、不发布。DB-IP City Lite 为近似地域数据，展示须保留链接至 DB-IP 的「IP Geolocation by DB-IP」署名及 CC BY 4.0 许可说明。
+- **部署仍待验收**：容器环境变量注入/数据挂载、部署包的数据文件交付、可信反代链、GEO finish/close 单次上报、真实数据库联调及旧 SSG 页面的 widget 首次发布均不因本轮文档同步而视为完成；不新增自动下载、自动拷库、热替库或多进程共享限流承诺。
 
 ### 3.4 与 Docker 形态的关系
 

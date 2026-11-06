@@ -171,46 +171,41 @@ defineBlock({
           <figcaption v-if="block.caption">{{ block.caption }}</figcaption>
         </figure>
 
-      <figure v-else-if="block.kind === 'video'" class="art-video">
-        <video
-          :src="block.src"
-          :poster="block.poster || undefined"
-          controls
-          playsinline
-          preload="metadata"
+        <figure v-else-if="block.kind === 'video'" class="art-video">
+          <video :src="block.src" :poster="block.poster || undefined" controls playsinline preload="metadata" />
+          <figcaption v-if="block.caption">{{ block.caption }}</figcaption>
+        </figure>
+
+        <div v-else-if="block.kind === 'table'" class="art-table" :style="alignStyle(block.align)">
+          <table>
+            <thead v-if="block.header && block.rows?.length">
+              <tr>
+                <!-- eslint-disable-next-line vue/no-v-html -- 单元格 html 已在服务端白名单化 -->
+                <th v-for="(cell, ci) in block.rows[0]" :key="ci" v-html="cell" />
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, ri) in block.bodyRows" :key="ri">
+                <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
+                <td v-for="(cell, ci) in row" :key="ci" v-html="cell" />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- rich：块级受限 HTML（段落 + 有序/无序列表，ADR-058 问答答案用），服务端已白名单化 -->
+        <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
+        <div v-else-if="block.kind === 'rich'" class="art-rich" v-html="block.html" />
+
+        <!-- eslint-disable-next-line vue/no-v-html -- html 已在服务端白名单化（仅行内标记） -->
+        <h2
+          v-else-if="block.kind === 'heading'"
+          :class="['art-h', `art-h${block.level}`]"
+          :style="alignStyle(block.align)"
+          v-html="block.html || block.text"
         />
-        <figcaption v-if="block.caption">{{ block.caption }}</figcaption>
-      </figure>
-
-      <div
-        v-else-if="block.kind === 'table'"
-        class="art-table"
-        :style="alignStyle(block.align)"
-      >
-        <table>
-          <thead v-if="block.header && block.rows?.length">
-            <tr>
-              <!-- eslint-disable-next-line vue/no-v-html -- 单元格 html 已在服务端白名单化 -->
-              <th v-for="(cell, ci) in block.rows[0]" :key="ci" v-html="cell" />
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(row, ri) in block.bodyRows" :key="ri">
-              <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
-              <td v-for="(cell, ci) in row" :key="ci" v-html="cell" />
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- rich：块级受限 HTML（段落 + 有序/无序列表，ADR-058 问答答案用），服务端已白名单化 -->
-      <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
-      <div v-else-if="block.kind === 'rich'" class="art-rich" v-html="block.html" />
-
-      <!-- eslint-disable-next-line vue/no-v-html -- html 已在服务端白名单化（仅行内标记） -->
-      <h2 v-else-if="block.kind === 'heading'" :class="['art-h', `art-h${block.level}`]" :style="alignStyle(block.align)" v-html="block.html || block.text" />
-      <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
-      <p v-else :style="alignStyle(block.align)" v-html="block.html || block.text" />
+        <!-- eslint-disable-next-line vue/no-v-html -- 同上 -->
+        <p v-else :style="alignStyle(block.align)" v-html="block.html || block.text" />
       </template>
     </template>
   </div>

@@ -7,7 +7,6 @@ import * as bcrypt from 'bcryptjs'
 import { PrismaService } from '../../prisma/prisma.service'
 import { formatDateTime } from '../../common/utils/datetime'
 import type { AuthUser } from '../../common/decorators/current-user.decorator'
-import { toJsonInput } from '../../common/utils/json'
 import { normalizePage, normalizePageSize } from '../../common/constants'
 import type { CreateAdminUserDto, QueryAdminUserDto, UpdateAdminUserDto } from './dto'
 
@@ -17,7 +16,6 @@ interface UserRecord {
   username: string
   displayName: string | null
   roleId: string
-  siteIds: unknown
   enabled: boolean
   createdAt: Date
   updatedAt: Date
@@ -53,7 +51,6 @@ export class AdminUsersService {
     return { list: list.map((item) => this.toView(item as UserRecord)), total, page, pageSize }
   }
 
-  /** 新建用户（仅平台级角色） */
   async create(dto: CreateAdminUserDto) {
     const exists = await this.prisma.adminUser.findUnique({ where: { username: dto.username }, select: { id: true } })
     if (exists) throw new BadRequestException(`账号「${dto.username}」已存在`)
@@ -65,7 +62,6 @@ export class AdminUsersService {
         password: await bcrypt.hash(dto.password, 10),
         displayName: dto.displayName || null,
         roleId: dto.roleId,
-        siteIds: toJsonInput(dto.siteIds ?? []),
         enabled: dto.enabled ?? true
       },
       include: { role: { select: { id: true, code: true, name: true, platform: true } } }
@@ -73,7 +69,6 @@ export class AdminUsersService {
     return this.toView(user as UserRecord)
   }
 
-  /** 编辑用户（仅平台级角色）：账号不可改，密码留空表示不修改 */
   async update(id: string, dto: UpdateAdminUserDto) {
     const current = await this.prisma.adminUser.findUnique({ where: { id }, include: { role: true } })
     if (!current) throw new NotFoundException('用户不存在')
@@ -91,7 +86,6 @@ export class AdminUsersService {
         ...(dto.password ? { password: await bcrypt.hash(dto.password, 10) } : {}),
         ...(dto.displayName !== undefined ? { displayName: dto.displayName || null } : {}),
         ...(dto.roleId !== undefined ? { roleId: dto.roleId } : {}),
-        ...(dto.siteIds !== undefined ? { siteIds: toJsonInput(dto.siteIds) } : {}),
         ...(dto.enabled !== undefined ? { enabled: dto.enabled } : {})
       },
       include: { role: { select: { id: true, code: true, name: true, platform: true } } }
@@ -99,7 +93,6 @@ export class AdminUsersService {
     return this.toView(user as UserRecord)
   }
 
-  /** 删除用户（仅平台级角色）：不允许删除自己，且始终保留一个平台级用户 */
   async remove(currentUser: AuthUser, id: string) {
     if (currentUser.id === id) throw new BadRequestException('不能删除当前登录账号')
 
@@ -126,7 +119,6 @@ export class AdminUsersService {
     if (count <= 1) throw new BadRequestException(`系统必须保留至少一个可用的平台级用户，无法执行${action}`)
   }
 
-  /** 统一对外视图：站点 ID 数组化、时间转中国时区字符串，不含密码 */
   private toView(user: UserRecord) {
     return {
       id: user.id,
@@ -136,7 +128,6 @@ export class AdminUsersService {
       roleCode: user.role.code,
       roleName: user.role.name,
       platform: user.role.platform,
-      siteIds: Array.isArray(user.siteIds) ? (user.siteIds as string[]) : [],
       enabled: user.enabled,
       createdAt: formatDateTime(user.createdAt),
       updatedAt: formatDateTime(user.updatedAt)

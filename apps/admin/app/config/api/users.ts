@@ -12,7 +12,6 @@ export interface AdminUserItem {
   roleCode: string
   roleName: string
   platform: boolean
-  siteIds: string[]
   enabled: boolean
   createdAt: string
   updatedAt: string
@@ -23,7 +22,6 @@ export interface AdminUserPayload {
   password?: string
   displayName?: string
   roleId?: string
-  siteIds?: string[]
   enabled?: boolean
 }
 

@@ -13,13 +13,13 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { PUBLIC_BLOCK_SITE_ID, blocksApi, sitesApi, type BlockListItem } from '~/config/api'
 import { BLOCK_SCOPE_LABEL } from '~/config/menu'
 import { PAGINATION_LAYOUT, PAGE_SIZE_DEFAULT, PAGE_SIZE_OPTIONS } from '~/config/pagination'
-import { useAuthStore } from '~/stores/auth'
+import { useMenuStore } from '~/stores/menu'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
 
 /** loading：行级动作（引入 / 回退 / 使用位置）用 keyed；防抖由各动作外层的 `debounce` 负责 */
 const { isLoading, runKeyed } = useLoading()
-/** 平台级角色才可编辑公共模板（模板库对站点级不可见） */
-const auth = useAuthStore()
+const menus = useMenuStore()
+const canManageTemplates = computed(() => Boolean(menus.titleOf('/blocks/templates')))
 
 /** window.open 不经路由、不会自动带 /geocms/ 基础路径，新标签页地址统一用 router.resolve 取带前缀的 href */
 const router = useRouter()
@@ -213,7 +213,7 @@ onMounted(async () => {
             使用位置
           </el-button>
           <el-button
-            v-if="row.isSiteScoped || auth.isPlatformAdmin"
+            v-if="row.isSiteScoped || canManageTemplates"
             link
             size="small"
             type="primary"

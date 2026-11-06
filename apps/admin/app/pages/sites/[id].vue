@@ -139,8 +139,8 @@ onMounted(load)
               <label><TermHint term="siteSlug" /> *（站点标识 / 产物目录名）</label>
               <input v-model="form.slug" class="inp" placeholder="如 example-site" />
               <p class="tip">
-                站点列表「预览」地址 = 预览基址 + 站点前缀 + 预览票据（ADR-049）；本地多个站点共用
-                localhost:3002 时，靠该前缀区分目标站点
+                站点列表「预览」地址 = 预览基址 + 站点前缀 + 预览票据（ADR-049）；本地多个站点共用 localhost:3002
+                时，靠该前缀区分目标站点
               </p>
             </div>
             <div class="field">

@@ -62,25 +62,8 @@ async function upsertRole(data: {
   })
 }
 
-/**
- * 角色-菜单授权：仅在该角色**尚无任何授权**时写入默认值
- * 这样重复执行种子不会覆盖运营在后台调整过的授权
- */
-async function grantMenusIfEmpty(roleId: string, menuIds: string[]) {
-  const count = await prisma.roleMenu.count({ where: { roleId } })
-  if (count > 0) return
-  if (!menuIds.length) return
-  await prisma.roleMenu.createMany({ data: menuIds.map((menuId) => ({ roleId, menuId })) })
-}
-
-/**
- * 角色-菜单授权：**只补缺失的菜单**（已授权的跳过）
- *
- * 用途：老库的角色早已有授权，「仅空时写」的 `grantMenusIfEmpty` 不会再生效，
- * 于是**新增菜单**（如「内容管理」父菜单、「块模板」）需要在种子里显式补齐，
- * 否则运营/站点管理员的侧栏看不到新入口。只补不删，不覆盖运营在后台调整过的授权。
- */
-async function grantMenusIfMissing(roleId: string, menuIds: string[]) {
+async function initializeRoleMenus(roleId: string, menuIds: string[], existingRoleIds: Set<string>) {
+  if (existingRoleIds.has(roleId)) return
   if (!menuIds.length) return
   await prisma.roleMenu.createMany({
     data: menuIds.map((menuId) => ({ roleId, menuId })),
@@ -203,8 +186,15 @@ async function syncBlockDefinitions() {
 async function main() {
   process.env.TZ = process.env.TZ || 'Asia/Shanghai'
 
+  const existingRoleIds = new Set((await prisma.role.findMany({ select: { id: true } })).map((role) => role.id))
+  await prisma.$transaction(async (tx) => {
+    const oldMenus = await tx.menu.findMany({ where: { path: '/' }, select: { id: true } })
+    const menuIds = oldMenus.map((menu) => menu.id)
+    await tx.roleMenu.deleteMany({ where: { menuId: { in: menuIds } } })
+    await tx.menu.deleteMany({ where: { id: { in: menuIds } } })
+  })
+
   // ---------- 后台菜单（用户 → 角色 → 菜单 的最后一环） ----------
-  const dashboard = await upsertMenu({ title: '总览仪表盘', parentId: null, path: '/', sort: 1 })
   /**
    * 「站点管理」改为目录型菜单（容器，本身不可点击，写法与「内容管理」一致），
    * 站点域的入口全部挂在它下面；子级 sort 留空隙（10/20/30）便于插入新入口。
@@ -218,10 +208,16 @@ async function main() {
    * 前两者是「表驱动」内容域（Product / CaseStudy 为管理源，保存即自动派生详情页 + 重算列表页），
    * 后两者沿用 NewsArticle / FaqItem；四个域共用同一套「表 + 派生页面」口径。
    */
-  const sitesProducts = await upsertMenu({ title: '产品体系', parentId: sitesRoot.id, path: '/sites/products', sort: 12 })
+  const sitesProducts = await upsertMenu({
+    title: '产品体系',
+    parentId: sitesRoot.id,
+    path: '/sites/products',
+    sort: 12
+  })
   const sitesCases = await upsertMenu({ title: '成功案例', parentId: sitesRoot.id, path: '/sites/cases', sort: 14 })
   const sitesNews = await upsertMenu({ title: '新闻资讯', parentId: sitesRoot.id, path: '/sites/news', sort: 20 })
   const sitesFaqs = await upsertMenu({ title: '常见问题', parentId: sitesRoot.id, path: '/sites/faqs', sort: 30 })
+  const sitesDemands = await upsertMenu({ title: '需求收集', parentId: sitesRoot.id, path: '/sites/demands', sort: 40 })
   /** 内容域父菜单（容器，本身不可点击）：让「内容 / 页面」与「块库」等同级并列 */
   const contentRoot = await upsertMenu({ title: '内容管理', parentId: null, path: null, sort: 3 })
   const members = await upsertMenu({ title: '会员管理', parentId: null, path: '/members', sort: 4 })
@@ -256,13 +252,13 @@ async function main() {
   const filesMenu = await upsertMenu({ title: '素材管理', parentId: contentRoot.id, path: '/files', sort: 6 })
 
   const allMenuIds = [
-    dashboard.id,
     sitesRoot.id,
     sitesList.id,
     sitesProducts.id,
     sitesCases.id,
     sitesNews.id,
     sitesFaqs.id,
+    sitesDemands.id,
     contentRoot.id,
     members.id,
     monitor.id,
@@ -280,7 +276,6 @@ async function main() {
   ]
   /** 站点级角色的默认菜单：不含站点管理、系统设置与块模板库（模板库仅平台级）；**父菜单必须授权**，否则子菜单被一并丢弃 */
   const siteMenuIds = [
-    dashboard.id,
     contentRoot.id,
     content.id,
     editor.id,
@@ -309,16 +304,8 @@ async function main() {
     sort: 2
   })
 
-  await grantMenusIfEmpty(adminRole.id, allMenuIds)
-  await grantMenusIfEmpty(siteAdminRole.id, siteMenuIds)
-  /**
-   * 内置角色**按定位补齐**授权（只增不减）：
-   * 老库里角色的授权只覆盖「当时已存在的菜单」，后来新增的菜单不会自动补上——
-   * 表现为管理员侧栏看不到「内容编辑器 / 块库 / 导航管理」，运营只能去角色管理里手工勾。
-   * 这里让两个内置角色回到各自定位的全量集合；只补不删，不影响额外授权的自定义角色。
-   */
-  await grantMenusIfMissing(adminRole.id, allMenuIds)
-  await grantMenusIfMissing(siteAdminRole.id, siteMenuIds)
+  await initializeRoleMenus(adminRole.id, allMenuIds, existingRoleIds)
+  await initializeRoleMenus(siteAdminRole.id, siteMenuIds, existingRoleIds)
 
   // ---------- 平台管理员（绑定「系统管理员」角色） ----------
   const adminUser = await prisma.adminUser.upsert({

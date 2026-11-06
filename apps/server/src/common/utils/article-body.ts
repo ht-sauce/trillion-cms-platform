@@ -260,7 +260,12 @@ export function articleBlocksToText(blocks: ArticleBlock[]): string {
     .map((block) => {
       if (block.kind === 'table') {
         return (block.rows || [])
-          .map((row) => row.map((cell) => inlineHtmlToText(cell)).filter(Boolean).join(' '))
+          .map((row) =>
+            row
+              .map((cell) => inlineHtmlToText(cell))
+              .filter(Boolean)
+              .join(' ')
+          )
           .filter(Boolean)
           .join('\n')
       }

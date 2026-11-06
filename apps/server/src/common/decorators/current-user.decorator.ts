@@ -14,10 +14,7 @@ export interface AuthUser {
   roleCode: string
   /** 角色名称（中文展示） */
   roleName: string
-  /** 是否平台级角色：平台级操作的唯一判据（PlatformAdminGuard 使用） */
   platform: boolean
-  /** 授权站点 ID；平台级角色为空数组表示全站点 */
-  siteIds: string[]
 }
 
 export const CurrentUser = createParamDecorator((data: keyof AuthUser | undefined, ctx: ExecutionContext) => {

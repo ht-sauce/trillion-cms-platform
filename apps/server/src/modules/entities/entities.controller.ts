@@ -5,12 +5,15 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } f
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { EntitiesService } from './entities.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('实体')
 @ApiBearerAuth()
 @Controller('entities')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/monitor')
 export class EntitiesController {
   constructor(private readonly service: EntitiesService) {}
 

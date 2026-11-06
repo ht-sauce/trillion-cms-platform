@@ -206,8 +206,7 @@ export function detectPendingProfileFields(
   },
   businessType?: string | null
 ): string[] {
-  const labels =
-    businessType === 'industrial' ? INDUSTRIAL_PROFILE_PENDING_LABELS : SITE_PROFILE_PENDING_LABELS
+  const labels = businessType === 'industrial' ? INDUSTRIAL_PROFILE_PENDING_LABELS : SITE_PROFILE_PENDING_LABELS
   return Object.entries(labels)
     .filter(([key]) => {
       const value = (profile as Record<string, unknown>)[key]

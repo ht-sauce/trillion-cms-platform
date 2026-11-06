@@ -194,7 +194,9 @@ export class NewsFaqSyncService {
       'hero-dark': hero,
       'article-meta': { date: input.publishDate },
       /** 正文整篇 HTML 优先（ADR-060）；无 HTML 时回落历史块数组 / 纯文本分段 */
-      'article-body': input.bodyHtml ? { html: input.bodyHtml, blocks: [] } : { blocks: resolveArticleBlocks(input.body ?? null, input.paragraphs) }
+      'article-body': input.bodyHtml
+        ? { html: input.bodyHtml, blocks: [] }
+        : { blocks: resolveArticleBlocks(input.body ?? null, input.paragraphs) }
     }
     return withStableIds(assembleFromTemplate(template, overrides), oldBlocks)
   }
@@ -269,10 +271,7 @@ export class NewsFaqSyncService {
    *   手工指定的 relatedIds 优先（按保存顺序，只取已发布、非自身、丢失的记录自动跳过）；
    *   没指定（或指定的全部失效）时回落到「同分类其它问答」——即改动前的自动口径。
    */
-  resolveRelated(
-    detail: { id: string; category: string; relatedIds: string[] },
-    all: FaqDetail[]
-  ): FaqDetail[] {
+  resolveRelated(detail: { id: string; category: string; relatedIds: string[] }, all: FaqDetail[]): FaqDetail[] {
     const manual: FaqDetail[] = []
     for (const id of detail.relatedIds) {
       const hit = all.find((item) => item.id === id && item.id !== detail.id)
@@ -400,7 +399,10 @@ export class NewsFaqSyncService {
     for (const detail of all) {
       if (!changed.has(detail.category)) continue
       if (detail.pageId == null) continue
-      const page = await this.prisma.page.findUnique({ where: { id: detail.pageId }, select: { id: true, blocks: true } })
+      const page = await this.prisma.page.findUnique({
+        where: { id: detail.pageId },
+        select: { id: true, blocks: true }
+      })
       if (!page) continue
       const items = this.resolveRelated(detail, all)
         .slice(0, RELATED_FAQ_MAX)
@@ -436,7 +438,9 @@ export class NewsFaqSyncService {
     for (const inst of instances) {
       if (inst.key !== 'faq-list') continue
       const key = String(inst.data?.category ?? '').trim() || String(inst.data?.title ?? '').trim()
-      const matched = shown.find((detail) => detail.category === key || String(inst.data?.title ?? '') === detail.category)
+      const matched = shown.find(
+        (detail) => detail.category === key || String(inst.data?.title ?? '') === detail.category
+      )
       if (matched && !categories.includes(matched.category)) categories.push(matched.category)
     }
     for (const detail of shown) {

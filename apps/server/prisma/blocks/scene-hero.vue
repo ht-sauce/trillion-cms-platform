@@ -27,7 +27,11 @@ function pick(i: number) {
 
 /** 标题：`\n` 换行，高亮词包 `<em>`（先转义再注入受控标记） */
 const titleHtml = computed(() => {
-  const esc = (t: unknown) => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const esc = (t: unknown) =>
+    String(t ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
   let out = esc(props.data.h1)
   const mark = esc(props.data.h1Grad || '')
   if (mark && out.includes(mark)) out = out.replace(mark, `<em>${mark}</em>`)
@@ -109,7 +113,13 @@ defineBlock({
         <p class="sh-lead">{{ data.lead }}</p>
         <div class="sh-acts">
           <template v-for="action in data.actions || []" :key="action.label">
-            <a v-if="action.href" :href="action.href" class="sh-btn" :class="action.primary ? 'primary' : 'ghost'">
+            <a
+              v-if="action.href"
+              :href="action.href"
+              class="sh-btn"
+              :class="action.primary ? 'primary' : 'ghost'"
+              :data-contact-action="/^\/contact\/?$/.test(String(action.href)) ? 'demand' : undefined"
+            >
               {{ action.label }}
             </a>
             <span v-else class="sh-btn" :class="action.primary ? 'primary' : 'ghost'">{{ action.label }}</span>
@@ -139,7 +149,9 @@ defineBlock({
     <div v-if="(data.stats || []).length" class="sh-statsbar">
       <div class="wrap sh-stats-grid">
         <div v-for="stat in data.stats" :key="stat.label" class="sh-stat">
-          <b>{{ stat.n }}<small v-if="stat.unit">{{ stat.unit }}</small></b>
+          <b
+            >{{ stat.n }}<small v-if="stat.unit">{{ stat.unit }}</small></b
+          >
           <span>{{ stat.label }}</span>
         </div>
       </div>
@@ -181,11 +193,17 @@ defineBlock({
   transform: scale(1);
 }
 .sh-bg::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(90deg, rgba(6, 8, 10, 0.94) 0%, rgba(6, 8, 10, 0.72) 38%, rgba(6, 8, 10, 0.26) 68%, rgba(6, 8, 10, 0.58) 100%),
+    linear-gradient(
+      90deg,
+      rgba(6, 8, 10, 0.94) 0%,
+      rgba(6, 8, 10, 0.72) 38%,
+      rgba(6, 8, 10, 0.26) 68%,
+      rgba(6, 8, 10, 0.58) 100%
+    ),
     linear-gradient(180deg, rgba(6, 8, 10, 0.5) 0%, transparent 28%, rgba(6, 8, 10, 0.78) 100%);
 }
 .wrap {
@@ -217,7 +235,7 @@ defineBlock({
   margin-bottom: 24px;
 }
 .sh-eyebrow::before {
-  content: "";
+  content: '';
   width: 26px;
   height: 1px;
   background: var(--hero-accent, var(--teal));

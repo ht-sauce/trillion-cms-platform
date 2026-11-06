@@ -32,8 +32,6 @@ export interface AdminUserEntity {
   roleName: string
   /** 是否平台级角色 */
   platform: boolean
-  /** 可管理的站点 ID 列表；平台级角色为空表示全部 */
-  siteIds: string[]
 }
 
 /** 站点会员 */

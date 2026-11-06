@@ -304,12 +304,7 @@ const submit = debounce(() => {
           <section class="detail-block">
             <div class="block-head">
               <span class="block-title">系统特点</span>
-              <el-button
-                link
-                type="primary"
-                size="small"
-                @click="features.push({ title: '', desc: '', icon: '' })"
-              >
+              <el-button link type="primary" size="small" @click="features.push({ title: '', desc: '', icon: '' })">
                 加一条
               </el-button>
             </div>

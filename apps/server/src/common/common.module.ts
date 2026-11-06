@@ -8,6 +8,7 @@ import { Global, Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import { jwtExpiresIn } from './utils/jwt-expiry'
+import { MenuPermissionGuard } from './guards/menu-permission.guard'
 
 @Global()
 @Module({
@@ -22,6 +23,7 @@ import { jwtExpiresIn } from './utils/jwt-expiry'
       })
     })
   ],
-  exports: [JwtModule]
+  providers: [MenuPermissionGuard],
+  exports: [JwtModule, MenuPermissionGuard]
 })
 export class CommonModule {}

@@ -218,17 +218,15 @@ watch([page, pageSize, statusFilter], () => load())
                 target="_blank"
                 rel="noopener noreferrer"
                 title="打开真实线上地址"
-              >{{ row.domain }}</a>
+                >{{ row.domain }}</a
+              >
               <span v-else class="mono">-</span>
             </div>
             <div v-if="row.domains?.length" class="domain-alias">
               <el-tag v-for="item in row.domains" :key="item" size="small" type="info" effect="plain">
-                <a
-                  class="mono domain-link"
-                  :href="domainHref(item)"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >{{ item }}</a>
+                <a class="mono domain-link" :href="domainHref(item)" target="_blank" rel="noopener noreferrer">{{
+                  item
+                }}</a>
               </el-tag>
             </div>
           </div>
@@ -273,12 +271,7 @@ watch([page, pageSize, statusFilter], () => load())
       </el-table-column>
       <el-table-column label="操作" width="210" fixed="right" class-name="ops-col">
         <template #default="{ row }">
-          <el-button
-            link
-            size="small"
-            :loading="isLoading(`preview:${row.id}`)"
-            @click="onPreview(row)"
-          >
+          <el-button link size="small" :loading="isLoading(`preview:${row.id}`)" @click="onPreview(row)">
             预览
           </el-button>
           <el-button link size="small" type="primary" @click="navigateTo(`/sites/${row.id}`)">编辑</el-button>

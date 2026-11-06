@@ -1,12 +1,12 @@
 /**
  * 站点接口：列表 / 详情 / 新建 / 编辑 / 删除
- * 建站、改渲染模式等平台级操作由 PlatformAdminGuard 限制
  */
 import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { SitesService } from './sites.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
-import { PlatformAdminGuard } from '../../common/guards/platform-admin.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { BootstrapSiteDto, CreateSiteDto, QuerySiteDto, UpdateSiteDto } from './dto'
 import { BootstrapService } from './bootstrap.service'
@@ -14,7 +14,8 @@ import { BootstrapService } from './bootstrap.service'
 @ApiTags('站点')
 @ApiBearerAuth()
 @Controller('sites')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/sites')
 export class SitesController {
   constructor(
     private readonly sitesService: SitesService,
@@ -22,6 +23,21 @@ export class SitesController {
   ) {}
 
   @Get()
+  @RequireMenu([
+    '/sites',
+    '/content',
+    '/content/editor',
+    '/blocks',
+    '/navigations',
+    '/files',
+    '/members',
+    '/monitor',
+    '/sites/news',
+    '/sites/faqs',
+    '/sites/products',
+    '/sites/cases',
+    '/sites/demands'
+  ])
   @ApiOperation({ summary: '站点列表（分页、支持关键字与筛选）' })
   list(@CurrentUser() user: AuthUser, @Query() query: QuerySiteDto) {
     return this.sitesService.list(user, query)
@@ -34,21 +50,18 @@ export class SitesController {
   }
 
   @Post()
-  @UseGuards(PlatformAdminGuard)
   @ApiOperation({ summary: '新建站点' })
   create(@Body() dto: CreateSiteDto) {
     return this.sitesService.create(dto)
   }
 
   @Patch(':id')
-  @UseGuards(PlatformAdminGuard)
   @ApiOperation({ summary: '编辑站点' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateSiteDto) {
     return this.sitesService.update(id, dto)
   }
 
   @Delete(':id')
-  @UseGuards(PlatformAdminGuard)
   @ApiOperation({ summary: '删除站点' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.sitesService.remove(id)

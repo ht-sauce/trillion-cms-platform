@@ -53,7 +53,6 @@ function profileOf(businessType?: string | null) {
   return businessType === 'industrial' ? ENTITY_PROFILE.industrial : ENTITY_PROFILE.medical
 }
 
-
 /** 生成上下文：站点 + 页面（页面为可选，站点级文档不需要） */
 export interface GeoContext {
   site: {
@@ -291,7 +290,16 @@ export function buildPageJsonLd(context: GeoContext): string {
 
   /** 列表页输出 ItemList（集合语义） */
   if (context.page.kind === 'list') {
-    const listKeys = ['post-list', 'doctor-card', 'case-card', 'job-list', 'gallery', 'product-card', 'case-grid', 'cert-grid']
+    const listKeys = [
+      'post-list',
+      'doctor-card',
+      'case-card',
+      'job-list',
+      'gallery',
+      'product-card',
+      'case-grid',
+      'cert-grid'
+    ]
     const listBlock = context.page.blocks.find((block) => listKeys.includes(block.key))
     const items = (listBlock?.data?.items || listBlock?.data?.list || []) as unknown[]
     if (Array.isArray(items) && items.length) {

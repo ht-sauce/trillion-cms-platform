@@ -7,12 +7,15 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { NavigationService } from './navigation.service'
 import { SaveNavigationDto } from './dto'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('导航管理')
 @ApiBearerAuth()
 @Controller('navigations')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/navigations')
 export class NavigationController {
   constructor(private readonly service: NavigationService) {}
 

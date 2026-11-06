@@ -5,6 +5,8 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { ContentService } from './content.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { normalizePage, normalizePageSize } from '../../common/constants'
 import { CreateChannelDto, CreatePageDto, StatusDto, UpdatePageDto } from './dto'
@@ -12,7 +14,8 @@ import { CreateChannelDto, CreatePageDto, StatusDto, UpdatePageDto } from './dto
 @ApiTags('内容')
 @ApiBearerAuth()
 @Controller('content')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/content')
 export class ContentController {
   constructor(private readonly service: ContentService) {}
 

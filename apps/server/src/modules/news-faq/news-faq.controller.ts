@@ -33,19 +33,23 @@ import {
   UpdateFaqDto
 } from './dto'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { normalizePage, normalizePageSize } from '../../common/constants'
 
 @ApiTags('新闻问答')
 @ApiBearerAuth()
 @Controller('news-faq')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/sites/faqs')
 export class NewsFaqController {
   constructor(private readonly service: NewsFaqService) {}
 
   // ---------------- 新闻资讯 ----------------
 
   @Get('articles')
+  @RequireMenu('/sites/news')
   @ApiOperation({ summary: '文章分页列表（读 NewsArticle 表，按发布日期倒序，keyword 模糊匹配标题）' })
   listArticles(
     @CurrentUser() user: AuthUser,
@@ -58,24 +62,28 @@ export class NewsFaqController {
   }
 
   @Get('articles/:id/detail')
+  @RequireMenu('/sites/news')
   @ApiOperation({ summary: '单条文章详情（直读表；鉴权按记录归属站点判定，content 为纯文本正文）' })
   getArticleDetail(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.getArticleDetail(user, id)
   }
 
   @Post('articles')
+  @RequireMenu('/sites/news')
   @ApiOperation({ summary: '新建文章（保存即发布，自动派生详情页/列表页并触发页面级发布）' })
   createArticle(@CurrentUser() user: AuthUser, @Body() dto: CreateArticleDto) {
     return this.service.createArticle(user, dto)
   }
 
   @Patch('articles/:id')
+  @RequireMenu('/sites/news')
   @ApiOperation({ summary: '编辑文章（slug 不可改；页面缺失自动补建，重算列表页并触发页面级发布）' })
   updateArticle(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateArticleDto) {
     return this.service.updateArticle(user, id, dto)
   }
 
   @Delete('articles/:id')
+  @RequireMenu('/sites/news')
   @ApiOperation({ summary: '删除文章（删发布产物页面与表记录，重算列表页并触发页面级发布）' })
   removeArticle(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
     return this.service.removeArticle(user, id)
@@ -149,11 +157,7 @@ export class NewsFaqController {
 
   @Put('faqs/:id/related')
   @ApiOperation({ summary: '关联问题保存（按 id 顺序展示；空数组＝恢复同分类自动口径；只重算该详情页并发布）' })
-  setFaqRelated(
-    @CurrentUser() user: AuthUser,
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: SetFaqRelatedDto
-  ) {
+  setFaqRelated(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Body() dto: SetFaqRelatedDto) {
     return this.service.setFaqRelated(user, id, dto.ids)
   }
 
@@ -166,7 +170,10 @@ export class NewsFaqController {
   // ---------------- 批量重建 ----------------
 
   @Post('rebuild')
-  @ApiOperation({ summary: '批量重建派生页面（导入/修复用）：全部文章与问答补建或刷新详情页 + 重算列表页，统一发布一次' })
+  @RequireMenu({ all: ['/sites/news', '/sites/faqs'] })
+  @ApiOperation({
+    summary: '批量重建派生页面（导入/修复用）：全部文章与问答补建或刷新详情页 + 重算列表页，统一发布一次'
+  })
   rebuild(@CurrentUser() user: AuthUser, @Query('siteId') siteId: string) {
     return this.service.rebuild(user, siteId)
   }

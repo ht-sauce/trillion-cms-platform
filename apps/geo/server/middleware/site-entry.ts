@@ -12,9 +12,6 @@
  * 发布管线零改动：产物目录从「nginx 的 root」变为「GEO 的磁盘缓存层」；
  * 增量构建的目录 rename 在 POSIX 下对正在读取的流安全（inode 存续），读流 error 时只断开当前响应。
  *
- * 站点级流量监控：所有页面类请求（静态资产除外）输出单行 JSON 访问日志
- * （host / site / method / path / status / 耗时 / UA / 产物命中），覆盖爬虫抓取、无 JS 访问等埋点盲区；
- * 页面级 PV/UV 仍走 TrackEvent（客户端埋点，按 siteId 隔离）。
  */
 import { createReadStream, existsSync, statSync, type Stats } from 'node:fs'
 import { extname, join, resolve } from 'node:path'
@@ -28,12 +25,6 @@ const siteCache = new Map<string, { slug: string | null; expires: number }>()
 const SITE_CACHE_TTL = 60_000
 const SITE_NEGATIVE_TTL = 30_000
 const SITE_LOOKUP_TIMEOUT = 2_000
-
-/** 静态资产扩展名：跳过访问日志（页面数据请求 _payload.json 不在清单内，照记） */
-const STATIC_EXT = new Set([
-  '.js', '.css', '.map', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.avif', '.svg', '.ico',
-  '.woff', '.woff2', '.ttf', '.eot'
-])
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -109,9 +100,7 @@ function findProduct(slug: string, pathname: string): { abs: string; rel: string
 export default defineEventHandler(async (event) => {
   const { req, res } = event.node
   const host = (req.headers.host || '').split(':')[0]
-  const startedAt = Date.now()
 
-  /** 本地回环（开发 / 预览基址）：完全放行，仍走 URL 首段前缀形态（ADR-031），不记访问日志 */
   if (!host || LOOPBACK_HOSTS.includes(host)) return
 
   /** 非 GET/HEAD、带预览票据、/static 代理：一律放行 */
@@ -119,36 +108,12 @@ export default defineEventHandler(async (event) => {
   if (method !== 'GET' && method !== 'HEAD') return
   if (event.path.includes('__preview=')) return
   if (event.path === '/static' || event.path.startsWith('/static/')) return
+  if (event.path.startsWith('/demand-widget/')) return
 
   const pathname = event.path.split('?')[0]
-  const isAsset = STATIC_EXT.has(extname(pathname)) || pathname.startsWith('/_nuxt/')
 
-  /**
-   * 访问日志（页面类请求；静态资产跳过）：
-   * 放行 SSR 与产物直出都要记（含各自耗时）；site / cache 字段在后续流程回填。
-   */
-  const access = { site: null as string | null, cache: 'ssr' as 'file' | 'ssr' }
-  if (!isAsset) {
-    res.on('finish', () => {
-      const record = {
-        ts: new Date().toISOString(),
-        host,
-        site: access.site,
-        method: req.method,
-        path: pathname,
-        status: res.statusCode,
-        ms: Date.now() - startedAt,
-        cache: access.cache,
-        ua: (req.headers['user-agent'] || '').slice(0, 180)
-      }
-      console.log('[access] ' + JSON.stringify(record))
-    })
-  }
-
-  /** 域名解析不出站点：放行 SSR（渲染层按环境变量默认站点兜底），site 字段留空 */
   const slug = await resolveSiteSlug(host)
   if (!slug) return
-  access.site = slug
 
   const product = findProduct(slug, pathname)
 
@@ -165,7 +130,6 @@ export default defineEventHandler(async (event) => {
   const skipHtmlDirect = process.env.SITES_STATIC_DISABLED === '1' && product?.abs.endsWith('.html')
 
   if (!product || skipHtmlDirect) return
-  access.cache = 'file'
 
   const ext = extname(product.abs).toLowerCase()
   setHeader(event, 'Content-Type', MIME[ext] || 'application/octet-stream')

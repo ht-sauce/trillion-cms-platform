@@ -5,7 +5,8 @@ import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, Query
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { MenusService } from './menus.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
-import { PlatformAdminGuard } from '../../common/guards/platform-admin.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { CreateMenuDto, QueryMenuDto, UpdateMenuDto } from './dto'
 
@@ -23,28 +24,32 @@ export class MenusController {
   }
 
   @Get()
-  @UseGuards(PlatformAdminGuard)
+  @UseGuards(MenuPermissionGuard)
+  @RequireMenu(['/settings/menus', '/settings/roles'])
   @ApiOperation({ summary: '菜单配置列表（平铺，含隐藏与停用项）' })
   list(@Query() query: QueryMenuDto) {
     return this.menusService.list(query)
   }
 
   @Post()
-  @UseGuards(PlatformAdminGuard)
+  @UseGuards(MenuPermissionGuard)
+  @RequireMenu('/settings/menus')
   @ApiOperation({ summary: '新建菜单' })
   create(@Body() dto: CreateMenuDto) {
     return this.menusService.create(dto)
   }
 
   @Patch(':id')
-  @UseGuards(PlatformAdminGuard)
+  @UseGuards(MenuPermissionGuard)
+  @RequireMenu('/settings/menus')
   @ApiOperation({ summary: '编辑菜单' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateMenuDto) {
     return this.menusService.update(id, dto)
   }
 
   @Delete(':id')
-  @UseGuards(PlatformAdminGuard)
+  @UseGuards(MenuPermissionGuard)
+  @RequireMenu('/settings/menus')
   @ApiOperation({ summary: '删除菜单（存在子菜单时拒绝）' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.menusService.remove(id)

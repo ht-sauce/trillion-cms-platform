@@ -12,7 +12,6 @@
  * 站点引用某个块时先复制成本站自有块，之后的代码改动只落在站点副本上，站点之间互不影响；
  * 写入站点维度时若副本不存在会自动复制（`ensure` 语义），因此运营不必先「手动引入」。
  *
- * 权限：读=站点级；写站点块=站点级；写公共模板=平台级（siteId='0' 的访问由 assertSiteAccess 拦截）
  */
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
@@ -168,7 +167,6 @@ export class BlocksService {
   /** 新建块（key 由声明决定） */
   async create(user: AuthUser, dto: { scope: 'public' | 'site'; siteId?: string; code: string }) {
     const siteId = dto.scope === 'public' ? PUBLIC_BLOCK_SITE_ID : dto.siteId!
-    /** 模板库（siteId = '0'）与站点块都过同一道站点权限：前者仅平台级可写 */
     assertSiteAccess(user, siteId)
 
     const result = await compileSfc(dto.code)
@@ -403,11 +401,9 @@ export class BlocksService {
 
   /**
    * 解析块：本站副本优先，其次公共模板（只读兜底，便于「还未引入本站」时也能看字段声明）
-   * @param forWrite 写操作：落到公共模板上时必须平台级（改模板会波及「之后新引入」的站点）
    */
   private async resolveBlock(user: AuthUser, siteId: string, key: string, forWrite = false) {
     const id = siteId
-    /** siteId = '0'（模板库）只对平台级开放：站点管理员既不能读也不能写模板库 */
     assertSiteAccess(user, id)
 
     const siteBlock = await this.prisma.blockDefinition.findUnique({ where: { key_siteId: { key, siteId: id } } })
@@ -416,13 +412,12 @@ export class BlocksService {
       (await this.prisma.blockDefinition.findUnique({ where: { key_siteId: { key, siteId: PUBLIC_BLOCK_SITE_ID } } }))
     if (!block) throw new NotFoundException(`块不存在：${key}`)
 
-    if (block.siteId === PUBLIC_BLOCK_SITE_ID && forWrite && !user.platform) {
-      throw new BadRequestException('公共模板代码仅平台级角色可修改')
+    if (block.siteId === PUBLIC_BLOCK_SITE_ID && forWrite && id !== PUBLIC_BLOCK_SITE_ID) {
+      throw new BadRequestException('请先将公共模板引入本站再修改站点块')
     }
     return block
   }
 
-  /** 只读公共模板（块模板库）：平台级专属 */
   private async resolveTemplate(user: AuthUser, key: string) {
     assertSiteAccess(user, PUBLIC_BLOCK_SITE_ID)
     const block = await this.prisma.blockDefinition.findUnique({

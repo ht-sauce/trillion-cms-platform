@@ -4,14 +4,7 @@
 import { PartialType } from '@nestjs/swagger'
 import { IsArray, IsBoolean, IsEmail, IsIn, IsOptional, IsString, MaxLength } from 'class-validator'
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import type {
-  OpeningHourRule,
-  RobotsMeta,
-  RobotsPolicy,
-  SameAsEntry,
-  SiteStatus,
-  ThemeConfig
-} from '@trillion/shared'
+import type { OpeningHourRule, RobotsMeta, RobotsPolicy, SameAsEntry, SiteStatus, ThemeConfig } from '@trillion/shared'
 
 /** 注：管理后台的全局默认值为简洁起见使用 any 兼容 JSON 字段 */
 

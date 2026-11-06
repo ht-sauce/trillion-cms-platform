@@ -19,6 +19,7 @@ const { site, load } = useSite()
 await load()
 
 const preview = usePreview()
+const widgetApiBase = String(useRuntimeConfig().public.apiBase || '')
 
 /**
  * 站点级样式预设（`themeTokens.stylePreset`，ADR-048）
@@ -49,6 +50,9 @@ useHead({
     ...headExtra.value.link
   ],
   meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }, ...headExtra.value.meta],
+  script: widgetApiBase
+    ? [{ key: 'demand-loader', src: '/demand-widget/v1/loader.js', defer: true, 'data-api-base': widgetApiBase }]
+    : [],
   /**
    * 站点令牌注入 :root（09 §7.4 ① ② ③）：
    *   ① 受管令牌（站点可配）→ themeRootCss

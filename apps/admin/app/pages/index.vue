@@ -1,11 +1,22 @@
 <script setup lang="ts">
-/**
- * 根路径占位页：直接访问 / 时内容区保持空白
- * 原根路径仪表盘「GEO 监控工作台」完整保留在 app/components/DashboardOverview.vue，
- * 只是本页不挂载它（2026-10-14）；需要恢复展示时在模板中写 <DashboardOverview /> 即可
- */
+import { useMenuStore } from '~/stores/menu'
+import { firstMenuPath } from '~/utils/menu-tree'
+
+const menuStore = useMenuStore()
+const route = useRoute()
+const targetPath = computed(() => (menuStore.loaded ? firstMenuPath(menuStore.tree) : ''))
+
+watch(
+  targetPath,
+  (path) => {
+    if (path && route.path === '/') navigateTo(path, { replace: true })
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
-  <div class="page-wrap" />
+  <div class="page-wrap">
+    <el-empty v-if="menuStore.loaded && !targetPath" description="暂无可用菜单，请联系管理员授权" />
+  </div>
 </template>

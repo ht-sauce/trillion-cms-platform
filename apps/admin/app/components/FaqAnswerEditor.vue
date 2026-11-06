@@ -38,7 +38,19 @@ const initialHtml = computed(() => model.value?.trim() || '<p><br></p>')
 
 /** 工具栏：只保留答案用得上的格式（粗斜下划删除 + 列表 + 清格式 + 撤销重做） */
 const toolbarConfig: Partial<IToolbarConfig> = {
-  toolbarKeys: ['bold', 'italic', 'underline', 'through', '|', 'bulletedList', 'numberedList', '|', 'clearStyle', 'undo', 'redo']
+  toolbarKeys: [
+    'bold',
+    'italic',
+    'underline',
+    'through',
+    '|',
+    'bulletedList',
+    'numberedList',
+    '|',
+    'clearStyle',
+    'undo',
+    'redo'
+  ]
 }
 
 const editorConfig: Partial<IEditorConfig> = {

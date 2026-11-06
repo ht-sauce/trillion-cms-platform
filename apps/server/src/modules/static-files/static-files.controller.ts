@@ -20,17 +20,30 @@ import { FileInterceptor } from '@nestjs/platform-express'
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { StaticFilesService } from './static-files.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 import { normalizePage, normalizePageSize } from '../../common/constants'
 
 @ApiTags('静态文件')
 @ApiBearerAuth()
 @Controller('files')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu('/files')
 export class StaticFilesController {
   constructor(private readonly service: StaticFilesService) {}
 
   @Post('upload')
+  @RequireMenu([
+    '/files',
+    '/sites',
+    '/content',
+    '/content/editor',
+    '/sites/news',
+    '/sites/faqs',
+    '/sites/products',
+    '/sites/cases'
+  ])
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 100 * 1024 * 1024 } }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({

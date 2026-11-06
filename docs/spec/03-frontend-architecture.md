@@ -47,7 +47,7 @@ flowchart TB
 | 路径                            | 职责                                                                                              |
 | ------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `app/config/api/http.ts`        | 唯一请求封装：注入 token、统一错误提示、401 跳登录、`ApiResult` 类型                              |
-| `app/config/api/*.ts`           | 按业务模块拆分的接口定义（auth / sites / files / content / news-faq / catalog / members / publish / track / menus / roles / users；`news-faq.ts` 见 2026-10-14 新闻/问答管理，`catalog.ts` 见 2026-11-03 产品/案例管理）。`http.ts` 另导出 `resolveFileUrl`（`/static/` 素材库 → 服务端 origin）与 `resolveMediaUrl`（站点产物图片 `/assets/...` → 站点基址 `runtimeConfig.public.siteBase`，即 `NUXT_PUBLIC_SITE_BASE`）——两类根相对路径语义不同，**内容图片一律用 `resolveMediaUrl`** |
+| `app/config/api/*.ts`           | 按业务模块拆分的接口定义（auth / sites / files / content / news-faq / catalog / members / demands / publish / track / menus / roles / users；`demands.ts` 提供需求列表、详情、跟进保存与 IP 封禁/解禁）。`http.ts` 另导出 `resolveFileUrl`（`/static/` 素材库 → 服务端 origin）与 `resolveMediaUrl`（站点产物图片 `/assets/...` → 站点基址 `runtimeConfig.public.siteBase`，即 `NUXT_PUBLIC_SITE_BASE`）——两类根相对路径语义不同，**内容图片一律用 `resolveMediaUrl`** |
 | `app/config/menu.ts`            | 渲染模式/状态等字典映射（**菜单项与角色名均不再硬编码**：菜单来自 `/geoserver/menus/tree`，角色名随 `/auth/me` 返回；**状态色只给 `.c-*` 语义类名，不给色值**；`BUILD_STATUS_META` = 构建状态唯一口径，站点列表 / 内容编辑器 / 总览发布任务三处共用，见 [`06`](./06-publish-and-geo.md) §1.1） |
 | `app/config/site-defaults.ts`   | 站点主题默认值（与后端 `SITE_DEFAULTS.theme` 对齐；**全项目唯一允许出现颜色字面量的 TS 文件**，ESLint 已豁免） |
 | `app/config/glossary.ts`        | **专有名词字典（界面文案唯一事实来源）**：`TERMS.<key> = { label, hint }`；页面禁止硬编码这些名词与解释，取值用 `TERMS.x.label`、出问号用 `<TermHint term="x" />`（文档侧同口径解释见 [`../GLOSSARY.md`](../GLOSSARY.md)） |
@@ -55,14 +55,18 @@ flowchart TB
 | `app/stores/auth.ts`            | Pinia 登录态与当前用户信息（token 存 localStorage，刷新后由 `init()` 读回）                       |
 | `app/stores/menu.ts`            | Pinia 菜单树：登录后拉取 `/geoserver/menus/tree`（按角色授权过滤），缓存并供布局与面包屑使用      |
 | `app/components/SideMenuNode.vue` | 侧栏菜单递归节点（最多三级，目录可展开/收起，命中路由高亮）                                     |
-| `app/components/*Dialog.vue`    | 业务弹窗组件（会员新增 / 新闻 `NewsDialog` / 问答 `FaqDialog` / 产品 `ProductDialog` / 行业分组 `IndustryDialog` / 案例 `CaseDialog` / 菜单表单 / 角色表单 / 角色菜单授权 / 用户表单）：`defineModel` 控制显隐、`emit('saved')` 通知父页面刷新；新闻弹窗的发布日期必填且**禁选早于今天的日期**（日期选择器禁用过去日期，与服务端 `todayInChina()` 校验同口径），问答无发布日期字段 |
+| `app/components/*Dialog.vue`    | 业务弹窗组件（会员新增 / 新闻 `NewsDialog` / 问答 `FaqDialog` / 产品 `ProductDialog` / 行业分组 `IndustryDialog` / 案例 `CaseDialog` / 需求详情 `DemandDetailDialog` / 菜单表单 / 角色表单 / 角色菜单授权 / 用户表单）：`defineModel` 控制显隐、`emit('saved')` 通知父页面刷新；需求详情同时保存跟进状态与单份备注，并支持按提交 IP 人工封禁/解禁 |
 | `app/components/NewsBodyEditor.vue` | **普通富文本编辑器（ADR-060 / ADR-061）**：新闻正文保存整篇 HTML，支持图片（含左/右环绕与取消环绕）、视频、H2/H3 标题（**不提供 H1 入口**，官方 `headerSelect` 硬编码 H1–H5 无过滤项，故改用原生 `header2`/`header3`）、颜色、对齐、列表与表格；只提供可视化编辑，不提供源码切换。采集时整理成编辑器支持的正文结构，编辑阶段不得再把布局强制转为表格或拆块。**保存原样入库，不做安全清洗与排版改写（ADR-061）**，站点使用同一正文排版样式直接展示；验收必须包含编辑保存后重开及站点视觉对比。问答仍使用独立的 `FaqAnswerEditor.vue`。 |
-| `app/utils/menu-tree.ts`        | 菜单树工具：平铺列表 ↔ 多级树（菜单管理页与角色授权页共用）                                       |
+| `app/utils/menu-tree.ts`        | 菜单树工具：平铺列表 ↔ 多级树；首页按授权树侧栏顺序选首个可点击叶子路径，跳过根路径与非内部路径 |
 | `app/utils/tool.ts`             | 交互工具（**两个独立概念**）：时间维度 `debounce` / `throttle`（默认 `leading`，即先触发后防抖）；状态维度 `useLoading()`（`run` / `runKeyed` / `isLoading`） |
 | `app/middleware/auth.global.ts` | 路由级守卫                                                                                        |
 | `app/layouts/default.vue`       | 深空控制台骨架：动态侧边菜单（后端配置驱动） + 顶栏（角色名来自接口）                             |
-| `app/pages/**`                  | 各功能页面，右侧"编辑"进入独立深入页（非弹窗）；系统设置为目录：运行配置 / 用户管理 / 角色管理 / 菜单管理；**站点管理为目录**（2026-10-14 起）：站点列表 /sites（原站点管理页改名）、产品体系 /sites/products、成功案例 /sites/cases、新闻资讯 /sites/news、高频问答 /sites/faqs（el-table border + 分页 + 站点下拉，问答带分类筛选）。**产品页为「左分组 + 右表格」双区**（2026-11-03）：左侧 260px 面板管理 `ProductIndustry`（组内产品数、编辑/删除、加分组；有产品引用时禁止删除），右侧产品表格带关键词/系列/行业三筛选，弹窗分「基础信息 / 详情内容」两个页签。**新闻/问答管理为表驱动 id 寻址**（2026-10-15 起，ADR-039）：列表行 `NewsArticleItem` / `FaqItem` 携带表主键 `id`（`pageId` 可选，仅作发布产物弱引用），编辑 / 删除按 `id` 调接口，详情直读表**不再收 `siteId` 参数**；新闻表单发布日期必填、禁选过去日期，问答无发布日期字段 |
+| `app/pages/**`                  | 各功能页面，右侧"编辑"进入独立深入页（非弹窗）；系统设置为目录：运行配置 / 用户管理 / 角色管理 / 菜单管理；**站点管理为目录**：站点列表 /sites、产品体系 /sites/products、成功案例 /sites/cases、新闻资讯 /sites/news、高频问答 /sites/faqs、需求收集 /sites/demands。需求收集按站点、待跟进/已跟进状态与关键词筛选，默认每页 20 条，详情使用独立弹窗；后台不提供站内回复。**产品页为「左分组 + 右表格」双区**（2026-11-03）：左侧 260px 面板管理 `ProductIndustry`，右侧产品表格带三筛选。**新闻/问答管理为表驱动 id 寻址**（ADR-039） |
 | `app/assets/scss/*`             | `tokens.scss`（设计令牌）→ `mixins.scss`（复用片段）→ `main.scss`（Element Plus 暗色覆盖 + 重置） |
+
+首页 `/` 等待授权菜单树加载，按侧栏顺序跳转首个可点击叶子菜单；空授权显示“暂无可用菜单”，不调用监控接口或强制进入 `/monitor`。删除旧 DashboardOverview 组件。需求菜单路径唯一为 `/sites/demands`，封禁暂共用此菜单授权且不新增独立页面。种子只为新建内置角色初始化默认菜单，不能补授任何既有角色。
+
+监控读取保持 loading 互斥，但忙碌期间的分页/筛选请求不可丢弃：记住最新请求版本并串行补查，旧响应不回写新查询；失败不阻止待处理查询，站点名称加载失败不阻止日志读取，卸载后不回写。
 
 ### 2.2 请求链路（强制）
 
@@ -174,6 +178,19 @@ flowchart LR
 | `utils/seo.ts` | `buildMeta` 与 `buildJsonLd`（WebSite / Article / BreadcrumbList） |
 | `scripts/build-sites.mjs` | SSG 构建脚本（详见 `06`） |
 | `scripts/sync-blocks.mjs` | 从服务端拉取站点块代码落盘为 `app/components/blocks/Blk*.vue` |
+
+### 3.3.1 独立需求 widget（2026-11-06）
+
+- 按 REQUIREMENTS §7.3 与已确认方案实现，不修改服务端幂等、数据库、nginx 或执行站点发布。公开契约以当前 demands 控制器、服务和 DTO 为准，05 中此前“未接入/待裁决”快照不作为本轮前端入参依据。
+- `app.vue` 经 `useHead` 仅注入 `/demand-widget/v1/loader.js` 外链 defer 标签与 `data-api-base`（来自现有 runtimeConfig），不挂 Vue widget，不依赖 hydration。版本化资源由 GEO 独立路由输出，不从某个站点的旧 SSG 资源副本读取；资源路由需先于 site-entry 放行，后续主体更新不要求重发页面。首次补 loader/标记仍需另行一次发布，本轮不执行。
+- `widget/loader.ts` 只按显式 `data-contact-action` 做事件委托；在 pointerover/focusin 时懒加载主体与匿名配置，未准备成功的点击保留原 href，不提前 preventDefault，不拦截修饰键/新窗口、电话、邮件、外站或顶部导航。已准备成功后打开窗口并拦截该按钮跳转；失败可再次准备，不阻塞正文。
+- 指定按钮标记保存在真实 `hero-dark`、`scene-hero`、`telbar` 块源及种子模板：行动按钮 href 为站内 `/contact`（允许尾斜杠）才输出 `data-contact-action="demand"`；Vite 转换仅兼容未带标记的旧块，已有标记不重复附加。不直接编辑同步生成的 Blk 文件，不扫描文案或所有联系链接，FrameSiteHeader 不参与。
+- forintech 本地补齐：首页 scene-hero 次按钮「国内项目 → /cases」改为「联系我们 → /contact」，主按钮不变；核对其他主体页同类 hero 联系按钮，横幅「提交需求」名称不变、打开 widget，顶部「电话咨询」不变。只定向更新 development 本站块/页面与本地 SSG 产物，不执行生产发布、迁移或全量种子。
+- `widget/widget.ts` 为独立无框架主体，Shadow DOM 隔离，固定欢迎语、需求与四栏联系方式、服务端图片验证码；保留输入、错误局部展示、不持久化身份、不轮询、不写站点正文/索引/JSON-LD。用原生 dialog 管理模态焦点、Escape、关闭返回触发按钮，移动端限制可视高度且窗口内滚动。
+- `GET <apiBase>/demands/widget-config` 解包 `{ code, message, data }`，消费 `version/widgetKey/siteName/captchaPath/submitPath`，widgetKey 仅为站点匿名标识、不发送为权限凭据。配置路径只允许同 API origin 的根相对地址。`GET captcha` 消费 `id/image`；图片为服务端验证码 data URL，不是外部装饰图片。
+- `POST submit` 白名单字段：`description`（trim 后 2–5000）、`contactName`（64）、`phone`（32）、`wechat`（64）、`email`（128）、`otherContact`（255）、`sourceUrl`（512）、`submitKey`（8–64）、`captchaId`（64）、`captchaCode`（16）；联系方式 trim 后至少一栏非空，空可选项不发送。sourceUrl 仅 origin + pathname、不含查询/片段。服务端来源映射站点，不发送 siteId。
+- 提交期间互斥并禁用编辑/刷新，网络失败保留同一份提交快照和 submitKey 重试；明确业务失败后允许修改或刷新验证码，同一内容仍沿用 submitKey，内容变化另建标识。仅 code=0 且返回记录 id 才显示收到，成功后重置下一次需求；验证码不会因网络错误自动刷新/消耗，避免掩盖保存成功但响应丢失的幂等重试。
+- 验证先覆盖实际序列化脚本、接口解包/字段/失败幂等、标记边界、导航降级、Shadow DOM/焦点与移动端，再做 GEO lint、类型和构建。替身接口测试不等于真实数据库联调或上线验收。
 
 ### 3.3 已确认的约束（勿回退）
 

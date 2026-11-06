@@ -9,7 +9,7 @@
  */
 import { ElMessage } from 'element-plus'
 import { blocksApi, type BlockCompileError, type BlockScope } from '~/config/api'
-import { useAuthStore } from '~/stores/auth'
+import { useMenuStore } from '~/stores/menu'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
 
 const visible = defineModel<boolean>({ required: true })
@@ -28,7 +28,8 @@ const props = withDefaults(
 )
 const emit = defineEmits<{ saved: [key: string] }>()
 
-const auth = useAuthStore()
+const menus = useMenuStore()
+const canManageTemplates = computed(() => Boolean(menus.titleOf('/blocks/templates')))
 
 /** loading 状态（执行中互斥 + 按钮转圈）；防抖由 `submit` 外层的 `debounce` 负责 */
 const { loading: saving, run } = useLoading()
@@ -101,7 +102,7 @@ const submit = debounce(() => {
         <template #label><TermHint term="blockOwner" /></template>
         <el-select v-model="scope" :disabled="lockScope" style="width: 260px">
           <el-option label="本站块（本站独有）" value="site" />
-          <el-option v-if="auth.isPlatformAdmin" label="公共模板（平台级，供各站引入）" value="public" />
+          <el-option v-if="canManageTemplates" label="公共模板（供各站引入）" value="public" />
         </el-select>
       </el-form-item>
       <el-form-item label="块源码">

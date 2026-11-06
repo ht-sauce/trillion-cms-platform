@@ -29,7 +29,7 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 
 **全平台配置的唯一事实来源中的"结构化配置与派生逻辑"部分**：端口表、应用清单、环境文件解析、API 基址 / CORS / 数据库连接串派生。应用代码不再硬编码端口与数据库，统一由本目录派生后注入进程。
 
-- [`index.mjs`](../config/index.mjs) —— 全局配置出口：`loadConfig()` 加载环境并派生端口/API/数据库/CORS/局域网地址，`buildAppEnv()` 组装某应用进程的环境变量，`describeConfig()` 生成启动摘要（含局域网 IP 行），`describeEndpoints()` 生成各工程访问入口清单（服务端含健康检查入口、生产环境自动略去 Swagger，`options.lan=false` 时不出局域网段落），`detectLanHosts()` 探测本机 IPv4（与 Vite 一致：全量返回，不排序、不区分虚拟网卡）
+- [`index.mjs`](../config/index.mjs) —— 全局配置出口：`loadConfig()` 加载环境并派生端口/API/数据库/CORS/局域网地址，`buildAppEnv()` 组装某应用进程的环境变量（原样透传 `TRUSTED_PROXIES` / `DBIP_CITY_MMDB`，内部令牌显式值优先、缺省由 JWT 密钥派生，见 07 §3.3），`describeConfig()` 生成启动摘要（含局域网 IP 行），`describeEndpoints()` 生成各工程访问入口清单（服务端含健康检查入口、生产环境自动略去 Swagger，`options.lan=false` 时不出局域网段落），`detectLanHosts()` 探测本机 IPv4（与 Vite 一致：全量返回，不排序、不区分虚拟网卡）
 - [`ports.mjs`](../config/ports.mjs) —— 端口表：默认端口（server 3001 / admin 3000 / geo 3002）、环境变量键名映射与端口合法性校验
 - [`apps.mjs`](../config/apps.mjs) —— 应用清单：短名、包名、工程目录、标题、日志配色、开发/构建/生产启动脚本名（`devScript` / `buildScript` / `startScript`）与共享类型包名 `SHARED_PACKAGE`（启动器、执行器、上线器共用）
 - [`env.mjs`](../config/env.mjs) —— 环境解析：`--env` 解析、`env/.env.<环境>` 读取、极简 .env 解析器、必填变量校验
@@ -38,10 +38,10 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 
 **各环境的变量值**：数据库、密钥、站点识别等；与 `config/` 分工明确（值 vs 结构/派生）。三个应用不再自带 `.env`。
 
-- [`.env.development`](../env/.env.development) —— 开发环境（本机 MySQL、默认端口），已入库，`pnpm dev` 开箱可用
+- [`.env.development`](../env/.env.development) —— 开发环境（本机 MySQL、默认端口），已入库，`pnpm dev` 开箱可用；本机 `DBIP_CITY_MMDB` 指向 `aiTest/dbip-city-lite-20261106/dbip-city-lite-2026-11.mmdb` 的绝对路径，换机器需重新配置，不改鉴权密钥
 - [`.env.test`](../env/.env.test) —— 测试环境（端口 3100/3101/3102、独立测试库），与开发环境可同机并存
 - [`.env.production`](../env/.env.production) —— 生产环境（**不入库**，见 `.gitignore`；上线前必须逐项确认密钥与地址）
-- [`.env.example`](../env/.env.example) —— 环境变量模板与逐项说明（新环境 / 新机器从此复制）
+- [`.env.example`](../env/.env.example) —— 环境变量模板与逐项说明（新环境 / 新机器从此复制）；含 `TRUSTED_PROXIES` 可信代理 CIDR 与 `DBIP_CITY_MMDB` 离线库路径说明，不提供自动代理信任或自动下载/交付数据文件（07 §3.3.1）
 
 ## /scripts（根级工程脚本）
 
@@ -90,16 +90,16 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 
   | 文件                                                | 内容                                                    |
   | --------------------------------------------------- | ------------------------------------------------------- |
-  | [`spec/INDEX.md`](./spec/INDEX.md)                  | 索引与阅读顺序、文档优先级、维护契约（改动必读）        |
+  | [`spec/INDEX.md`](./spec/INDEX.md)                  | 索引与阅读顺序、文档优先级、维护契约；本轮仅补 ADR 的限定阅读路径与决策/验收状态区分 |
   | [`spec/00-overview.md`](./spec/00-overview.md)      | 系统总纲：定位、术语、架构原则、质量属性、边界与约束    |
   | [`spec/01-system-context.md`](./spec/01-system-context.md) | C4 L1/L2：系统上下文、容器划分、通信矩阵、关键场景时序  |
   | [`spec/02-server-architecture.md`](./spec/02-server-architecture.md) | 服务端分层、模块职责、横切机制、站点隔离、已知约束 |
   | [`spec/03-frontend-architecture.md`](./spec/03-frontend-architecture.md) | 管理后台与 GEO 项目结构、请求链路、双模式取数、约束 |
   | [`spec/04-data-model.md`](./spec/04-data-model.md)  | 15 张表职责与关系、字段口径、隔离与索引、迁移与种子     |
-  | [`spec/05-api-contract.md`](./spec/05-api-contract.md) | 57 条接口清单、鉴权矩阵、状态码、发布体检规则        |
+  | [`spec/05-api-contract.md`](./spec/05-api-contract.md) | 接口分组、菜单鉴权矩阵、状态码、发布体检及入站监控/需求契约与未验收边界 |
   | [`spec/06-publish-and-geo.md`](./spec/06-publish-and-geo.md) | 发布流水线、原子替换、产物规范、GEO 四层落地    |
-  | [`spec/07-deployment.md`](./spec/07-deployment.md)  | Docker/直装拓扑、端口、环境变量、持久化、健康检查、运维 |
-  | [`spec/08-adr.md`](./spec/08-adr.md)                | 架构决策记录（含否决项与副作用）                        |
+  | [`spec/07-deployment.md`](./spec/07-deployment.md)  | Docker/直装/部署包拓扑、端口、环境变量、持久化、健康检查；DB-IP/可信代理配置与有限验证、替库及部署边界 |
+  | [`spec/08-adr.md`](./spec/08-adr.md)                | 架构决策记录（含否决项与副作用）；2026-11-06 新增 ADR-062 全平台菜单权限、ADR-063 轻量监控、ADR-064 需求收集，标注旧权限/监控决策替代范围并保留原正文；决策采纳不等于实现验收 |
   | [`spec/09-site-editor.md`](./spec/09-site-editor.md) | 站点内容编辑器与块代码化完整规格（含完整建站）          |
   | [`spec/10-launch-runbook.md`](./spec/10-launch-runbook.md) | Linux 直装上线操作手册：服务器初始化、PM2 守护、首次部署、日常更新、nginx、验收与回滚 |
 
@@ -122,7 +122,7 @@ Monorepo 工作区根，只放工程配置、全局配置与全局文档，不�
 - [`src/index.ts`](../packages/shared/src/index.ts) —— 类型统一出口
 - [`src/types/site.ts`](../packages/shared/src/types/site.ts) —— 站点实体（主域名 `domain` + 别名域名 `domains`）、主题令牌、静态文件类型
 - [`src/types/content.ts`](../packages/shared/src/types/content.ts) —— 栏目 / 页面 / 模板定义与结构化 Block 数据类型
-- [`src/types/api.ts`](../packages/shared/src/types/api.ts) —— 统一响应、分页、管理员、会员、埋点载荷类型
+- [`src/types/api.ts`](../packages/shared/src/types/api.ts) —— 统一响应、分页、管理员、会员、埋点载荷类型；管理员契约不再包含 siteIds
 - [`src/types/menu.ts`](../packages/shared/src/types/menu.ts) —— 后台菜单实体与菜单树节点类型（含状态枚举）
 - [`src/types/role.ts`](../packages/shared/src/types/role.ts) —— 后台角色实体与状态枚举（`platform` / `builtin` 标记）
 - [`src/types/block.ts`](../packages/shared/src/types/block.ts) —— Block 类型清单与中文元数据（管理后台表单使用）
@@ -158,11 +158,17 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`schema/defaults.prisma`](../apps/server/prisma/schema/defaults.prisma) —— 默认值说明文档（robotsPolicy / themeConfig / blocks JSON 结构）
 - [`schema/site.prisma`](../apps/server/prisma/schema/site.prisma) —— `Site` 站点表（企业元数据 + 网站信息 + SEO/GEO 默认值；原 `renderMode` 字段已随 ADR-046 删除）与 `SiteDomain` 站点别名域名表（主域名仍是 `Site.domain`，本表存别名，多域名映射见 ADR-022）
 - [`schema/static-file.prisma`](../apps/server/prisma/schema/static-file.prisma) —— `StaticFile` 静态文件 URL 表（URL 与物理存储解耦）
-- [`schema/admin-user.prisma`](../apps/server/prisma/schema/admin-user.prisma) —— `AdminUser` 管理后台用户（角色 + 授权站点）
+- [`schema/admin-user.prisma`](../apps/server/prisma/schema/admin-user.prisma) —— 管理后台用户与角色；历史 siteIds 列保留但不再用于管理业务数据授权，未执行删字段
 - [`schema/member.prisma`](../apps/server/prisma/schema/member.prisma) —— `Member` 站点会员（按 siteId 隔离）
 - [`schema/content.prisma`](../apps/server/prisma/schema/content.prisma) —— `Channel` 栏目、`Page` 页面（模板 + Block）、`Template` 模板定义
 - [`schema/entity.prisma`](../apps/server/prisma/schema/entity.prisma) —— `Entity` 品牌/产品实体（GEO 实体一致性）
 - [`schema/track.prisma`](../apps/server/prisma/schema/track.prisma) —— `TrackEvent` 埋点事件、`AiCrawlEvent` AI 抓取事件
+- [`schema/access-log.prisma`](../apps/server/prisma/schema/access-log.prisma) —— 实施草稿：GeoAccessEvent 单张请求事实表，站点可空、完整 IP/UA、地址、响应结果与 DB-IP 地域快照（含 geoStatus，历史默认 unknown）；字段与未完成关联见 04 §3.7，不代表已迁移
+- [`schema/demand.prisma`](../apps/server/prisma/schema/demand.prisma) —— DemandSubmission 需求/四栏联系方式/单份跟进备注/幂等键/clientIp，以及平台共用 GeoIpBan；IP 直接来自需求请求，不关联请求日志推断身份
+- [`schema/migrations/20261106130000_add_demand_client_ip/migration.sql`](../apps/server/prisma/schema/migrations/20261106130000_add_demand_client_ip/migration.sql) —— 增量添加需求 clientIp；旧记录暂置空串且随即移除列默认值，不猜测历史 IP；2026-11-06 核实 development 已应用，本轮未修改文件
+- [`schema/migrations/20261106120000_add_geo_inbound_monitoring/migration.sql`](../apps/server/prisma/schema/migrations/20261106120000_add_geo_inbound_monitoring/migration.sql) —— 入站与需求表迁移；2026-11-06 核实 development 已应用，本轮未修改文件
+- [`schema/migrations/20261106150000_add_geo_status/migration.sql`](../apps/server/prisma/schema/migrations/20261106150000_add_geo_status/migration.sql) —— 独立增量添加 geo_status(16)，非空默认 unknown；已部署 development，旧迁移校验和不变，验证范围见 04 §3.7
+- [`schema/migrations/20261106160000_remove_legacy_overview_menu/migration.sql`](../apps/server/prisma/schema/migrations/20261106160000_remove_legacy_overview_menu/migration.sql) —— 事务内定向删除 path=/ 的旧总览菜单 1 条及其 RoleMenu 2 条；已部署 development，其余菜单/授权不变，不执行种子
 - [`schema/news-faq.prisma`](../apps/server/prisma/schema/news-faq.prisma) —— `NewsArticle` 新闻文章表、`FaqItem` 问答条目表（**管理源**，见 04 §8；`pageId` 为发布产物 `Page` 弱引用，`[siteId, slug]` 唯一）
 - [`schema/catalog.prisma`](../apps/server/prisma/schema/catalog.prisma) —— `ProductIndustry` 产品行业分组、`Product` 产品、`CaseStudy` 成功案例（**管理源**，见 04 §9；`Product.industries` 存分组名数组以便多分组归属、`series` 是第二种分类维度；详情字段一律 `Json?`——MySQL 的 JSON/TEXT 列不允许 DEFAULT；`[siteId, slug]` / `[siteId, name]` 唯一）
 - [`schema/publish-task.prisma`](../apps/server/prisma/schema/publish-task.prisma) —— `PublishTask` 发布构建任务（队列与日志）
@@ -172,18 +178,18 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`schema/migrations/20261103164500_init_current_schema/migration.sql`](../apps/server/prisma/schema/migrations/20261102133000_init_current_schema/migration.sql) —— **唯一迁移（2026-11-03 重建基线）**：24 张表的完整 DDL、全部外键与主键（`prisma migrate diff --from-empty` 生成，无 `render_mode` 列——ADR-046）。上一版基线（ADR-043 的 `init_id_string`）与历史迁移一并废弃（见 04 §6；本地 Windows 的 migrate drift 误报说明亦见该节）
 - [`maintenance/fix-prisma-migrations-meta-table.sql`](../apps/server/prisma/maintenance/fix-prisma-migrations-meta-table.sql) —— **一次性环境修复（不是迁移）**：旧版 Prisma CLI 建出的 `_prisma_migrations` 台账 `applied_steps_count` 无 DEFAULT，会让 `migrate deploy` 报「Field 'applied_steps_count' doesn't have a default value」而整体失败；本脚本为其补默认值，幂等，用 `prisma db execute --file` 执行（见 10-launch-runbook §4.2）
 - [`maintenance/fix-table-name-case.sql`](../apps/server/prisma/maintenance/fix-table-name-case.sql) —— **一次性环境修复（不是迁移）**：Windows MySQL（`lower_case_table_names=1`）导库会把表名落到小写，Linux 默认区分大小写、Prisma 模型未写 `@@map`，于是报「The table `AdminUser` does not exist」；本脚本按映射把 21 张业务表改回大驼峰（`_prisma_migrations` 保持小写），幂等、仅改表名不动数据行、含外键自动改写与前后核对（见 10-launch-runbook §11）
-- [`seed.ts`](../apps/server/prisma/seed.ts) —— 种子数据：内置角色（`admin` / `site_admin`）与角色菜单授权、平台管理员（绑定 `admin` 角色）、后台菜单（站点管理目录：站点列表 / 新闻资讯 / 高频问答；内容管理下六页：页面 / 编辑器 / 块库 / 块模板 / 导航 / 素材 + 系统设置四个子页）、默认模板、示例站点/栏目/页面、内置块定义（若 `prisma/blocks/*.vue` 存在则写入**模板库** `siteId = 0`，目录缺失时跳过）与示例站点的**块副本**（ADR-035）
+- [`seed.ts`](../apps/server/prisma/seed.ts) —— 种子数据：内置角色、平台管理员、菜单、模板及内置块；事务先清除旧 path=/ 总览菜单与 RoleMenu，新增“站点管理 → 需求收集” `/sites/demands`。默认菜单只初始化新建内置角色，不补授既有角色（含零授权），本轮不执行种子
 - **`blocks/*.vue`（54 个，块唯一真源）** —— 公共块模板代码（`defineBlock` 字段声明 + 原型类名 DOM，09 §7.4.1 / ADR-036）。改块必须改这里再 `pnpm db seed` → 站点副本重同步 → `geo blocks:sync`；直接改数据库或只改 GEO 侧 `Blk*.vue` 会在下次 seed / 构建时被覆盖或产生「块不可用」。`telbar`（尾部预约条）/`vcard-grid`（键值对卡片栅格）在仁爱建站时新增（09 §7.2.2）；`faq-board`（问答分类页签 + 关键词搜索 + 站内分页，ADR-055）在 forintech 问答改版时新增
 
 ### src/（源码）
 
-- [`main.ts`](../apps/server/src/main.ts) —— 启动入口：设置中国时区、**全局前缀 `/geoserver`**（ADR-040）、全局管道/拦截器/异常过滤器、静态资源、CORS（读派生白名单）、Swagger（非生产，`/geoserver/docs`）；拦截 `unhandledRejection` / `uncaughtException`（只记录日志不退出，防发布链路异常带崩服务，ADR-032）
-- [`app.module.ts`](../apps/server/src/app.module.ts) —— 根模块：配置模块（zod 校验、环境变量由启动器注入）+ 全部业务模块注册
+- [`main.ts`](../apps/server/src/main.ts) —— 启动入口：设置中国时区、**全局前缀 `/geoserver`**（ADR-040）、全局管道/拦截器/异常过滤器、静态资源；公开需求在 Body 解析前按可信 IP 计数，畸形/超大 Body 统一 400/413 与 no-store/noindex；仅公开需求及预检动态放行有效站点 Origin，后台 CORS 保持配置白名单；Swagger（非生产，`/geoserver/docs`）及进程级异常兜底（ADR-032）
+- [`app.module.ts`](../apps/server/src/app.module.ts) —— 根模块集中注册业务模块，包括 AccessModule/DemandsModule；注册不等于真实数据库链路验收通过
 
 ### src/config/（服务端配置映射，值的来源是根 env/ 与 config/）
 
-- [`configuration.ts`](../apps/server/src/config/configuration.ts) —— 全局配置工厂（环境、端口、时区、数据库、JWT、上传、CORS、AI 清单、构建目录）
-- [`env.validation.ts`](../apps/server/src/config/env.validation.ts) —— 环境变量 zod 校验（端口与数据库无应用内默认值，缺失启动即失败）
+- [`configuration.ts`](../apps/server/src/config/configuration.ts) —— 全局配置工厂（环境、端口、时区、数据库、JWT、上传、CORS、AI 清单、构建目录）；`TRUSTED_PROXIES` 映射为逗号拆分/去空白的 `trustedProxies`，`DBIP_CITY_MMDB` 映射为 `dbipCityMmdb`，缺省服务端相对路径 `data/dbip-city-lite.mmdb`
+- [`env.validation.ts`](../apps/server/src/config/env.validation.ts) —— 环境变量 zod 校验（端口与数据库无应用内默认值，缺失启动即失败）；可信代理与 MMDB 路径为可选字符串，不代表已验证 CIDR、文件可读性或部署拓扑
 - [`ai-crawlers.ts`](../apps/server/src/config/ai-crawlers.ts) —— AI 爬虫 UA 清单、UA 匹配、robots.txt 生成（UA 自动去重，并输出「AI 爬虫策略说明」注释段；`hasAiCrawlerPolicy` 供发布前检查判定）
 - [`database-url.ts`](../apps/server/src/config/database-url.ts) —— 连接串拼装（密码特殊字符编码）
 
@@ -195,12 +201,15 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`filters/http-exception.filter.ts`](../apps/server/src/common/filters/http-exception.filter.ts) —— 全局异常过滤器（统一结构 + 5xx 日志）
 - [`decorators/current-user.decorator.ts`](../apps/server/src/common/decorators/current-user.decorator.ts) —— `@CurrentUser()` 取登录用户
 - [`guards/admin-auth.guard.ts`](../apps/server/src/common/guards/admin-auth.guard.ts) —— JWT-A 鉴权守卫（管理后台）
-- [`guards/platform-admin.guard.ts`](../apps/server/src/common/guards/platform-admin.guard.ts) —— 平台级操作守卫（仅 super_admin）
+- [`decorators/require-menu.decorator.ts`](../apps/server/src/common/decorators/require-menu.decorator.ts) —— 全平台接口菜单声明：单菜单、共享入口任一菜单、共同操作全部菜单、块归属动态菜单
+- [`guards/menu-permission.guard.ts`](../apps/server/src/common/guards/menu-permission.guard.ts) —— 全平台管理路由启用菜单与 RoleMenu 校验；未声明拒绝，无 platform 绕过；块写口按实际 scope/siteId 区分模板与本站菜单
+- [`utils/ip.ts`](../apps/server/src/common/utils/ip.ts) —— IPv4/IPv6 归一化（含十六进制及展开形式的 IPv4-mapped IPv6）、CIDR 与可信代理客户端 IP 解析；实际代理配置/拓扑仍待核对
+- [`guards/platform-admin.guard.ts`](../apps/server/src/common/guards/platform-admin.guard.ts) —— 历史守卫文件，管理业务控制器已全部脱离，不再作为授权边界
 - [`common.module.ts`](../apps/server/src/common/common.module.ts) —— **全局公共模块**：注册并导出 JwtModule，让各业务模块直接使用守卫而无需各自注册 JWT
 - [`workers/sfc-compile.ts`](../apps/server/src/common/workers/sfc-compile.ts) —— **SFC 编译主线程入口**：把块编译丢进 worker 线程（15s 超时），超时/崩溃归一为 400 错误不回退主线程；worker 产物缺失时降级主线程并告警（ADR-032）
 - [`workers/sfc.worker.ts`](../apps/server/src/common/workers/sfc.worker.ts) —— **SFC 编译 Worker**（独立线程）：一次性执行 `validateBlockSfc` 后回传结果，避免 CPU 编译阻塞 NestJS 主事件循环
 - [`utils/geo-check.ts`](../apps/server/src/common/utils/geo-check.ts) —— **发布前 GEO 体检纯函数**：页面级 `checkPageGeo`（标题/摘要/编审/案例禁用字段/canonical/NAP）与站点级 `checkSiteGeo`（实体声明 / llms / robots AI 策略 / robots meta / sitemap 核心 URL / NAP）。纯函数、被 content 与 geo 两个模块共用，故放在 `common/utils`
-- [`utils/site-scope.ts`](../apps/server/src/common/utils/site-scope.ts) —— **站点数据权限**：断言与查询过滤（真正的安全边界）
+- [`utils/site-scope.ts`](../apps/server/src/common/utils/site-scope.ts) —— 仅保留显式 id/siteId 主动筛选，缺省不过滤；assertSiteAccess 为旧调用兼容空入口，不读取用户 siteIds/platform；业务归属检查仍由业务服务承担
 - [`utils/json.ts`](../apps/server/src/common/utils/json.ts) —— Prisma JSON 字段读写收窄（`toJsonInput` / `fromJson`）
 - [`utils/article-body.ts`](../apps/server/src/common/utils/article-body.ts) —— **正文结构化块（历史兼容格式，ADR-053）**：`ArticleBlock`（paragraph / heading / image / table / video / rich）+ `normalizeArticleBody` 白名单收口（类型、空块、图片地址只认 `/static`、`/assets`、`http(s)`、块数上限）+ `articleBlocksToText` 纯文本派生 + `resolveArticleBlocks`（有 body 用 body，否则按段落回落）。**ADR-060 起降级为历史兼容格式**（新代码写 `bodyHtml`），仍用于旧数据回落与迁移
 - [`utils/article-html.ts`](../apps/server/src/common/utils/article-html.ts) —— **正文整篇 HTML 白名单化（ADR-060；ADR-061 起仅采集 / 导入脚本使用，后台保存不再调用）**：`sanitizeArticleHtml` 手写 tokenizer 做标签 / 属性 / 样式三层收口；`h1` 降为 `h2`、`h5/h6` 降为 `h4`，script/style 整块及注释丢弃，事件属性与浮层样式剔除，标签栈补齐结构。**幂等保存**：正文保留已有实体、裸字符仍转义；属性实体先解码再校验、重新转义，查询参数与引号不累积转义，实体编码的危险协议仍拒绝。**编辑器兼容白名单**：限定标签与取值的 wangEditor 图片 / 视频 / 表格标记；视频 `src/poster/controls/width/height`、`source` 的安全地址与视频 MIME、表格布局及单元格合并 / 尺寸属性；不放行任意 `data-*`，尺寸与数值属性逐项校验。媒体地址只认 `/static/`、`/assets/` 与 `http(s)`，链接另允许站内路径和锚点；排版样式含安全字号、字重、颜色与布局值。另提供 `htmlToText`（块级换行、去标签派生纯文本）与 `articleBlocksToHtml`（历史块数组 → HTML，纯文本单独转义，迁移用）
@@ -216,13 +225,13 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 ### src/modules/auth（管理后台登录 JWT-A）
 
 - [`auth.module.ts`](../apps/server/src/modules/auth/auth.module.ts) —— 模块定义（JwtService 由全局 CommonModule 提供，此处不重复注册）
-- [`auth.service.ts`](../apps/server/src/modules/auth/auth.service.ts) —— 登录校验（bcrypt）、JWT 签发、用户信息
+- [`auth.service.ts`](../apps/server/src/modules/auth/auth.service.ts) —— 登录校验（bcrypt）、JWT 签发、用户信息；JWT/视图不再下发 siteIds 数据授权
 - [`auth.controller.ts`](../apps/server/src/modules/auth/auth.controller.ts) —— `POST /auth/login`、`GET /auth/me`
 
 ### src/modules/sites（站点管理）
 
 - [`sites.module.ts`](../apps/server/src/modules/sites/sites.module.ts) —— 模块定义
-- [`sites.controller.ts`](../apps/server/src/modules/sites/sites.controller.ts) —— 站点列表/详情/新建/编辑/删除（写操作限平台管理员）
+- [`sites.controller.ts`](../apps/server/src/modules/sites/sites.controller.ts) —— 站点读写与导入按 `/sites` 菜单；列表共享给功能页站点选择，不扩大站点写权限
 - [`sites.service.ts`](../apps/server/src/modules/sites/sites.service.ts) —— 站点 CRUD、**别名域名规范化与全局唯一校验**（随站点全量同步）、文件引用解析、JSON 字段与时间格式化、**列表/详情附加 `build`（最新构建任务摘要，批量取避免 N+1）**
 - [`dto.ts`](../apps/server/src/modules/sites/dto.ts) —— 入参校验 DTO（QuerySiteDto / CreateSiteDto / UpdateSiteDto）
 - [`constants.ts`](../apps/server/src/modules/sites/constants.ts) —— 站点默认值（AI 策略放行、主题令牌）
@@ -244,7 +253,7 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 ### src/modules/news-faq（新闻资讯 / 高频问答管理）
 
 - [`news-faq.module.ts`](../apps/server/src/modules/news-faq/news-faq.module.ts) —— 模块定义（依赖 Content / Publish 模块，导出同步服务）
-- [`news-faq.controller.ts`](../apps/server/src/modules/news-faq/news-faq.controller.ts) —— `/news-faq/*` 接口：文章与问答的分页列表（读管理表）、单条详情（`articles/:id/detail` / `faqs/:id/detail` **直读表，不接收 siteId 参数**，按记录归属站点鉴权）、增删改、分类清单
+- [`news-faq.controller.ts`](../apps/server/src/modules/news-faq/news-faq.controller.ts) —— 新闻 `/sites/news`、问答 `/sites/faqs` 菜单授权；共同重建要求二者；详情直读表、不接收 siteId 参数，不做后台站点数据授权
 - [`news-faq.service.ts`](../apps/server/src/modules/news-faq/news-faq.service.ts) —— 管理面 CRUD（**表驱动**：`NewsArticle` / `FaqItem` 为管理源）：列表/详情直读表 → 写表 → 委托同步服务创建或补建 kind=detail 发布产物页（保存即发布、slug 自动生成；**slug 创建后不可改**）、按 `pageId` 弱关联挂接失联产物 → 重算派生块 → 自动触发**页面级**发布（响应携带 `affectedPages` 与 `publishTaskId`）
 - [`news-faq-sync.service.ts`](../apps/server/src/modules/news-faq/news-faq-sync.service.ts) —— **派生块同步（核心）**：`loadDetailTemplate(siteId, section)` 取该栏目最早创建的 detail 页登记为模板，`buildArticleDetailBlocks` / `buildFaqDetailBlocks` 在模板上只做字段覆盖（h1 / lead / chips / 正文段落），块顺序与固定文案全沿用模板；详情数据装载 `loadNewsDetails` / `loadFaqDetails` **直读管理表**（表是唯一事实来源）；`/news` 列表（post-list 按发布日期倒序、hero chips 置空、移除独立 pager）、`/faq` 列表（hero chips + 分类 `faq-list` 只填上架问答 + `faq-board` 填全量问答，ADR-055）、同分类详情页 related-faq 重算；Prisma 事务写回并重算内容指纹（块实例 id 同 key 顺序复用，常规编辑下指纹稳定）
 - ~~`news-faq.constants.ts`~~ —— **2026-11-03 已删除**：原文件把仁爱医院站的门诊时间 / 029 电话 / 医学合规声明硬编码在此，换站点即错。现在详情页与列表页的块结构、固定文案一律从站点既有同栏目 detail 页克隆（ADR-052），代码内不含任何站点文案
@@ -268,14 +277,14 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 
 - [`constants.ts`](../apps/server/src/modules/blocks/constants.ts) —— `PUBLIC_BLOCK_SITE_ID = 0`：**公共模板（模板库）**的 siteId 约定值（不用 NULL，唯一索引不约束多个 NULL）
 - [`block-copy.ts`](../apps/server/src/modules/blocks/block-copy.ts) —— **块副本唯一实现** `copyTemplatesToSite(db, siteId, keys)`（幂等）：把公共模板复制为站点自有块（`scope=site`、`version=1` + 版本留档）；被保存草稿 / 建站导入 / 发布兜底 / 手动引入 / 回填与种子共用
-- [`blocks.service.ts`](../apps/server/src/modules/blocks/blocks.service.ts) —— 列表（本站块 + 公共模板）/ 详情（`template=1` 只读模板）/ 新建 / 保存（站点维度**先复制副本再落笔**）/ 使用位置 / 回退上一版（`save` 与 `rollback` 共用 `archiveVersion`，先归档被覆盖的那一版）/ `apply`（模板引入本站）/ 渲染引擎清单与代码指纹（本站块优先 + 模板兜底）；模板库（`siteId=0`）读写限平台级
-- [`blocks.controller.ts`](../apps/server/src/modules/blocks/blocks.controller.ts) —— 上述接口（含 `POST /blocks/:key/apply`）
+- [`blocks.service.ts`](../apps/server/src/modules/blocks/blocks.service.ts) —— 列表（本站块 + 公共模板）/ 详情（`template=1` 只读模板）/ 新建 / 保存（站点维度**先复制副本再落笔**）/ 使用位置 / 回退上一版（`save` 与 `rollback` 共用 `archiveVersion`，先归档被覆盖的那一版）/ `apply`（模板引入本站）/ 渲染引擎清单与代码指纹（本站块优先 + 模板兜底）；保留模板副本边界，不按平台角色拒绝
+- [`blocks.controller.ts`](../apps/server/src/modules/blocks/blocks.controller.ts) —— 上述接口（含 `POST /blocks/:key/apply`）；本站/模板写口分别按 `/blocks`、`/blocks/templates`，详情共享给内容编辑器，不按平台角色拒绝
 - [`blocks-internal.controller.ts`](../apps/server/src/modules/blocks/blocks-internal.controller.ts) —— 渲染引擎内部清单接口（`GET /internal/blocks`，内部 token）
 - [`sfc.ts`](../apps/server/src/modules/blocks/sfc.ts) / [`dto.ts`](../apps/server/src/modules/blocks/dto.ts) —— SFC 编译校验与入参 DTO
 
 ### src/modules/members（站点会员，管理侧）
 
-- [`members.module.ts`](../apps/server/src/modules/members/members.module.ts) / [`members.controller.ts`](../apps/server/src/modules/members/members.controller.ts) / [`members.service.ts`](../apps/server/src/modules/members/members.service.ts) —— 会员列表、新增、删除（按站点隔离）
+- [`members.module.ts`](../apps/server/src/modules/members/members.module.ts) / [`members.controller.ts`](../apps/server/src/modules/members/members.controller.ts) / [`members.service.ts`](../apps/server/src/modules/members/members.service.ts) —— 会员列表、新建、删除按 `/members` 菜单；保留会员 siteId 归属与主动筛选，不按管理用户站点授权过滤
 
 ### src/modules/site-auth（站点会员鉴权 JWT-M）
 
@@ -295,6 +304,25 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 - [`track.controller.ts`](../apps/server/src/modules/track/track.controller.ts) —— 公开上报接口（限流）、PV/UV 概览、AI 抓取概览、批量入库
 - [`track.service.ts`](../apps/server/src/modules/track/track.service.ts) —— 内存队列攒批写入、AI 事件记录、分组统计
 
+### src/modules/access（轻量入站监控，当前实施中）
+
+- [`access.module.ts`](../apps/server/src/modules/access/access.module.ts) —— 访问记录与地域解析服务注册，已接入 AppModule；注册不代表真实数据库与完整采集链路验收
+- [`access.controller.ts`](../apps/server/src/modules/access/access.controller.ts) —— 单条内部保存 `/internal/access-events`、菜单授权分页 `/access-events`；当前无统计接口，契约登记见 05 §7.1
+- [`access.service.ts`](../apps/server/src/modules/access/access.service.ts) —— 单条写入、Host 站点解析、必要筛选分页；ISO 保留时区/毫秒，无时区输入按中国时间解析，拒绝非法日期；保存及返回地域状态/库版本，查询不重算历史；完整采集链路仍待联调
+- [`geo-ip.service.ts`](../apps/server/src/modules/access/geo-ip.service.ts) —— 保存时 maxmind 读取 DB-IP City Lite MMDB；名称类型兼容 Names，区分非法/非公网/未命中/不可用/异常/命中，保留已加载库版本；本机真实读取已有 6 个公网及 5 个控制样本证据，非数据库联调验收；reader/加载 Promise 按进程缓存，替库需重启并复核，不支持自动热替库（07 §3.3.1）
+- [`dto.ts`](../apps/server/src/modules/access/dto.ts) —— 请求快照与分页筛选 DTO；状态码 query 十进制整数转换，空串忽略，非法值仍由 IsInt 拒绝；地址去敏及代理口径待联调
+
+### src/modules/demands（需求收集，当前实施中）
+
+- [`demands.module.ts`](../apps/server/src/modules/demands/demands.module.ts) —— 需求/验证码/计数服务注册，已接入 AppModule
+- [`demands.controller.ts`](../apps/server/src/modules/demands/demands.controller.ts) —— 公开 captcha/submit/widget-config；完整 Origin 与 Referer 协议/主机/端口一致性、可信代理来源解析及内部 WeakSet 防重复计数；后台跟进/封禁契约保持，管理接口要求 `/sites/demands` 菜单授权
+- [`demands.service.ts`](../apps/server/src/modules/demands/demands.service.ts) —— 解析前入口计数与服务直调计数共用 IP 互斥，后续复核封禁但不重复计数；有效域名映射站点，幂等回读先于挑战、成功保存后消耗；列表/详情/跟进附 siteName、clientIp 与 ban，不加数据权限
+- [`captcha.service.ts`](../apps/server/src/modules/demands/captcha.service.ts) —— 安全随机图片挑战绑定归一化可信 IP，verify/consume 均核对 IP；跨 IP 不消耗、不计猜错，5 分钟/单挑战 5 次错误，不发访客会话 token
+- [`rate-limit.service.ts`](../apps/server/src/modules/demands/rate-limit.service.ts) —— 进程内滚动窗口计数与 IP/验证码键互斥，保障单进程并发及人工封禁/解除顺序；不宣称多进程共享计数
+- [`demands.constants.ts`](../apps/server/src/modules/demands/demands.constants.ts) —— 验证码期限及已确认限流/自动封禁初始参数，业务口径见 REQUIREMENTS §7.4
+- [`dto.ts`](../apps/server/src/modules/demands/dto.ts) —— 需求/联系方式、跟进与 IP 封禁 DTO 草稿，当前长度值与待定验证口径见 05 §7.2
+- [`demands.service.test.ts`](../apps/server/src/modules/demands/demands.service.test.ts) —— node:test 回归：幂等/并发/数据库失败/来源/限流/人工优先及本地 Nest HTTP 契约、菜单鉴权、widget/提交/详情/跟进；Prisma 替身不代表真实数据库验收
+
 ### src/modules/entities（实体一致性）
 
 - [`entities.module.ts`](../apps/server/src/modules/entities/entities.module.ts) / [`entities.controller.ts`](../apps/server/src/modules/entities/entities.controller.ts) / [`entities.service.ts`](../apps/server/src/modules/entities/entities.service.ts) —— 品牌/产品实体与别名维护
@@ -302,22 +330,22 @@ NestJS + Prisma + MySQL 数据层，负责内容数据、上传存储、鉴权�
 ### src/modules/menus（后台菜单）
 
 - [`menus.module.ts`](../apps/server/src/modules/menus/menus.module.ts) —— 模块定义
-- [`menus.controller.ts`](../apps/server/src/modules/menus/menus.controller.ts) —— 侧栏菜单树（按角色过滤）+ 菜单配置增删改查（写操作限平台管理员）
+- [`menus.controller.ts`](../apps/server/src/modules/menus/menus.controller.ts) —— 树仅登录并按角色过滤；维护按 `/settings/menus` 菜单，配置读口共享给角色授权树
 - [`menus.service.ts`](../apps/server/src/modules/menus/menus.service.ts) —— 菜单树构建、层级与环路校验（最多三级）、存在子菜单时拒绝删除
 - [`dto.ts`](../apps/server/src/modules/menus/dto.ts) —— 菜单入参校验 DTO
 
 ### src/modules/roles（后台角色）
 
 - [`roles.module.ts`](../apps/server/src/modules/roles/roles.module.ts) —— 模块定义
-- [`roles.controller.ts`](../apps/server/src/modules/roles/roles.controller.ts) —— 角色增删改查 + 角色-菜单授权（全部限平台级角色）
+- [`roles.controller.ts`](../apps/server/src/modules/roles/roles.controller.ts) —— 维护按 `/settings/roles` 菜单；角色列表共享给 `/settings/users` 的绑定选择
 - [`roles.service.ts`](../apps/server/src/modules/roles/roles.service.ts) —— 角色 CRUD、菜单授权保存（自动补全上级菜单）、内置角色与用户绑定的删除护栏
 - [`dto.ts`](../apps/server/src/modules/roles/dto.ts) —— 角色入参校验 DTO
 
 ### src/modules/admin-users（后台用户）
 
 - [`admin-users.module.ts`](../apps/server/src/modules/admin-users/admin-users.module.ts) —— 模块定义
-- [`admin-users.controller.ts`](../apps/server/src/modules/admin-users/admin-users.controller.ts) —— 用户增删改查与角色分配（全部限平台级角色）
-- [`admin-users.service.ts`](../apps/server/src/modules/admin-users/admin-users.service.ts) —— 用户 CRUD、bcrypt 密码、角色绑定校验、站点授权、删除/降级护栏（不能删自己、必须保留至少一个可用平台级用户）
+- [`admin-users.controller.ts`](../apps/server/src/modules/admin-users/admin-users.controller.ts) —— 用户 CRUD 与角色绑定按 `/settings/users` 菜单，不再按 platform 拒绝
+- [`admin-users.service.ts`](../apps/server/src/modules/admin-users/admin-users.service.ts) —— 用户 CRUD、bcrypt、角色绑定；不读写/下发 siteIds，保留不能删自己与至少一个可用平台级用户的删除/降级/停用护栏
 - [`dto.ts`](../apps/server/src/modules/admin-users/dto.ts) —— 用户入参校验 DTO
 
 ### src/modules/public（GEO 项目公开只读接口）
@@ -369,6 +397,8 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`api/files.ts`](../apps/admin/app/config/api/files.ts) —— 静态文件上传/列表/删除/替换（`replace` → `PUT /files/:id/replace`，URL 不变仅换文件）接口
 - [`api/content.ts`](../apps/admin/app/config/api/content.ts) —— 栏目与页面接口
 - [`api/members.ts`](../apps/admin/app/config/api/members.ts) —— 站点会员接口
+- [`api/access.ts`](../apps/admin/app/config/api/access.ts) —— 当前实施草稿：入站请求分页 API/字段类型，不提供统计分析
+- [`api/demands.ts`](../apps/admin/app/config/api/demands.ts) —— 需求列表/详情/跟进与 IP 禁用/解禁封装；路径、UUID 寻址及 clientIp/ban 字段已与服务端静态对齐（05 §7.2），真实数据库与浏览器交互联调仍待验收
 - [`api/publish.ts`](../apps/admin/app/config/api/publish.ts) —— 发布任务接口 + 产物状态（`artifacts`，含 `task` = 最新构建任务）、单页回退（`rollback`）、GEO 索引更新（`repair`，界面旧称「产物修复」）、产物包下载（`download`）
 - [`api/editor.ts`](../apps/admin/app/config/api/editor.ts) —— 站点内容编辑器接口：内容树、目录/页面增删改与上下移、整页草稿读写与丢弃、内容指纹重算
 - [`api/blocks.ts`](../apps/admin/app/config/api/blocks.ts) —— 块库接口：列表（本站块 + 公共模板）/详情（含源码与字段声明，`template: true` 只读模板）/新建/保存代码（编译失败返回 `compileError` 含行号列号）/使用位置/回退上一版/**模板引入本站**（`apply`，ADR-035）
@@ -389,7 +419,7 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 ### app/utils
 
-- [`menu-tree.ts`](../apps/admin/app/utils/menu-tree.ts) —— 菜单树工具：平铺列表 ↔ 多级树（菜单管理与角色授权页共用）
+- [`menu-tree.ts`](../apps/admin/app/utils/menu-tree.ts) —— 菜单树工具：平铺列表 ↔ 多级树；首页按授权树顺序选择首个可点击叶子路径，跳过 / 与非内部路径
 - [`tool.ts`](../apps/admin/app/utils/tool.ts) —— 交互工具（**防抖与 loading 相互独立**）：`debounce` / `throttle`（时间维度，默认 `leading` 即先触发后防抖）与 `useLoading()`（状态维度：`run` 整块互斥 / `runKeyed` 行级互斥 / `isLoading` 行内 loading）；全部写操作按钮统一从这里引入，组合顺序为「防抖在外、loading 在内」
 
 ### app/plugins
@@ -406,8 +436,9 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 - [`NewsBodyEditor.test.ts`](../apps/admin/app/components/NewsBodyEditor.test.ts) —— 安装版 Edge 中加载真实 wangEditor 与组件解析/序列化逻辑；验证尺寸、对齐、间距、撤销重开和媒体URL边界，`BODY_EDITOR_REVERSE=dimensions|styles|urls` 仅对内存源码撤修复作反向红，不覆盖 dirty 文件；浏览器依赖通过 `BROWSER_TEST_MODULE` 指定。
 - [`SideMenuNode.vue`](../apps/admin/app/components/SideMenuNode.vue) —— 侧栏菜单递归节点（最多三级，目录可展开/收起，命中路由高亮）
-- [`DashboardOverview.vue`](../apps/admin/app/components/DashboardOverview.vue) —— GEO 监控工作台仪表盘（PV/UV + AI 抓取 + 发布任务）；**当前未挂载**：根路径 `/` 改为空白占位页（`pages/index.vue`），需要恢复时在页面模板写 `<DashboardOverview />`
+- 旧 DashboardOverview 组件已删除；旧菜单与 RoleMenu 清理逻辑在 seed.ts，本轮不操作数据库
 - [`MemberCreateDialog.vue`](../apps/admin/app/components/MemberCreateDialog.vue) —— 新增站点会员弹窗
+- [`DemandDetailDialog.vue`](../apps/admin/app/components/DemandDetailDialog.vue) —— 详情/四栏联系方式、跟进状态/单份备注及 IP 禁用/解禁；操作路径与服务端对齐，共用 `/sites/demands` 授权，不建独立封禁页面；真实数据库与浏览器交互验收仍待完成
 - [`NewsDialog.vue`](../apps/admin/app/components/NewsDialog.vue) —— 新闻新建/编辑弹窗（标题 / 发布日期 / 摘要 / 封面图 `ImageField` / 正文 `NewsBodyEditor`（整篇 HTML，编辑区 320px）+ 编辑打开时拉单条详情回显正文）；与案例弹窗统一使用 Element Plus `top="3vh"` 设置顶部间距，`.el-dialog__body` 按视口限高（`calc(100vh - 180px)`）**只在内层滚动**，不再超出屏幕。
 - `NewsBodyEditor.vue` 正文样式 —— 仅编辑区与 GEO `site.css` 的 `.art-html` 对齐：14.6px / 1.9、标题、列表文本缩进与间距、表格默认细边 / 8px 内边距；复用管理后台现有字号、间距与颜色令牌，移除图片包裹间距和最小尺寸，不强制图片满宽
 - [`NewsBodyEditor.vue`](../apps/admin/app/components/NewsBodyEditor.vue) —— **单可视化正文编辑器（整篇 HTML，ADR-060）**：新闻 / 案例共用 wangEditor，v-model 为**整篇正文 HTML 字符串**（不是块数组），仅可视化编辑，无源码切换；支持 H2/H3 标题（**不提供 H1 入口**，用官方原生 `header2`/`header3`）、字号、文字色 / 背景色、粗斜下划删除、对齐、列表、表格、图片（含左 / 右环绕与取消环绕）、视频与撤销重做；保存原样入库、不做清洗（ADR-061），站点直接展示正文。**字重保留**：仅对登记的正文编辑器扩展 HTML 解析 / 渲染 / 序列化，保留 `font-weight:600/400`，避免规整成粗体或重复包裹 span。**媒体回显**：纯图片 `figure` 转为编辑器可识别的段落（含图注 / 视频 / 其它内容的 figure 不转换），`img/video/source` 的 src 与视频 poster 经 `resolveMediaUrl` 解析；图片 / 视频上传走 `filesApi.upload` 并带来源标签，粘贴 base64 图片入库后按 Slate 节点替换地址，进行中 / 已失败的图片不重复上传。**回显与历史清理**：空 HTML 初始化后通过 `applyHtml` 统一回显，先 blur 再 setHtml，并清空 undo/redo，避免撤销回到程序加载前；原始值与编辑器 HTML 双快照过滤延迟 change 回声，避免回写循环；编辑器只在可见容器初始化（详情页签 `lazy`），销毁后停止回显与异步实例操作
@@ -420,11 +451,11 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`MenuFormDialog.vue`](../apps/admin/app/components/MenuFormDialog.vue) —— 菜单新建/编辑弹窗（上级菜单树选择 + 环路排除）
 - [`RoleFormDialog.vue`](../apps/admin/app/components/RoleFormDialog.vue) —— 角色新建/编辑弹窗（内置角色标识与状态受保护）
 - [`RoleMenusDialog.vue`](../apps/admin/app/components/RoleMenusDialog.vue) —— 角色菜单授权弹窗（勾选子级自动含上级）
-- [`AdminUserFormDialog.vue`](../apps/admin/app/components/AdminUserFormDialog.vue) —— 后台用户新建/编辑弹窗（角色绑定 + 站点授权）
+- [`AdminUserFormDialog.vue`](../apps/admin/app/components/AdminUserFormDialog.vue) —— 后台用户新建/编辑弹窗（角色绑定 + 启停），已移除站点授权选择与载荷
 - [`BlockDataForm.vue`](../apps/admin/app/components/BlockDataForm.vue) —— **动态块数据表单**：按 `BlockFieldSchema` 递归渲染 text/textarea/number/switch/select/file/url/link/list/group，`list` 支持增删与上下移；对外暴露 `collectMissing()` 供保存前收集未填必填项
 - [`ChannelFormDialog.vue`](../apps/admin/app/components/ChannelFormDialog.vue) —— 目录新建/编辑弹窗（名称 + URL 片段 + 排序）
 - [`PageFormDialog.vue`](../apps/admin/app/components/PageFormDialog.vue) —— 页面新建/编辑弹窗（标题/URL 片段/所属目录/类型/摘要；已发布页锁定 slug 与目录）
-- [`BlockCreateDialog.vue`](../apps/admin/app/components/BlockCreateDialog.vue) —— 新建块弹窗（归属 + SFC 源码模板，标识取自源码声明；编译失败展示行号列号）；`defaultScope` / `lockScope` 供块模板库锁定为「公共模板」，非平台级不提供公共模板选项（ADR-035）
+- [`BlockCreateDialog.vue`](../apps/admin/app/components/BlockCreateDialog.vue) —— 新建块弹窗（归属 + SFC 源码模板）；defaultScope/lockScope 保留，公共模板选项按 `/blocks/templates` 菜单，不按 platform
 - [`BlockUsagesDialog.vue`](../apps/admin/app/components/BlockUsagesDialog.vue) —— 块使用位置弹窗（引用页面 + 实例数/启用数）
 - [`GeoPreviewDialog.vue`](../apps/admin/app/components/GeoPreviewDialog.vue) —— GEO 预览弹窗（只读展示「系统自动生成」与「实际会输出」）
 - [`GeoArtifactsDialog.vue`](../apps/admin/app/components/GeoArtifactsDialog.vue) —— GEO 产物弹窗（查看已构建产物里的 robots.txt / sitemap.xml / llms.txt；「GEO 索引更新」重出索引；「编辑」为非常规兜底的手动替换，会被下次索引更新 / 重建覆盖）
@@ -437,20 +468,21 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 
 ### app/layouts
 
-- [`default.vue`](../apps/admin/app/layouts/default.vue) —— 控制台布局：角色化侧栏菜单 + 顶栏 + 内容区
+- [`default.vue`](../apps/admin/app/layouts/default.vue) —— 控制台布局：角色化侧栏菜单 + 顶栏 + 内容区；根路径面包屑为“首页”，不再显示旧仪表盘标题
 
 ### app/pages
 
 > 页面级约定：列表表格统一 `el-table` + `border`（列宽可拖拽，样式基线在 `main.scss`）；弹窗一律使用 `app/components/*Dialog.vue` 独立组件，页面只保留 `v-model` 与 `@saved`。
 
 - [`login.vue`](../apps/admin/app/pages/login.vue) —— 登录页（深空控制台风格）
-- [`index.vue`](../apps/admin/app/pages/index.vue) —— 总览仪表盘：PV/UV、AI 抓取、发布任务、热门路由
+- [`index.vue`](../apps/admin/app/pages/index.vue) —— 等待授权菜单树加载后 replace 跳转首个可点击叶子菜单；无可用菜单显示授权空态，不强制进入监控
 - [`sites/index.vue`](../apps/admin/app/pages/sites/index.vue) —— 站点列表（搜索/筛选/分页；**域名映射列**：主域名 + 别名域名；**站点前缀列**：站点标识 `slug`，进编辑页可改；**构建状态列**：未构建 / 排队中 / 构建中 / 构建成功 / 构建失败 + 时间（进行中显示已运行时长，失败悬停看日志尾部；有进行中任务时每 4 秒静默轮询）；操作列「预览」新标签打开**主域名 + 站点前缀**、「编辑」进入深入编辑页、「内容编辑器」进入 `/content/editor?siteId=<id>`、「下载」打开 `SiteDownloadDialog` 下载产物包）
 - [`sites/[id].vue`](../apps/admin/app/pages/sites/%5Bid%5D.vue) —— 站点深入编辑页（单页三分区、无 Tab：基本信息（含**站点前缀 slug**、**主域名 + 别名域名增删**）/ 企业资质 / SEO 设置；渲染模式与主题色不在此页）
 - [`sites/products.vue`](../apps/admin/app/pages/sites/products.vue) —— **产品体系管理（2026-11-03）**：左侧 260px「行业分组」面板（组名 / 产品数 / 说明摘要 + 编辑、删除、加分组；`productCount > 0` 时前端直接 warning 阻止删除，与服务端 400 口径一致）+ 右侧产品表格（缩略图 + 名称、系列、行业标签、访问路径、状态、操作；筛选 keyword / 系列 / 行业；分页）。弹窗 `ProductDialog`（两页签）+ `IndustryDialog`
 - [`sites/cases.vue`](../apps/admin/app/pages/sites/cases.vue) —— **成功案例管理**：按站点隔离 + 关键词 / 行业筛选（行业选项来自分类表 `catalogApi.industries`）+ 新建/编辑/删除；表格列案例（缩略图 + 标题）/ 行业 / 地点 / 面积·年份 / 使用体系 / 访问路径 / 状态 / 操作；弹窗 `CaseDialog`（行业为分类下拉，正文用 `NewsBodyEditor`）
 - [`sites/news.vue`](../apps/admin/app/pages/sites/news.vue) —— 新闻资讯管理（按站点隔离：站点切换 + 关键词搜索；表格列标题 / 访问路径 / 发布日期 / 发布状态徽标；操作编辑、删除（删除与保存均由服务端自动触发站点构建）；弹窗 `NewsDialog`）
 - [`sites/faqs.vue`](../apps/admin/app/pages/sites/faqs.vue) —— 高频问答管理（按站点隔离：站点切换 + 关键词搜索 + 分类筛选（选项来自分类接口，清空 = 全部）+ 上架状态筛选（全部 / 只看上架 / 只看未上架）；表格列问题 / 分类 / 访问路径 / 上架开关（行内即时生效，只影响列表页展示，详情页保留，ADR-055）/ 发布状态徽标；操作关联问题（`FaqRelatedDialog`，ADR-057）、编辑、删除；弹窗 `FaqDialog`，新分类保存后刷新分类清单）；答案为受限富文本（`FaqAnswerEditor`，ADR-058）
+- [`sites/demands.vue`](../apps/admin/app/pages/sites/demands.vue) —— “站点管理 → 需求收集”的站点/状态/关键词分页与独立详情；菜单定稿 `/sites/demands`，封禁共用此授权；新增菜单不自动扩大既有角色授权
 - [`content/index.vue`](../apps/admin/app/pages/content/index.vue) —— 页面列表（状态三态、GEO 分、提交审核与发布）
 - [`content/[id].vue`](../apps/admin/app/pages/content/%5Bid%5D.vue) —— 页面编辑器（模板 + 结构化 Block 表单 + 右侧 GEO 体检）
 - [`content/editor.vue`](../apps/admin/app/pages/content/editor.vue) —— **站点内容编辑器工作台**（09 §6.2）：工具条（站点切换 + **构建状态**（未构建 / 排队中 / 构建中 / 构建成功 / 构建失败 + 时间或已运行时长，失败可悬停看原因；进行中每 3 秒轮询并在结束时刷新左树与徽标 + 提示结果）+ **增量发布**（带 `?` 说明）+ **整站重建** / **GEO 索引更新**（接通既有 `/publish/site`、`/publish/repair` 接口，三个动作各带 `?` 说明，问号统一由 `TermHint` 渲染；**进行中三个按钮全部禁用**，增量发布与整站重建转圈）+ 刷新）、左列可搜索内容树（目录/页面/块 + 发布徽标，点目录即打开其下第一个页面）、右侧预览 iframe 占满一屏（走 `/preview/ticket`，头部展示预览态标记 + 页面**访问地址**可复制）、「页面 / 块 / 发布」改为右侧抽屉（页面：草稿字段 + SEO + 编审 + JSON-LD 双模式；块：实例清单（块标识下列出**块名称与用途说明**，定义批量预取）+ 动态数据表单 + 「编辑代码」新标签页打开块代码；发布：状态 + 发布/回退 + GEO 体检）
@@ -460,9 +492,9 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - [`files.vue`](../apps/admin/app/pages/files.vue) —— 素材管理（`static_files` 可视化入口）：站点筛选 + 关键词搜索（文件名 / 地址 / 来源 / 备注）+ 多选上传（图片 ≤2MB、视频 ≤100MB）、图片缩略预览（视频显示播放标记）、**「上传来源」列**（`source`，标注哪个功能传的）、复制访问地址、**ID 固定宽度单行 + 点击复制**、替换（隐藏 file input，accept 限定原文件 MIME，`PUT /files/:id/replace` 替换内容、引用地址不变）、删除
 - [`navigations.vue`](../apps/admin/app/pages/navigations.vue) —— 导航管理（头部主导航 + 页脚四列分组，条目增删排序、站内页面/外部链接二选一，整组全量覆盖保存）
 - [`members/index.vue`](../apps/admin/app/pages/members/index.vue) —— 站点会员管理
-- [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— GEO 监控（AI 爬虫分布、被抓取页面 Top）
+- [`monitor/index.vue`](../apps/admin/app/pages/monitor/index.vue) —— GEO 入站请求筛选/分页明细，不做统计；loading 互斥下版本化串行补查最新条件，旧响应不回写，失败仍补查、卸载停止回写；站点名与明细并行加载，不由站点请求失败阻断明细；真实采集链路验收另行完成
 - [`settings/index.vue`](../apps/admin/app/pages/settings/index.vue) —— 系统设置 · 运行配置（平台级，展示账号与角色/接口基址/时区/静态资源/AI 爬虫策略）
-- [`settings/users.vue`](../apps/admin/app/pages/settings/users.vue) —— 系统设置 · 用户管理（平台级，用户增删改查、分配角色与站点授权、启停）
+- [`settings/users.vue`](../apps/admin/app/pages/settings/users.vue) —— 系统设置 · 用户管理（菜单授权，CRUD、角色绑定与启停），已移除站点授权列与站点选项加载
 - [`settings/roles.vue`](../apps/admin/app/pages/settings/roles.vue) —— 系统设置 · 角色管理（平台级，角色增删改查 + 菜单授权树，内置角色受保护）
 - [`settings/menus.vue`](../apps/admin/app/pages/settings/menus.vue) —— 系统设置 · 菜单管理（平台级，三级菜单增删改查，保存后侧栏即时生效；可见性由角色授权决定）
 
@@ -516,6 +548,24 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 ### app/analytics
 
 - [`analytics.ts`](../apps/geo/app/analytics/analytics.ts) —— 埋点插件（构建期条件注册，默认关闭）：路由变化后 sendBeacon 上报（匿名 ID，无个人信息）；env 置 `NUXT_PUBLIC_TRACK_ENABLED=1` 才由 nuxt.config 的 plugins 数组打包进产物，默认构建完全不含埋点代码（不放 plugins/ 自动扫描目录正是为了能整体排除）
+
+### server/middleware（当前入口与未验收边界）
+
+- [`site-entry.ts`](../apps/geo/server/middleware/site-entry.ts) —— 既有 Host 站点定位、SSG 直出与 SSR 兜底；访问日志由前置 00-access.ts 采集，widget 版本资源在产物查找前放行；本轮仅核对文档，不改代码/入口缓存策略，不验收运行链路
+- [`00-access.ts`](../apps/geo/server/middleware/00-access.ts) / [`../utils/access.ts`](../apps/geo/server/utils/access.ts) —— 采集入口调用 observeAccess/recordAccess，直接读取 `TRUSTED_PROXIES` 并使用既有内部令牌逐条异步上报；服务端 AccessModule 已注册。具体能力亦见本地图后文，代码接入不代表 finish/close、去敏、可信代理或真实数据库保存链路已验收（05 §7.1、07 §3.3.1）
+- [`../widget/loader.ts`](../apps/geo/widget/loader.ts) —— 独立轻量加载器：显式按钮事件委托、意向懒加载、准备成功才拦截；顶部导航、电话/邮件、外站、新窗口与加载失败保持原跳转，不依赖 hydration/storage
+- [`../widget/widget.ts`](../apps/geo/widget/widget.ts) —— Shadow DOM + 原生 dialog 的聊天外观需求表单；按服务端 widget-config、captcha id/image 与 SubmitDemandDto 请求，四栏任填、错误保留输入、网络不确定失败复用提交快照/幂等键、焦点及移动端内滚动；不发访客 token、不写需求到站点产物
+- [`../widget/mark-actions.ts`](../apps/geo/widget/mark-actions.ts) —— Vite 编译时兼容未带标记的旧 hero-dark/scene-hero/telbar 行动按钮，本站 /contact 才启用；真实块源已有稳定标记时不重复附加，不扫描文案、不涉及顶部导航
+- [`hero-dark.vue`](../apps/server/prisma/blocks/hero-dark.vue) / [`scene-hero.vue`](../apps/server/prisma/blocks/scene-hero.vue) / [`telbar.vue`](../apps/server/prisma/blocks/telbar.vue) —— 种子块源与 development forintech 本站数据库副本均保存站内 /contact 行动按钮的条件标记；只定向合并标记，不覆盖本站其他样式/结构，不修改同步生成的 Blk 文件
+- [`forintech.json`](../scripts/data/forintech.json) —— 建站描述首页次按钮同步「联系我们 → /contact」；现有 development 首页以数据库 scene-hero 为真实来源，本轮定向更新其次按钮，核对其他主体页，横幅提交需求及顶部电话/导航保留
+- [`forintech-actions.test.mjs`](../aiTest/forintech-actions.test.mjs) / [`forintech-actions-update.mjs`](../aiTest/forintech-actions-update.mjs) —— 本地忽略入库的先红后绿回归与定向更新脚本；备份本站页面/块、编译校验后更新稳定标记与内容指纹，导航/站点/授权保持，publishedHash 不伪写；本地 SSG 重建不代表生产发布
+- [`forintech-artifacts.test.mjs`](../aiTest/forintech-artifacts.test.mjs) / [`forintech-built-browser.mjs`](../aiTest/forintech-built-browser.mjs) / [`forintech-actions-verification.md`](../aiTest/forintech-actions-verification.md) —— 117 条正式产物机械检查、独立本地浏览器点击检查与部分验收记录；浏览器未通过项单独列出，不等同于全部主体页交互验收
+- [`../server/routes/demand-widget/v1/[asset].get.ts`](../apps/geo/server/routes/demand-widget/v1/[asset].get.ts) —— 版本化 loader.js/widget.js 独立脚本响应，公开短缓存、nosniff；site-entry 在站点产物查找前放行此资源，避免旧 SSG 资源副本覆盖主体更新
+- [`../app/app.vue`](../apps/geo/app/app.vue) / [`../nuxt.config.ts`](../apps/geo/nuxt.config.ts) —— 根组件只注入 defer 外链 loader 与现有 API 基址；既有块编译转换前置按钮标记。首次接入旧页面仍需一次发布，当前未发布、不改 nginx、未执行数据库联调
+
+2026-11-06 权限续作：按 REQUIREMENTS §9、05 §2 与用户授权同步 02 及地图；全部管理业务控制器接入登录 + 菜单守卫，移除 siteIds/platform 业务拒绝和站点授权 UI，保留归属、模板副本、会员/内部身份与防锁死。历史“限平台级/按用户站点隔离”条目不再作为业务权限要求。数据库 site_ids 历史列暂留，无结构迁移，无自动菜单补授、无发布。
+
+权限验证脚本 [`aiTest/menu-permissions.test.ts`](../aiTest/menu-permissions.test.ts) 为忽略入库的本地测试：路由元数据全覆盖、真实 Nest HTTP 的401/403/跨站非平台读写、主动筛选、DTO/身份字段、目录与预览归属、会员身份、防锁死、模板权限防伪造。运行目录 apps/server：`node -r ts-node/register/transpile-only --test ../../aiTest/menu-permissions.test.ts`（NODE_PATH 指向该应用 node_modules，TS_NODE_PROJECT 指向该应用 tsconfig.json，保留 Nest 装饰器元数据）。Prisma 替身不代表真实数据库验收。
 
 ### app/utils
 
@@ -610,7 +660,9 @@ Nuxt 4 + Element Plus（**亮色主题**），SPA（`ssr: false`，见 ADR-017�
 - `public/assets/css/{theme-b,site}.css` —— 新增：设计稿原型样式**原样落地**（ADR-036）
 - `public/assets/img/{cert,device,doctor,env}/**` —— 新增：设计稿图片资产 60 个（ADR-037）
 - `server/middleware/preview.ts` —— 新增：预览票据校验、草稿渲染、禁索引、关埋点
-- `server/middleware/site-entry.ts` —— 新增：站点统一入口中间件（ADR-045）——Host 非回环时按域名解析站点（内存缓存 + 负缓存），优先直出 `sites/<slug>/` 产物文件（`fileOfPath` 口径，HTML no-cache + 304、`_nuxt` immutable），未命中放行 SSR 兜底；输出 `[access]` 单行 JSON 站点级访问日志（静态资产与回环地址跳过）；产物根可用 `SITE_PRODUCTS_DIR` 覆盖。**依赖 `nuxt.config` 的 `nitro.serveStatic: false`**（否则 nitro 内嵌资产层先拦 `_nuxt/**`）
+- `server/middleware/00-access.ts` —— 响应后访问采集入口：预览与站点入口之前注册 finish/close，覆盖所有到达 GEO 的请求；构建渲染进程跳过，使用既有内部令牌逐条异步保存，不等待结果、不改 widget
+- `server/utils/access.ts` —— GEO 服务端访问工具：IPv4/IPv6 归一化、可信 CIDR 与代理链、URL/Referer 敏感信息剔除、资源与 UA 声明分类（附证据/用途）、单次生命周期快照、内部保存错误捕获；无新依赖，不持有 req/res 进入保存过程
+- `server/middleware/site-entry.ts` —— 站点统一入口中间件（ADR-045）——Host 非回环时按域名解析站点（内存缓存 + 负缓存），优先直出 `sites/<slug>/` 产物文件（`fileOfPath` 口径，HTML no-cache + 304、`_nuxt` immutable），未命中放行 SSR 兜底；原 `[access]` stdout 日志移交 `00-access.ts` 响应后上报；产物根可用 `SITE_PRODUCTS_DIR` 覆盖。**依赖 `nuxt.config` 的 `nitro.serveStatic: false`**（否则 nitro 内嵌资产层先拦 `_nuxt/**`）
 - `server/routes/static/[...path].ts` —— 新增：`/static/**` 同源代理（Nitro 路由 → 服务端素材库 `useStaticAssets`，透传状态码 / content-type / 查询串，dev SSR 与渲染服务共用）
 - `scripts/build-sites.mjs` —— **改动**：复制现有产物 → 增量生成 → 全量索引与主站索引 → 合并清单 → 清理下线页 → 保留上一版；2026-10-07 进一步改为「构建缓存判定（命中跳过 Vite）+ SSR 爬取 targets + 跨站点构建锁」（ADR-032）
 - `scripts/sync-blocks.mjs` —— 新增：块代码落盘（数据库 → `app/components/blocks/Blk*.vue`，幂等跳过未变化块）

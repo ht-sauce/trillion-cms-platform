@@ -6,7 +6,14 @@
  * 站点切换与默认站点逻辑与新闻管理（news.vue）一致
  */
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { catalogApi, resolveMediaUrl, sitesApi, type ProductIndustryItem, type ProductItem, type SiteItem } from '~/config/api'
+import {
+  catalogApi,
+  resolveMediaUrl,
+  sitesApi,
+  type ProductIndustryItem,
+  type ProductItem,
+  type SiteItem
+} from '~/config/api'
 import { BADGE_META } from '~/config/menu'
 import { PAGINATION_LAYOUT, PAGE_SIZE_DEFAULT, PAGE_SIZE_OPTIONS } from '~/config/pagination'
 import { DEBOUNCE_WAIT, debounce, useLoading } from '~/utils/tool'
@@ -87,11 +94,9 @@ const onRemove = debounce(
   (row: ProductItem) =>
     runKeyed(`remove:${row.id}`, async () => {
       try {
-        await ElMessageBox.confirm(
-          `确认删除产品「${row.name}」？其详情页会一并删除，该操作不可恢复`,
-          '删除确认',
-          { type: 'warning' }
-        )
+        await ElMessageBox.confirm(`确认删除产品「${row.name}」？其详情页会一并删除，该操作不可恢复`, '删除确认', {
+          type: 'warning'
+        })
       } catch {
         /** 用户取消 */
         return
@@ -216,15 +221,15 @@ onMounted(async () => {
             <template #default="{ row }">
               <div class="prod-cell">
                 <el-image
-              v-if="row.img"
-              :src="resolveMediaUrl(row.img)"
-              :preview-src-list="[resolveMediaUrl(row.img)]"
-              :alt="row.name"
-              fit="cover"
-              preview-teleported
-              hide-on-click-modal
-              class="prod-thumb"
-            />
+                  v-if="row.img"
+                  :src="resolveMediaUrl(row.img)"
+                  :preview-src-list="[resolveMediaUrl(row.img)]"
+                  :alt="row.name"
+                  fit="cover"
+                  preview-teleported
+                  hide-on-click-modal
+                  class="prod-thumb"
+                />
                 <div class="prod-meta">
                   <span class="prod-name">{{ row.name }}</span>
                   <span class="c-mute">{{ row.cnName }}</span>
@@ -256,7 +261,13 @@ onMounted(async () => {
           <el-table-column label="操作" width="100" fixed="right" class-name="ops-col">
             <template #default="{ row }">
               <el-button link size="small" type="primary" @click="openEdit(row)">编辑</el-button>
-              <el-button link size="small" type="danger" :loading="isLoading(`remove:${row.id}`)" @click="onRemove(row)">
+              <el-button
+                link
+                size="small"
+                type="danger"
+                :loading="isLoading(`remove:${row.id}`)"
+                @click="onRemove(row)"
+              >
                 删除
               </el-button>
             </template>
@@ -283,7 +294,12 @@ onMounted(async () => {
       :industries="industries"
       @saved="onSaved"
     />
-    <IndustryDialog v-model="industryDialogVisible" :site-id="siteId" :industry="editingIndustry" @saved="onIndustrySaved" />
+    <IndustryDialog
+      v-model="industryDialogVisible"
+      :site-id="siteId"
+      :industry="editingIndustry"
+      @saved="onIndustrySaved"
+    />
   </div>
 </template>
 

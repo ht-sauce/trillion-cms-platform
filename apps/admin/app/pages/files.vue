@@ -234,14 +234,7 @@ onMounted(async () => {
       />
       <span class="spacer" />
       <el-button type="primary" size="small" :loading="isLoading('upload')" @click="pickFiles">上传</el-button>
-      <input
-        ref="fileInput"
-        type="file"
-        multiple
-        :accept="MEDIA_ACCEPT"
-        class="upload-input"
-        @change="onFileChange"
-      />
+      <input ref="fileInput" type="file" multiple :accept="MEDIA_ACCEPT" class="upload-input" @change="onFileChange" />
       <input ref="replaceInput" type="file" class="upload-input" @change="onReplaceChange" />
     </div>
 

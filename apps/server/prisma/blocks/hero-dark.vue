@@ -91,7 +91,13 @@ defineBlock({
       required: true,
       hint: '60~120 字，让患者单独读懂；[[文字]] 包住的内容会显示为高亮数字'
     },
-    { key: 'chips', label: '标签组', type: 'list', item: { type: 'text' }, hint: '3~6 个；与本页某区块标题同名（或互含）时自动变成页内锚点，点击滚动到该区块' },
+    {
+      key: 'chips',
+      label: '标签组',
+      type: 'list',
+      item: { type: 'text' },
+      hint: '3~6 个；与本页某区块标题同名（或互含）时自动变成页内锚点，点击滚动到该区块'
+    },
     {
       key: 'actions',
       label: '行动按钮',
@@ -142,7 +148,13 @@ defineBlock({
             <span v-if="isNonLink(action.href)" class="btn" :class="action.primary ? 'btn-teal' : 'btn-line'">
               {{ action.label }}
             </span>
-            <NuxtLink v-else :to="action.href || '#'" class="btn" :class="action.primary ? 'btn-teal' : 'btn-line'">
+            <NuxtLink
+              v-else
+              :to="action.href || '#'"
+              class="btn"
+              :class="action.primary ? 'btn-teal' : 'btn-line'"
+              :data-contact-action="/^\/contact\/?$/.test(String(action.href)) ? 'demand' : undefined"
+            >
               {{ action.label }}
             </NuxtLink>
           </template>
@@ -166,7 +178,13 @@ defineBlock({
             <span v-if="isNonLink(action.href)" class="btn" :class="action.primary ? 'btn-teal' : 'btn-line'">
               {{ action.label }}
             </span>
-            <NuxtLink v-else :to="action.href || '#'" class="btn" :class="action.primary ? 'btn-teal' : 'btn-line'">
+            <NuxtLink
+              v-else
+              :to="action.href || '#'"
+              class="btn"
+              :class="action.primary ? 'btn-teal' : 'btn-line'"
+              :data-contact-action="/^\/contact\/?$/.test(String(action.href)) ? 'demand' : undefined"
+            >
               {{ action.label }}
             </NuxtLink>
           </template>

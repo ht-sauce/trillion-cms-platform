@@ -1,7 +1,5 @@
 /**
  * 块定义接口
- * 读：站点级；写站点块：站点级；模板库（siteId = '0'，公共模板）与公共模板写操作：平台级
- * （平台级由 BlocksService 里的 assertSiteAccess(user, PUBLIC_BLOCK_SITE_ID) 落地，见 09 §4.5）
  */
 import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
@@ -9,12 +7,15 @@ import { BlocksService } from './blocks.service'
 import { ApplyBlockDto, CreateBlockDto, RollbackBlockDto, SaveBlockCodeDto } from './dto'
 import { PUBLIC_BLOCK_SITE_ID } from './constants'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('块库（内容编辑器）')
 @ApiBearerAuth()
 @Controller('blocks')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu({ blocks: true })
 export class BlocksController {
   constructor(private readonly service: BlocksService) {}
 
@@ -25,6 +26,7 @@ export class BlocksController {
   }
 
   @Get(':key')
+  @RequireMenu(['/blocks', '/blocks/templates', '/content/editor'])
   @ApiOperation({ summary: '块详情（含 Vue SFC 源码与字段声明；template=1 读公共模板）' })
   detail(
     @CurrentUser() user: AuthUser,

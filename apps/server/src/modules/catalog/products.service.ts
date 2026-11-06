@@ -66,8 +66,9 @@ export class ProductsService {
       desc: industry.desc,
       moreLabel: industry.moreLabel,
       sort: industry.sort,
-      productCount: products.filter((product) => ((product.industries as string[] | null) ?? []).includes(industry.name))
-        .length
+      productCount: products.filter((product) =>
+        ((product.industries as string[] | null) ?? []).includes(industry.name)
+      ).length
     }))
     return { list }
   }
@@ -109,7 +110,10 @@ export class ProductsService {
       })
       if (taken) throw new BadRequestException(`已存在同名行业分组：${name}`)
       /** 产品上的行业引用是名称数组，改名必须同步，否则分组会变空 */
-      const products = await this.prisma.product.findMany({ where: { siteId: row.siteId }, select: { id: true, industries: true } })
+      const products = await this.prisma.product.findMany({
+        where: { siteId: row.siteId },
+        select: { id: true, industries: true }
+      })
       for (const product of products) {
         const industries = (product.industries as string[] | null) ?? []
         if (!industries.includes(row.name)) continue
@@ -137,10 +141,18 @@ export class ProductsService {
     if (!row) throw new NotFoundException('行业分组不存在')
     assertSiteAccess(user, row.siteId)
 
-    const products = await this.prisma.product.findMany({ where: { siteId: row.siteId }, select: { name: true, industries: true } })
+    const products = await this.prisma.product.findMany({
+      where: { siteId: row.siteId },
+      select: { name: true, industries: true }
+    })
     const used = products.filter((product) => ((product.industries as string[] | null) ?? []).includes(row.name))
     if (used.length) {
-      throw new BadRequestException(`分组内还有 ${used.length} 个产品（${used.slice(0, 3).map((p) => p.name).join('、')}），请先调整产品分类`)
+      throw new BadRequestException(
+        `分组内还有 ${used.length} 个产品（${used
+          .slice(0, 3)
+          .map((p) => p.name)
+          .join('、')}），请先调整产品分类`
+      )
     }
 
     await this.prisma.productIndustry.delete({ where: { id: row.id } })
@@ -282,7 +294,10 @@ export class ProductsService {
         name: dto.name ?? row.name,
         cnName: dto.cnName ?? row.cnName,
         series: dto.series ?? row.series,
-        industries: dto.industries === undefined ? toJsonInput((row.industries as string[] | null) ?? []) : toJsonInput(dto.industries),
+        industries:
+          dto.industries === undefined
+            ? toJsonInput((row.industries as string[] | null) ?? [])
+            : toJsonInput(dto.industries),
         tags: dto.tags === undefined ? toJsonInput((row.tags as string[] | null) ?? []) : toJsonInput(dto.tags),
         desc: dto.desc ?? row.desc,
         img: dto.img ?? row.img,

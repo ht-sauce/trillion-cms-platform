@@ -6,13 +6,15 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger'
 import type { Response } from 'express'
 import { PublishService } from './publish.service'
 import { AdminAuthGuard } from '../../common/guards/admin-auth.guard'
-import { PlatformAdminGuard } from '../../common/guards/platform-admin.guard'
+import { MenuPermissionGuard } from '../../common/guards/menu-permission.guard'
+import { RequireMenu } from '../../common/decorators/require-menu.decorator'
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator'
 
 @ApiTags('发布')
 @ApiBearerAuth()
 @Controller('publish')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, MenuPermissionGuard)
+@RequireMenu(['/sites', '/content', '/content/editor'])
 export class PublishController {
   constructor(private readonly service: PublishService) {}
 
@@ -23,7 +25,6 @@ export class PublishController {
   }
 
   @Post('site/:siteId')
-  @UseGuards(PlatformAdminGuard)
   @ApiOperation({ summary: '整站重建（平台级）' })
   rebuild(@CurrentUser() user: AuthUser, @Param('siteId') siteId: string) {
     return this.service.rebuild(user, siteId)

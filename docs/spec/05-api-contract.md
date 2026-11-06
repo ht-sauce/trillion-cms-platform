@@ -27,7 +27,7 @@
 | 200  | 成功                                          | 解包 `data`            |
 | 400  | 参数校验失败 / 业务约束冲突（如上传类型不符） | `ElMessage.error`      |
 | 401  | 缺失或失效 token                              | 清 token 并跳 `/login` |
-| 403  | 非平台管理员访问平台级接口 / 跨站点越权       | 提示无权限             |
+| 403  | 无对应菜单授权 / 内部调用凭证错误 / 需求 IP 被封禁 | 提示无权限或请求被拒绝 |
 | 404  | 资源不存在                                    | 提示未找到             |
 | 500  | 未处理异常（过滤器统一兜底）                  | 提示 + 记录日志        |
 
@@ -36,11 +36,12 @@
 | 层级                | 适用范围                                                                                           | 实现位置                              |
 | ------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | 公开无鉴权          | `/geoserver/auth/login`、`/geoserver/health`、`/geoserver/public/**`、`/geoserver/track/collect`、`/geoserver/site-auth/register | login`                                | 控制器未挂 Guard |
-| JWT-A（登录即可）   | 其余受保护接口                                                                                     | `@UseGuards(AdminAuthGuard)`          |
-| JWT-A + 平台级角色  | 站点增删改、整站重建、菜单/角色/用户维护、members 删除等平台级操作                                 | 追加 `@UseGuards(PlatformAdminGuard)` |
+| JWT-A（身份接口） | `/auth/me`、当前用户菜单树等身份/导航接口 | `AdminAuthGuard` |
+| JWT-A + 对应菜单 | 全平台管理业务接口；不按用户/角色 siteIds 或 platform 限制数据/操作 | AdminAuthGuard + MenuPermissionGuard，启用菜单 RoleMenu 授权 |
+| 内部调用身份 | `/internal/access-events` 等内部写入/渲染接口，不公开给浏览器 | 内部令牌缺失/错误拒绝，不能以 CORS 代替 |
 | JWT-M（站点会员）   | `/geoserver/site-auth/verify`、`/geoserver/site-auth/me`                                           | 会员域 token                          |
 
-> **平台级**的判据是「用户绑定的角色带 `platform` 标记」（RBAC），不再是硬编码的角色字符串；角色信息随 JWT 下发，`PlatformAdminGuard` 只读 `request.user.platform`（见 [ADR-019](./08-adr.md#adr-019-rbac用户--角色--菜单绑定)）。
+> 2026-11-06 按上游与用户授权，管理业务控制器已统一登录 + 菜单授权；§3/§6 历史“平台级/站点级”鉴权列不再适用，实际菜单映射以 §2.1 与 02 §4.3 为准。会员 JWT-M、资源归属、内部身份与防锁死保留。不自动向角色补授菜单。
 
 ```mermaid
 flowchart LR
@@ -48,14 +49,28 @@ flowchart LR
   B -->|是| OK1["放行"]
   B -->|否| C{"有效 JWT?"}
   C -->|否| E1["401"]
-  C -->|是| D{"是否平台级接口?"}
-  D -->|否| E{"目标资源 siteId<br/>在 user.siteIds 内?"}
-  D -->|是| F{"role = super_admin?"}
-  F -->|否| E2["403"]
-  F -->|是| OK1
-  E -->|否| E2
+  C -->|是| D{"身份/导航接口?"}
+  D -->|是| OK1
+  D -->|否| E{"具有对应启用菜单授权?"}
+  E -->|否| E2["403"]
   E -->|是| OK1
 ```
+
+图示仅描述管理 JWT-A 目标流程；内部调用及 JWT-M 独立鉴权，不走公开无校验分支。菜单隐藏不代替接口拒绝。
+
+### 2.1 全平台权限调整与菜单映射
+
+管理控制器已接入对应菜单，PlatformAdminGuard 不再挂业务路由；site-scope 仅显式筛选，assertSiteAccess 为兼容空入口；登录/用户视图与用户 DTO/UI 已移除 siteIds，不删历史数据库列。接口菜单映射见 02 §4.3，共享站点选择、角色列表、菜单授权树、上传与块详情仅开放对应消费菜单，不扩大独占维护权限。
+
+| 范围 | 当前调用点 | 要求 |
+| --- | --- | --- |
+| 登录用户与站点授权 | common/utils/site-scope.ts、decorators/current-user、guards/admin-auth、auth/auth.service、admin-users/service 与 DTO；管理后台用户表单/用户页 | 取消 user.siteIds 授权条件及站点授权入口；保留登录、角色绑定、账号安全护栏 |
+| 站点与内容 | sites.service、bootstrap.service、content.service、editor.service、news-faq.service、catalog/products.service/cases.service | 区分 assertSiteAccess/siteWhere/siteIdWhere 的授权条件和业务 siteId 条件，只移除前者；站点归属、同站关联、派生和显式筛选保留 |
+| 资源、渲染与发布 | static-files、entities、members、blocks、navigation、geo、preview、publish 服务及相关控制器 | 统一对应菜单校验，移除后台站点数据权限与平台角色业务门槛；公共块副本隔离、短时预览票据、内部令牌、发布约束不取消 |
+| 平台维护与现有统计 | sites/publish/menus/roles/admin-users/blocks 等平台守卫；track 两个统计读口 | 按功能菜单控制接口，不只隐藏侧栏；不增加 track 的站点授权，不将其统计纳入新监控；菜单与角色关联维护仍保留 |
+| 当前新增入口 | RequireMenu、MenuPermissionGuard、access/demands 控制器 | 新入口已接入；监控 `/monitor`、需求及封禁 `/sites/demands`；新增菜单不补授既有角色（含空授权角色），仅新建内置角色初始化默认授权 |
+
+MenuPermissionGuard 按启用 Menu.path + RoleMenu 校验，未声明拒绝；单路径、任一消费路径、all共同操作、blocks实际归属四种声明。块创建以 scope=public 优先于 siteId 判定模板权限，防止伪造 siteId 绕过。公开写口仅保留 track 摄取、会员注册/登录、需求提交与既有专用校验；没有匿名内容维护入口。测试先失败后通过，含全管理路由元数据与真实 Nest HTTP 的401/403/跨站非平台成功；真实数据库与上线验收不由这些替身测试替代。
 
 ## 3. 接口清单（86 条）
 
@@ -64,7 +79,7 @@ flowchart LR
 | 方法 | 路径          | 用途                     | 鉴权  |
 | ---- | ------------- | ------------------------ | ----- |
 | POST | `/auth/login` | 登录并签发 JWT-A         | 公开  |
-| GET  | `/auth/me`    | 当前管理员信息与站点授权 | JWT-A |
+| GET  | `/auth/me`    | 当前管理员身份与角色信息，不返回 siteIds | JWT-A |
 
 ### 3.2 sites · 站点管理
 
@@ -140,6 +155,8 @@ flowchart LR
 
 ### 3.7 track · 埋点与监控
 
+本组为既有技术接口登记，不是新入站监控能力；本轮不删除、不新增统计消费或站点数据授权。新监控接口见 §7，不将 AiCrawlEvent 与 GeoAccessEvent 重复相加。
+
 | 方法 | 路径                 | 用途                               | 鉴权  |
 | ---- | -------------------- | ---------------------------------- | ----- |
 | POST | `/track/collect`     | 埋点摄取（`sendBeacon`，攒批落库） | 公开  |
@@ -175,29 +192,29 @@ flowchart LR
 | 方法   | 路径          | 用途                                                       | 鉴权              |
 | ------ | ------------- | ---------------------------------------------------------- | ----------------- |
 | GET    | `/menus/tree` | 侧栏菜单树（按当前用户角色的菜单授权过滤，最多三级）        | JWT-A             |
-| GET    | `/menus`      | 菜单配置列表（平铺，含隐藏与停用项）                       | JWT-A + 平台级角色 |
-| POST   | `/menus`      | 新建菜单（`parentId` 缺省为一级）                          | JWT-A + 平台级角色 |
-| PATCH  | `/menus/:id`  | 编辑菜单（换父级时校验环路与三级上限）                     | JWT-A + 平台级角色 |
-| DELETE | `/menus/:id`  | 删除菜单（存在子菜单返回 `400`，需先删子级）               | JWT-A + 平台级角色 |
+| GET    | `/menus`      | 菜单配置列表（平铺，含隐藏与停用项）                       | JWT-A + `/settings/menus` 或 `/settings/roles` |
+| POST   | `/menus`      | 新建菜单（`parentId` 缺省为一级）                          | JWT-A + `/settings/menus` |
+| PATCH  | `/menus/:id`  | 编辑菜单（换父级时校验环路与三级上限）                     | JWT-A + `/settings/menus` |
+| DELETE | `/menus/:id`  | 删除菜单（存在子菜单返回 `400`，需先删子级）               | JWT-A + `/settings/menus` |
 
 ### 3.11 roles · 角色（用户 → 角色 → 菜单 的中间层）
 
 | 方法   | 路径               | 用途                                                     | 鉴权              |
 | ------ | ------------------ | -------------------------------------------------------- | ----------------- |
-| GET    | `/roles`           | 角色列表（含 `menuIds` 授权与 `userCount` 绑定用户数）   | JWT-A + 平台级角色 |
-| POST   | `/roles`           | 新建角色（内置角色不可通过接口创建）                     | JWT-A + 平台级角色 |
-| PATCH  | `/roles/:id`       | 编辑角色（内置角色：标识与状态受保护）                   | JWT-A + 平台级角色 |
-| DELETE | `/roles/:id`       | 删除角色（内置角色或仍有用户绑定时返回 `400`）           | JWT-A + 平台级角色 |
-| PUT    | `/roles/:id/menus` | 保存菜单授权（覆盖式，服务端自动补全上级菜单）           | JWT-A + 平台级角色 |
+| GET    | `/roles`           | 角色列表（含 `menuIds` 授权与 `userCount` 绑定用户数）   | JWT-A + `/settings/roles` 或 `/settings/users` |
+| POST   | `/roles`           | 新建角色（内置角色不可通过接口创建）                     | JWT-A + `/settings/roles` |
+| PATCH  | `/roles/:id`       | 编辑角色（内置角色：标识与状态受保护）                   | JWT-A + `/settings/roles` |
+| DELETE | `/roles/:id`       | 删除角色（内置角色或仍有用户绑定时返回 `400`）           | JWT-A + `/settings/roles` |
+| PUT    | `/roles/:id/menus` | 保存菜单授权（覆盖式，服务端自动补全上级菜单）           | JWT-A + `/settings/roles` |
 
 ### 3.12 admin-users · 后台用户
 
 | 方法   | 路径               | 用途                                                             | 鉴权              |
 | ------ | ------------------ | ---------------------------------------------------------------- | ----------------- |
-| GET    | `/admin-users`     | 用户列表（分页、关键字与角色筛选；永不返回密码）                 | JWT-A + 平台级角色 |
-| POST   | `/admin-users`     | 新建用户（账号 + 密码 + `roleId` 绑定角色 + 站点授权）           | JWT-A + 平台级角色 |
-| PATCH  | `/admin-users/:id` | 编辑用户（账号不可改，`password` 留空表示不修改）                | JWT-A + 平台级角色 |
-| DELETE | `/admin-users/:id` | 删除用户（不能删自己，须保留至少一个可用平台级用户，否则 `400`） | JWT-A + 平台级角色 |
+| GET    | `/admin-users`     | 用户列表（分页、关键字与角色筛选；永不返回密码）                 | JWT-A + `/settings/users` |
+| POST   | `/admin-users`     | 新建用户（账号 + 密码 + roleId；不接收 siteIds 数据授权）         | JWT-A + `/settings/users` |
+| PATCH  | `/admin-users/:id` | 编辑用户（账号不可改，`password` 留空表示不修改）                | JWT-A + `/settings/users` |
+| DELETE | `/admin-users/:id` | 删除用户（不能删自己，须保留至少一个可用平台级用户，否则 `400`） | JWT-A + `/settings/users` |
 
 > 菜单是**体验层**：`/menus/tree` 的过滤只是 UX，权限边界始终由 Guard 承担（见 [ADR-018](./08-adr.md#adr-018-后台菜单数据驱动)、[ADR-019](./08-adr.md#adr-019-rbac用户--角色--菜单绑定)）。
 
@@ -206,7 +223,7 @@ flowchart LR
 > **表驱动**：新闻与问答的管理源是独立数据表 `NewsArticle` / `FaqItem`（见 [04 §8](./04-data-model.md)），`Page`（`kind=detail` 详情页，路径前缀 `/news/*` 与 `/faq/q*`）只是发布产物。
 > 本组接口做管理面 CRUD，**每次增删改后自动重算派生块**（`/news`、`/faq` 列表页 + 同分类详情页 `related-faq`）
 > 并自动触发**页面级**发布（系统入口、可排队），响应 `data` 携带 `affectedPages`（受影响页面 id 集合）与 `publishTaskId`（发布任务标识，无需发布时为 `null`）。
-> 列表接口的 `siteId` 参与站点权限校验（`assertSiteAccess`，越权 403）；**详情接口直读表、不接收 `siteId` 参数**——按记录自身 `siteId` 归属鉴权（记录不存在 404，越权 403），修复了旧实现要求 `?siteId=` 而前端未传导致的 404。
+> 按登录 + 对应菜单授权；列表 siteId 用于主动筛选，详情直读表、不收 siteId、记录不存在 404。assertSiteAccess 仅为旧调用兼容空入口；记录 siteId 仍用于内容归属和派生，不以用户站点列表拒绝。
 
 | 方法   | 路径                            | 用途                                                                     | 鉴权  |
 | ------ | ------------------------------- | ------------------------------------------------------------------------ | ----- |
@@ -233,7 +250,7 @@ flowchart LR
 
 > **表驱动**：产品与案例的管理源是 `ProductIndustry` / `Product` / `CaseStudy`（见 [04 §9](./04-data-model.md)），`Page` 只是发布产物。
 > 与 §3.13 同口径：本组接口做管理面 CRUD，每次增删改后自动**重算列表页块**（`/products` 的分组结构、`/cases` 的 `case-grid.items`）并**派生详情页**，然后自动触发**页面级**发布（系统入口、可排队）。
-> 列表接口的 `siteId` 参与站点权限校验（`assertSiteAccess`，越权 403）；详情接口直读表、不接收 `siteId`（按记录归属鉴权）。
+> 权限同 §3.13：登录 + 对应菜单授权，列表 siteId 为主动筛选，详情直读记录、不收 siteId；不做后台用户站点数据授权，业务归属仍保留。
 
 | 方法   | 路径                            | 用途 | 鉴权 |
 | ------ | ------------------------------- | ---- | ---- |
@@ -299,19 +316,65 @@ flowchart LR
 
 | 分组 | 接口 | 鉴权 |
 | ---- | ---- | ---- |
-| 内容树 | `GET /content/tree?siteId=` | JWT-A（站点级） |
-| 目录/页面操作 | 新增 / 删除 / 重命名 / 上下移（含 `kind`、`path` 校验与 **已发布地址锁定 400**） | JWT-A（站点级） |
-| 草稿 | `GET` / `PUT` / `DELETE /content/pages/:id/draft` | JWT-A（站点级） |
-| 块定义 | `GET /blocks?siteId=`（本站块 + 公共模板）、`GET /blocks/:key`（`?template=1` 只读模板）、`POST /blocks`、`PUT /blocks/:key`（编译校验 + 声明抽取；站点维度会先自动复制本站副本）、`GET /blocks/:key/usages`、`POST /blocks/:key/rollback`、`POST /blocks/:key/apply`（模板引入本站） | 站点级；**模板库与公共模板（`siteId=0`）读写限平台级**；块隔离见 [09 §4.5](./09-site-editor.md) |
-| 导航 | `GET /navigations?siteId=`、`PUT /navigations/:key`（整组全量提交 + 排序） | JWT-A（站点级） |
-| 预览 | `POST /preview/ticket`（签发短时票据）；`GET /preview/page/:id`（渲染引擎调用，内部 token） | JWT-A / 内部 |
-| GEO 生成预览 | `POST /geo/preview`（纯计算，返回实际输出内容） | JWT-A（站点级） |
-| GEO 就绪度体检 | `GET /geo/site-check?siteId=`（站点级发布前检查：实体声明 / llms / robots AI 策略 / robots meta / sitemap 核心 URL / NAP，返回 `score` 与 `issues`） | JWT-A（站点级） |
-| 发布 | `POST /publish/page/:siteId`、`POST /publish/site/:siteId`、`POST /publish/rollback`、`POST /publish/repair` | 单页站点级；**整站发布限平台级** |
-| 产物与下载 | `GET /publish/artifacts/:siteId`、`GET /publish/geo-docs/:siteId`（站点级 GEO 产物内容，只读）、`GET /publish/download/:siteId?mode=full\|html` | JWT-A（站点级） |
-| 建站导入 | `POST /sites/:id/bootstrap`（建站描述事务落库，幂等） | 平台级 |
+| 内容树 | `GET /content/editor/tree?siteId=` | JWT-A + `/content/editor` |
+| 目录/页面操作 | 新建 / 删除 / 重命名 / 上下移（含 `kind`、`path` 校验与 **已发布地址锁定 400**） | JWT-A + `/content/editor`；普通内容 CRUD 按 `/content` |
+| 草稿 | `GET` / `PUT` / `DELETE /content/editor/pages/:id/draft` | JWT-A + `/content/editor` |
+| 块定义 | `GET /blocks?siteId=`（本站块 + 公共模板）、`GET /blocks/:key`（`?template=1` 只读模板）、`POST /blocks`、`PUT /blocks/:key`（编译校验 + 声明抽取；站点维度会先自动复制本站副本）、`GET /blocks/:key/usages`、`POST /blocks/:key/rollback`、`POST /blocks/:key/apply`（模板引入本站） | JWT-A + `/blocks` 或 `/blocks/templates`，按实际 scope/siteId；详情共享 `/content/editor`；模板副本边界保留 |
+| 导航 | `GET /navigations?siteId=`、`PUT /navigations/:key`（整组全量提交 + 排序） | JWT-A + `/navigations` |
+| 预览 | `POST /preview/ticket`（签发短时票据）；`GET /preview/page/:id`（渲染引擎调用，内部 token） | 票据签发按 JWT-A + sites/content/editor 任一菜单；读取保留票据/内部身份 |
+| GEO 生成预览 | `POST /geo/preview`（纯计算，返回实际输出内容） | JWT-A + monitor/sites/editor 任一菜单 |
+| GEO 就绪度体检 | `GET /geo/site-check?siteId=`（站点归属发布前检查：实体声明 / llms / robots AI 策略 / robots meta / sitemap 核心 URL / NAP，返回 `score` 与 `issues`） | JWT-A + monitor/sites/editor 任一菜单 |
+| 发布 | `POST /publish/page/:siteId`、`POST /publish/site/:siteId`、`POST /publish/rollback`、`POST /publish/repair` | JWT-A + sites/content/editor 任一菜单，无平台角色业务门槛 |
+| 产物与下载 | `GET /publish/artifacts/:siteId`、`GET /publish/geo-docs/:siteId`（站点 GEO 产物内容，只读）、`GET /publish/download/:siteId?mode=full\|html` | JWT-A + sites/content/editor 任一菜单 |
+| 建站导入 | `POST /sites/bootstrap`（建站描述事务落库，幂等） | JWT-A + `/sites` |
 | 渲染引擎内部 | `GET /public/list/:siteKey?channel=`、`GET /internal/blocks?...`（块代码清单） | 公开只读 / 内部 token |
 
 ---
 
-> 下一步：[`06-publish-and-geo.md`](./06-publish-and-geo.md) —— 发布流水线与 GEO 产物。
+## 7. 入站监控与需求接口（2026-11-06，当前实施中）
+
+范围来自 REQUIREMENTS §7/§9。路径均相对 `/geoserver`；access/demands 已注册到根 AppModule。需求菜单、跟进和封禁路径按下表定稿；模块注册不代表真实数据库迁移或生产验收完成。
+
+### 7.1 单条请求保存与分页
+
+| 当前方法/路径 | 入参与响应 data | 鉴权与状态 |
+| --- | --- | --- |
+| POST `/internal/access-events` | CreateAccessEventDto：04 §3.7 请求字段，siteId/referer/browserVersion/agentToken/vendor/status 可选；occurredAt 字符串≤40；返回 `{ id }` | 当前以 x-internal-token 比对服务端 internalToken，缺配置/缺凭据/错误均 403；校验错误 400，保存失败 500；草稿指定 HTTP 200 |
+| GET `/access-events` | page/pageSize、siteId≤36、from/to、clientIp≤64、path≤256、resourceType/accessCategory 枚举、agentToken≤64、status 整数；返回 `{ list, total, page, pageSize }`，行含请求/响应及 country/region/city/geoSource/geoDbVersion/geoStatus | JWT-A + `/monitor` 启用菜单授权；未登录 401，无菜单 403；不按用户站点列表过滤，不提供统计接口 |
+
+内部字段长度与枚举见 04 §3.7；status 中断可空、durationMs 非负，时间输出走 formatDateTime。当前 parseDateTime 已区分 ISO 的 Z/偏移并保留毫秒，无时区输入按中国时间解析，非法日期返回 null；create 在解析失败时回退当前时间，查询忽略非法时间条件，不能将解析函数拒绝非法日期等同接口返回 400。GEO 的 00-access.ts/utils/access.ts 已接入调用，服务端 AccessModule 已注册，不再保留“未注册”差异；完整采集与真实数据库写入仍待联调。
+
+当前 GEO 快照已剔除 URL query/hash、Referer 凭据与 query/hash，仅在直连对端命中 TRUSTED_PROXIES 时解析转发信息。Host 保留端口；未采用有效转发协议时按 socket TLS 状态选择 https/http，而非未知 scheme。此处登记现有实现，不代表生产代理拓扑、恶意转发头、finish/close 去重与异步保存链路已验收；配置及部署边界见 07 §3.3.1。
+
+采集目标链路：GEO 放行前快照/计时，finish 或未完成的 close 仅一次调用 void 入口，内部异步捕获保存异常；路由不 await，不保存请求/响应体，不做批量队列、重试或零资源承诺。主流 UA 只匹配声明身份，规则证据缺口不猜厂商；地域保存时离线解析、查询不重算，DB-IP 署名必须保留。
+
+### 7.2 需求与封禁契约（定稿）
+
+| 操作 | 服务端路径 | 管理后台封装 | 鉴权/说明 |
+| --- | --- | --- | --- |
+| 验证码/提交 | GET `/demands/captcha`、POST `/demands/submit` | GEO widget 已调用，不经管理后台封装；真实站点联调待验收 | 匿名辅助/业务提交；提交 HTTP 200，no-store/noindex |
+| widget 配置 | GET `/demands/widget-config` | GEO widget 已读取配置并使用 captchaPath/submitPath | 匿名，返回 version/widgetKey/siteName/captchaPath/submitPath；不发权限凭据 |
+| 分页 | GET `/demands` | list | JWT-A + `/sites/demands` 启用菜单授权 |
+| 单条详情 | GET `/demands/:id` | detail | 同上，id 为 UUID；不存在 404 |
+| 跟进保存 | PATCH `/demands/:id/follow-up` | saveFollowUp | 同上，status/note 至少一项；界面同时提交两项 |
+| 封禁列表 | GET `/demands/bans/list` | 暂不封装 | 同上，仅保留接口，不新增独立页面或菜单 |
+| 人工禁用 | POST `/demands/ip-bans` | banIp | 同上，ip/reason，HTTP 200 |
+| 解除封禁 | DELETE `/demands/ip-bans/:ip` | unbanIp | 同上，按 URL 编码后的 IP 解禁，返回 `{ ip }` |
+| 菜单判据 | RequireMenu(`/sites/demands`) | 页面 `/sites/demands` | 需求与封禁共用授权；既有角色须显式授权，不自动补授 |
+
+当前 DTO 输入：description 字符串 2~5000，contactName≤64、phone≤32、wechat≤64、email≤128且邮箱格式、otherContact≤255、sourceUrl≤512 均可选；submitKey 8~64 必填，captchaId≤64、captchaCode≤16 必填。这些是当前草稿值，不自动升级为已确认业务限制；trim 后描述有效性、手机号地区/格式、空可选邮箱处理、请求体上限待最小契约定稿。四栏任一有效已确认，不能要求手机号或四项全填。
+
+跟进 DTO status（pending/followed）与 note≤5000 可选，至少一项；界面点击保存同时提交状态与单份备注。人工封禁输入 ip≤64、reason 2~255；分页遵循 §1，需求筛选 siteId/status/keyword≤128，封禁筛选 ip/source。管理端仅登录 + 对应菜单，无数据权限。列表/详情/跟进返回需求字段及 siteName、直接采集的 clientIp、当前有效 ban（无封禁为 null），移除 submitKey；时间走 formatDateTime。不得通过请求日志 IP 反推客户身份。
+
+2026-11-06 定点核对：管理后台 demandsApi 的列表/详情/跟进/人工禁用/解禁路径、UUID 寻址、clientIp/ban 字段已与服务端对齐，删除“路径/标识/字段未对齐”的旧结论。静态对齐及替身 HTTP 回归不替代真实数据库、浏览器交互或部署验收；不扩大当前 DTO 草稿值的业务确认范围。
+
+提交返回 `{ id, duplicated, createdAt }`，成功才显示收到；列表返回分页对象，跟进返回需求记录，人工禁用返回封禁记录，解禁返回 `{ ip }`。验证码不返回答案；所有错误保持统一包装，400 字段/来源/验证码无效、401 未登录、403 无菜单或封禁、404 记录不存在、429 轻度限流、500 保存失败；Retry-After 尚未提供。
+
+### 7.3 安全顺序与本地验收门槛
+
+- 来源按实际域名映射有效站点，不信任访客 siteId；Origin 必须是完整 HTTP(S) origin，Origin/Referer 同时存在时按协议、主机和有效端口核对，不能只比较域名。转发 Host 仅可信代理命中且无 Origin/Referer 时采用。main 仅对公开 captcha/submit/widget-config 与其预检动态放行有效站点来源，管理接口仍用配置白名单；CORS 不代替鉴权。
+- 入口频率及平台共用 IP 名单按 REQUIREMENTS §7.4：main 在 Body 解析、DTO 和来源校验之前计数，控制器/服务不得重复计数；非法字段、畸形 JSON、超大 Body、非法来源均计入提交/验证码与合计频率。60 秒第 21 次验证码/第 11 次提交 429，第 61 次合计自动 30 分钟；预检、widget 配置、普通页面不计数。解析错误返回统一 400/413 包装，公开错误也 no-store/noindex。人工优先、到期/解除清计数、封禁期间不延长、不影响页面/爬虫。
+- 挑战绑定归一化可信客户端 IP，校验和消耗均核对该 IP；跨 IP 的挑战视为不存在，不消耗、不计有效猜错。单挑战 5 次错误、5 分钟有效，同 IP 10 分钟第 20 次有效猜错封禁；保留成功幂等回读优先、数据库失败不消耗语义。
+- 提交先过 IP 封禁/限流与来源校验，再按同站点 submitKey 回读，后验证挑战；保存成功后才消耗验证码，唯一冲突回读已保存记录。成功幂等重试仍受入口限流但不算猜错；进程内互斥不代表多进程共享计数。
+- 公开需求已声明 no-store/noindex，不公开读取、不发访客会话 token、不进入 SSG/索引。正文/备注纯文本展示与参数化写库、字段白名单/请求体上限是独立防注入边界，验证码不代替。
+- 旧 DashboardOverview 与总览种子定义删除，种子先清除旧 path=/ 菜单及 RoleMenu，再初始化新角色默认授权，不补授既有角色；根路径按授权菜单顺序导航，无菜单显示空态。本轮不运行种子或数据库迁移。全平台菜单映射已接入并通过控制器覆盖与替身回归；widget 代码接入已登记，但真实站点交互、真实数据库验收与站点发布不由权限回归或本轮文档核对推定完成。

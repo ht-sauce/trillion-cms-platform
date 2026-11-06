@@ -2,7 +2,7 @@
  * 后台用户模块 DTO：入参校验，写操作字段在此集中定义
  */
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { ArrayUnique, IsArray, IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
+import { IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
 
 export class QueryAdminUserDto {
   @ApiPropertyOptional({ description: '页码' })
@@ -46,13 +46,6 @@ export class CreateAdminUserDto {
   @IsString()
   roleId: string
 
-  @ApiPropertyOptional({ description: '授权站点 ID 列表（平台级角色可留空表示全站点）', type: [String] })
-  @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @IsString({ each: true })
-  siteIds?: string[]
-
   @ApiPropertyOptional({ description: '是否启用' })
   @IsOptional()
   @IsBoolean()
@@ -77,13 +70,6 @@ export class UpdateAdminUserDto {
   @IsOptional()
   @IsString()
   roleId?: string
-
-  @ApiPropertyOptional({ description: '授权站点 ID 列表', type: [String] })
-  @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @IsString({ each: true })
-  siteIds?: string[]
 
   @ApiPropertyOptional({ description: '是否启用' })
   @IsOptional()

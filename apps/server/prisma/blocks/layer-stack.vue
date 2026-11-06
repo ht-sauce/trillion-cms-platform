@@ -116,13 +116,15 @@ defineBlock({
   border-bottom: 1px solid rgba(11, 13, 16, 0.1);
   cursor: pointer;
   position: relative;
-  transition: background 0.3s, padding-left 0.3s;
+  transition:
+    background 0.3s,
+    padding-left 0.3s;
 }
 :global(.site-section:not(.alt):not(.alt-flush)) .ls-layer {
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 .ls-layer::before {
-  content: "";
+  content: '';
   position: absolute;
   left: 0;
   top: 0;
@@ -190,7 +192,10 @@ defineBlock({
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  transition: max-height 0.4s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.3s, margin 0.3s;
+  transition:
+    max-height 0.4s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.3s,
+    margin 0.3s;
 }
 :global(.site-section:not(.alt):not(.alt-flush)) .ls-layer .ls-desc,
 :global(.site-section:not(.alt):not(.alt-flush)) .ls-layer .ls-prod {
@@ -240,7 +245,9 @@ defineBlock({
   padding: 0 14px;
   font-size: 11.5px;
   font-weight: 600;
-  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 0.35s;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1),
+    box-shadow 0.35s;
   cursor: pointer;
 }
 .ls-stratum .ls-th {
